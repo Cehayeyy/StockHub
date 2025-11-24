@@ -17,4 +17,11 @@
     <body class="font-sans antialiased">
         @inertia
     </body>
+        @csrf
+        @method('DELETE')
+        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menonaktifkan akun ini?')">
+            Nonaktifkan
+        </button>
+    </form>
+
 </html>
