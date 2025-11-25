@@ -123,11 +123,11 @@ export default function AppLayout({ header, children }: LayoutProps) {
         </div>
 
         <nav className="flex-1 space-y-2">
-          <SidebarLink href="dashboard" icon={LayoutDashboard}>Dashboard</SidebarLink>
+          <SidebarLink href="dashboard" icon={LayoutDashboard}>Dasbor</SidebarLink>
           <SidebarLink href="manajemen" icon={Users}>Manajemen Akun</SidebarLink>
-          <SidebarLink href="masterdata" icon={Box}>Master Data</SidebarLink>
+          <SidebarLink href="masterdata" icon={Box}>Data Induk</SidebarLink>
           <SidebarLink href="#" icon={ClipboardList}>Stok Harian</SidebarLink>
-          <SidebarLink href="#" icon={ClipboardCheck}>Stok Opname</SidebarLink>
+          <SidebarLink href="#" icon={ClipboardCheck}>Verifikasi Stok</SidebarLink>
           <SidebarLink href="#" icon={FileText}>Laporan Aktivitas</SidebarLink>
         </nav>
 
