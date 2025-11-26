@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
   LayoutDashboard,
@@ -9,7 +9,8 @@ import {
   FileText,
   LogOut,
   Bell,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown
 } from 'lucide-react';
 
 // Tipe data props halaman
@@ -31,13 +32,22 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-// Komponen sidebar link
-function SidebarLink({ href, icon: Icon, children }: { href: string, icon: React.ElementType, children: React.ReactNode }) {
+function SidebarLink({
+  href,
+  icon: Icon,
+  children,
+  onClick,
+}: {
+  href?: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
   let isActive = false;
-  let url = '#';
+  let url = "#";
 
   try {
-    if (route().has(href)) {
+    if (href && route().has(href)) {
       isActive = route().current(href);
       url = route(href);
     }
@@ -45,11 +55,13 @@ function SidebarLink({ href, icon: Icon, children }: { href: string, icon: React
     console.warn(`Route ${href} tidak ditemukan.`);
   }
 
-  const activeClasses = isActive ? 'bg-black/20' : 'hover:bg-black/10';
+  const activeClasses = "hover:bg-black/10";
 
   return (
     <Link
-      href={url}
+      href={href ? url : ""}
+      onClick={onClick}
+      preserveScroll
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeClasses}`}
     >
       <Icon className="w-5 h-5 mr-3" />
@@ -61,6 +73,7 @@ function SidebarLink({ href, icon: Icon, children }: { href: string, icon: React
 export default function AppLayout({ header, children }: LayoutProps) {
   const { auth, flash } = usePage<PageProps>().props;
   const [showModal, setShowModal] = useState(false);
+  const [openMasterData, setOpenMasterData] = useState(false);
 
   // Jam realtime
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -117,7 +130,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
           <div>
             <div className="font-bold text-lg text-white">Warung Cangkruk</div>
             <div className="text-xs text-white/70">
-              {auth.user.name} (Supervisor 1)
+              {auth.user.name}
             </div>
           </div>
         </div>
@@ -125,7 +138,49 @@ export default function AppLayout({ header, children }: LayoutProps) {
         <nav className="flex-1 space-y-2">
           <SidebarLink href="dashboard" icon={LayoutDashboard}>Dashboard</SidebarLink>
           <SidebarLink href="manajemen" icon={Users}>Manajemen Akun</SidebarLink>
-          <SidebarLink href="masterdata" icon={Box}>Master Data</SidebarLink>
+
+          {/* MASTER DATA */}
+          <div>
+            <button
+              onClick={() => setOpenMasterData(!openMasterData)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+            >
+              <div className="flex items-center">
+                <Box className="w-5 h-5 mr-3" />
+                Master Data
+              </div>
+
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${openMasterData ? "rotate-180" : ""}`}
+              />
+            </button>
+
+           {openMasterData && (
+            <div className="ml-10 mt-2 space-y-3 text-sm">
+
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                <Link href={route("kategori")} className="block">
+                    Kategori
+                </Link>
+                </div>
+
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                <Link href={route("item")} className="block">
+                    Item
+                </Link>
+                </div>
+
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                <Link href={route("resep")} className="block">
+                    Resep
+                </Link>
+                </div>
+
+            </div>
+)}
+
+          </div>
+
           <SidebarLink href="#" icon={ClipboardList}>Stok Harian</SidebarLink>
           <SidebarLink href="#" icon={ClipboardCheck}>Stok Opname</SidebarLink>
           <SidebarLink href="#" icon={FileText}>Laporan Aktivitas</SidebarLink>
@@ -146,30 +201,22 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
       {/* AREA KANAN */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* HEADER */}
         <header className="bg-white shadow-sm p-6">
           <div className="flex justify-between items-center">
-
-            {/* Logo + Judul */}
             <div className="flex items-center">
               <img src="/images/stockhub-logo.png" alt="StockHub Logo" className="h-10" />
               {header && <div className="ml-6 text-2xl font-semibold text-gray-800">{header}</div>}
             </div>
 
-            {/* USER, TANGGAL, JAM, NOTIF */}
             <div className="flex items-center">
               <div className="text-right mr-6">
                 <div className="font-semibold text-gray-800">{auth.user.name}</div>
                 <div className="text-sm text-gray-500">{formattedDate}</div>
-
-                {/* JAM REALTIME — DITARUH DI BAWAH TANGGAL */}
                 <div className="text-sm font-mono font-semibold text-[#5D4037]">
                   {formattedTime}
                 </div>
               </div>
 
-              {/* Bell */}
               <div className="relative p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
                 <Bell className="w-6 h-6 text-gray-600" />
                 <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
