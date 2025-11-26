@@ -22,6 +22,11 @@ Route::middleware(['auth'])->group(function () {
         ->name('manajemen.destroy');
     Route::post('/users', [UserController::class, 'store'])
         ->name('users.store');
+    Route::put('/manajemen/{id}', [UserController::class, 'update'])
+        ->name('manajemen.update');
+
+
+
 
     //bagian master data
     Route::get('/masterdata', function () {

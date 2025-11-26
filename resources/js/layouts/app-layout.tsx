@@ -18,17 +18,12 @@ interface PageProps {
     user: {
       name: string;
       email: string;
+      role: string;
     };
   };
   flash?: {
     login_success?: string;
   };
-}
-
-// Tipe props layout
-interface LayoutProps {
-  header?: React.ReactNode;
-  children: React.ReactNode;
 }
 
 // Komponen sidebar link
@@ -58,8 +53,9 @@ function SidebarLink({ href, icon: Icon, children }: { href: string, icon: React
   );
 }
 
-export default function AppLayout({ header, children }: LayoutProps) {
+export default function AppLayout({ header, children }: PropsWithChildren<{ header?: React.ReactNode }>) {
   const { auth, flash } = usePage<PageProps>().props;
+
   const [showModal, setShowModal] = useState(false);
 
   // Jam realtime
@@ -89,7 +85,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
   return (
     <div className="flex h-screen bg-theme-background">
 
-      {/* Modal Login Berhasil */}
+      {/* MODAL LOGIN */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm text-center">
@@ -106,7 +102,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
         </div>
       )}
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <aside className="w-64 bg-theme-sidebar text-white/90 p-5 flex flex-col">
         <div className="flex items-center mb-8">
           <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
@@ -114,10 +110,11 @@ export default function AppLayout({ header, children }: LayoutProps) {
               {auth.user.name.charAt(0)}
             </span>
           </div>
+
           <div>
             <div className="font-bold text-lg text-white">Warung Cangkruk</div>
             <div className="text-xs text-white/70">
-              {auth.user.name} (Supervisor 1)
+              {auth.user.name} ({auth.user.role})
             </div>
           </div>
         </div>
@@ -151,25 +148,28 @@ export default function AppLayout({ header, children }: LayoutProps) {
         <header className="bg-white shadow-sm p-6">
           <div className="flex justify-between items-center">
 
-            {/* Logo + Judul */}
+            {/* Judul */}
             <div className="flex items-center">
               <img src="/images/stockhub-logo.png" alt="StockHub Logo" className="h-10" />
               {header && <div className="ml-6 text-2xl font-semibold text-gray-800">{header}</div>}
             </div>
 
-            {/* USER, TANGGAL, JAM, NOTIF */}
+            {/* USER TANGGAL JAM NOTIF */}
             <div className="flex items-center">
               <div className="text-right mr-6">
-                <div className="font-semibold text-gray-800">{auth.user.name}</div>
+                <div className="font-semibold text-gray-800">
+                  {auth.user.name} ({auth.user.role})
+                </div>
+
                 <div className="text-sm text-gray-500">{formattedDate}</div>
 
-                {/* JAM REALTIME — DITARUH DI BAWAH TANGGAL */}
+                {/* JAM DI BAWAH TANGGAL */}
                 <div className="text-sm font-mono font-semibold text-[#5D4037]">
                   {formattedTime}
                 </div>
               </div>
 
-              {/* Bell */}
+              {/* BELL */}
               <div className="relative p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
                 <Bell className="w-6 h-6 text-gray-600" />
                 <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
