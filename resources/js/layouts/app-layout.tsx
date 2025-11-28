@@ -10,11 +10,7 @@ import {
   LogOut,
   Bell,
   CheckCircle2,
-<<<<<<< HEAD
-  ChevronDown
-=======
-  ChevronRight,
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
+  ChevronDown,
 } from 'lucide-react';
 
 // Tipe data props halaman
@@ -23,6 +19,7 @@ interface PageProps {
     user: {
       name: string;
       email: string;
+      role?: string;
     };
   };
   flash?: {
@@ -31,36 +28,26 @@ interface PageProps {
   [key: string]: any; // supaya kompatibel dengan Inertia PageProps
 }
 
-<<<<<<< HEAD
 // Tipe props layout
 interface LayoutProps {
   header?: React.ReactNode;
   children: React.ReactNode;
 }
 
-=======
 // Komponen sidebar link utama
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
 function SidebarLink({
   href,
   icon: Icon,
   children,
-<<<<<<< HEAD
   onClick,
 }: {
   href?: string;
   icon: React.ElementType;
   children: React.ReactNode;
   onClick?: () => void;
-=======
-}: {
-  href: string;
-  icon: React.ElementType;
-  children: React.ReactNode;
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
 }) {
   let isActive = false;
-  let url = "#";
+  let url = '#';
 
   try {
     if (href && route().has(href)) {
@@ -71,11 +58,11 @@ function SidebarLink({
     console.warn(`Route ${href} tidak ditemukan.`);
   }
 
-  const activeClasses = "hover:bg-black/10";
+  const activeClasses = isActive ? 'bg-black/20' : 'hover:bg-black/10';
 
   return (
     <Link
-      href={href ? url : ""}
+      href={href ? url : ''}
       onClick={onClick}
       preserveScroll
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeClasses}`}
@@ -86,61 +73,14 @@ function SidebarLink({
   );
 }
 
-<<<<<<< HEAD
 export default function AppLayout({ header, children }: LayoutProps) {
   const { auth, flash } = usePage<PageProps>().props;
-=======
-// Komponen sidebar submenu (tanpa icon, agak menjorok ke kanan)
-function SidebarSubLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  let isActive = false;
-  let url = '#';
 
-  try {
-    if (route().has(href)) {
-      isActive = route().current(href);
-      url = route(href);
-    }
-  } catch (e) {
-    console.warn(`Route ${href} (submenu) tidak ditemukan.`);
-  }
-
-  const base =
-    'block ml-8 mt-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors';
-  const activeClasses = isActive
-    ? 'bg-black/30 text-white'
-    : 'bg-black/10 text-white/90 hover:bg-black/20';
-
-  return (
-    <Link href={url} className={`${base} ${activeClasses}`}>
-      {children}
-    </Link>
-  );
-}
-
-export default function AppLayout({
-  header,
-  children,
-}: PropsWithChildren<{ header?: React.ReactNode }>) {
-  const page = usePage<PageProps>();
-  const { auth, flash } = page.props;
-  const currentUrl = page.url as string;
-
-  const isDataIndukActive = currentUrl.startsWith('/masterdata');
-  const isStokHarianActive = currentUrl.startsWith('/stok-harian');
-
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
   const [showModal, setShowModal] = useState(false);
-  const [openMasterData, setOpenMasterData] = useState(false);
 
-  // collapse/expand
-  const [masterDataOpen, setMasterDataOpen] = useState(isDataIndukActive);
-  const [stokHarianOpen, setStokHarianOpen] = useState(isStokHarianActive);
+  // buka/tutup submenu
+  const [openMasterData, setOpenMasterData] = useState(false);
+  const [openStokHarian, setOpenStokHarian] = useState(false);
 
   // Jam realtime
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -173,12 +113,7 @@ export default function AppLayout({
 
   return (
     <div className="flex h-screen bg-theme-background">
-<<<<<<< HEAD
-
       {/* Modal Login Berhasil */}
-=======
-      {/* MODAL LOGIN */}
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
       {showModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm text-center">
@@ -208,62 +143,13 @@ export default function AppLayout({
             <div className="font-bold text-lg text-white">Warung Cangkruk</div>
             <div className="text-xs text-white/70">
               {auth.user.name}
+              {auth.user.role ? ` (${auth.user.role})` : ''}
             </div>
           </div>
         </div>
 
         {/* MENU NAVIGASI */}
         <nav className="flex-1 space-y-2">
-<<<<<<< HEAD
-          <SidebarLink href="dashboard" icon={LayoutDashboard}>Dashboard</SidebarLink>
-          <SidebarLink href="manajemen" icon={Users}>Manajemen Akun</SidebarLink>
-
-          {/* MASTER DATA */}
-          <div>
-            <button
-              onClick={() => setOpenMasterData(!openMasterData)}
-              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
-            >
-              <div className="flex items-center">
-                <Box className="w-5 h-5 mr-3" />
-                Master Data
-              </div>
-
-              <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${openMasterData ? "rotate-180" : ""}`}
-              />
-            </button>
-
-           {openMasterData && (
-            <div className="ml-10 mt-2 space-y-3 text-sm">
-
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                <Link href={route("kategori")} className="block">
-                    Kategori
-                </Link>
-                </div>
-
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                <Link href={route("item")} className="block">
-                    Item
-                </Link>
-                </div>
-
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                <Link href={route("resep")} className="block">
-                    Resep
-                </Link>
-                </div>
-
-            </div>
-)}
-
-          </div>
-
-          <SidebarLink href="#" icon={ClipboardList}>Stok Harian</SidebarLink>
-          <SidebarLink href="#" icon={ClipboardCheck}>Stok Opname</SidebarLink>
-          <SidebarLink href="#" icon={FileText}>Laporan Aktivitas</SidebarLink>
-=======
           <SidebarLink href="dashboard" icon={LayoutDashboard}>
             Dasbor
           </SidebarLink>
@@ -272,69 +158,81 @@ export default function AppLayout({
             Manajemen Akun
           </SidebarLink>
 
-          {/* DATA INDUK + CHEVRON + SUB KATEGORI/ITEM/RESEP */}
+          {/* MASTER DATA + SUB: Kategori, Item, Resep */}
           <div>
             <button
               type="button"
-              onClick={() => setMasterDataOpen((prev) => !prev)}
-              className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                isDataIndukActive ? 'bg-black/20' : 'hover:bg-black/10'
-              }`}
+              onClick={() => setOpenMasterData(!openMasterData)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
             >
-              <span className="flex items-center">
+              <div className="flex items-center">
                 <Box className="w-5 h-5 mr-3" />
                 Data Induk
-              </span>
-              <ChevronRight
-                className={`w-4 h-4 transition-transform ${
-                  masterDataOpen ? 'rotate-90' : ''
+              </div>
+
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  openMasterData ? 'rotate-180' : ''
                 }`}
               />
             </button>
 
-            {masterDataOpen && (
-              <>
-                {/* urutan: Kategori, Item, Resep */}
-                <SidebarSubLink href="masterdata.kategori">
-                  Kategori
-                </SidebarSubLink>
-                <SidebarSubLink href="masterdata.item">
-                  Item
-                </SidebarSubLink>
-                <SidebarSubLink href="masterdata.resep">
-                  Resep
-                </SidebarSubLink>
-              </>
+            {openMasterData && (
+              <div className="ml-10 mt-2 space-y-3 text-sm">
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                  <Link href={route('kategori')} className="block">
+                    Kategori
+                  </Link>
+                </div>
+
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                  <Link href={route('item')} className="block">
+                    Item
+                  </Link>
+                </div>
+
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                  <Link href={route('resep')} className="block">
+                    Resep
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
 
-          {/* STOK HARIAN + CHEVRON + SUB BAR/DAPUR */}
+          {/* STOK HARIAN + SUB: Bar, Dapur */}
           <div>
             <button
               type="button"
-              onClick={() => setStokHarianOpen((prev) => !prev)}
-              className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                isStokHarianActive ? 'bg-black/20' : 'hover:bg-black/10'
-              }`}
+              onClick={() => setOpenStokHarian(!openStokHarian)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
             >
-              <span className="flex items-center">
+              <div className="flex items-center">
                 <ClipboardList className="w-5 h-5 mr-3" />
                 Stok Harian
-              </span>
-              <ChevronRight
-                className={`w-4 h-4 transition-transform ${
-                  stokHarianOpen ? 'rotate-90' : ''
+              </div>
+
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  openStokHarian ? 'rotate-180' : ''
                 }`}
               />
             </button>
 
-            {stokHarianOpen && (
-              <>
-                <SidebarSubLink href="stok-harian.bar">Bar</SidebarSubLink>
-                <SidebarSubLink href="stok-harian.dapur">
-                  Dapur
-                </SidebarSubLink>
-              </>
+            {openStokHarian && (
+              <div className="ml-10 mt-2 space-y-3 text-sm">
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                  <Link href={route('stok-harian.bar')} className="block">
+                    Bar
+                  </Link>
+                </div>
+
+                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
+                  <Link href={route('stok-harian.dapur')} className="block">
+                    Dapur
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
 
@@ -345,7 +243,6 @@ export default function AppLayout({
           <SidebarLink href="#" icon={FileText}>
             Laporan Aktivitas
           </SidebarLink>
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
         </nav>
 
         {/* TOMBOL KELUAR */}
@@ -364,15 +261,8 @@ export default function AppLayout({
 
       {/* AREA KANAN */}
       <div className="flex-1 flex flex-col overflow-hidden">
-<<<<<<< HEAD
         <header className="bg-white shadow-sm p-6">
           <div className="flex justify-between items-center">
-=======
-        {/* HEADER */}
-        <header className="bg-white shadow-sm p-6">
-          <div className="flex justify-between items-center">
-            {/* Judul */}
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
             <div className="flex items-center">
               <img
                 src="/images/stockhub-logo.png"
@@ -386,13 +276,12 @@ export default function AppLayout({
               )}
             </div>
 
-<<<<<<< HEAD
-=======
-            {/* USER + TANGGAL + JAM + NOTIF */}
->>>>>>> b2ff960a95917d8dae342da6956ea8387cd97c1f
             <div className="flex items-center">
               <div className="text-right mr-6">
-                <div className="font-semibold text-gray-800">{auth.user.name}</div>
+                <div className="font-semibold text-gray-800">
+                  {auth.user.name}
+                  {auth.user.role ? ` (${auth.user.role})` : ''}
+                </div>
                 <div className="text-sm text-gray-500">{formattedDate}</div>
                 <div className="text-sm font-mono font-semibold text-[#5D4037]">
                   {formattedTime}
