@@ -19,6 +19,9 @@
     </body>
         @csrf
         @method('DELETE')
-
+        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menonaktifkan akun ini?')">
+          
+        </button>
+    </form>
 
 </html>

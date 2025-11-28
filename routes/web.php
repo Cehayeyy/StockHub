@@ -24,6 +24,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/users', [UserController::class, 'store'])
         ->name('users.store');
+    Route::put('/manajemen/{id}', [UserController::class, 'update'])
+        ->name('manajemen.update');
+
+
+
 
     // MASTER DATA (Parent)
     Route::get('/masterdata', function () {

@@ -84,7 +84,7 @@ export default function Dashboard() {
 
   // Header Custom dengan Jam
   const dashboardHeader = (
-    <h2 className="font-semibold text-xl text-gray-800 leading-tight">
+    <h2 className="font-semibold text-2xl text-gray-800 leading-tight">
       Dashboard
     </h2>
   );
