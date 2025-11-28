@@ -9,7 +9,8 @@ import {
   FileText,
   LogOut,
   Bell,
-  CheckCircle2
+  CheckCircle2,
+  ChevronRight,
 } from 'lucide-react';
 
 // Tipe data props halaman
@@ -24,10 +25,19 @@ interface PageProps {
   flash?: {
     login_success?: string;
   };
+  [key: string]: any; // supaya kompatibel dengan Inertia PageProps
 }
 
-// Komponen sidebar link
-function SidebarLink({ href, icon: Icon, children }: { href: string, icon: React.ElementType, children: React.ReactNode }) {
+// Komponen sidebar link utama
+function SidebarLink({
+  href,
+  icon: Icon,
+  children,
+}: {
+  href: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
   let isActive = false;
   let url = '#';
 
@@ -53,10 +63,55 @@ function SidebarLink({ href, icon: Icon, children }: { href: string, icon: React
   );
 }
 
-export default function AppLayout({ header, children }: PropsWithChildren<{ header?: React.ReactNode }>) {
-  const { auth, flash } = usePage<PageProps>().props;
+// Komponen sidebar submenu (tanpa icon, agak menjorok ke kanan)
+function SidebarSubLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  let isActive = false;
+  let url = '#';
+
+  try {
+    if (route().has(href)) {
+      isActive = route().current(href);
+      url = route(href);
+    }
+  } catch (e) {
+    console.warn(`Route ${href} (submenu) tidak ditemukan.`);
+  }
+
+  const base =
+    'block ml-8 mt-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors';
+  const activeClasses = isActive
+    ? 'bg-black/30 text-white'
+    : 'bg-black/10 text-white/90 hover:bg-black/20';
+
+  return (
+    <Link href={url} className={`${base} ${activeClasses}`}>
+      {children}
+    </Link>
+  );
+}
+
+export default function AppLayout({
+  header,
+  children,
+}: PropsWithChildren<{ header?: React.ReactNode }>) {
+  const page = usePage<PageProps>();
+  const { auth, flash } = page.props;
+  const currentUrl = page.url as string;
+
+  const isDataIndukActive = currentUrl.startsWith('/masterdata');
+  const isStokHarianActive = currentUrl.startsWith('/stok-harian');
 
   const [showModal, setShowModal] = useState(false);
+
+  // collapse/expand
+  const [masterDataOpen, setMasterDataOpen] = useState(isDataIndukActive);
+  const [stokHarianOpen, setStokHarianOpen] = useState(isStokHarianActive);
 
   // Jam realtime
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -75,16 +130,20 @@ export default function AppLayout({ header, children }: PropsWithChildren<{ head
   const formattedDate = currentTime.toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
   });
 
-  const formattedTime = currentTime
-    .toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    .replace(/\./g, ':') + " WIB";
+  const formattedTime =
+    currentTime
+      .toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+      .replace(/\./g, ':') + ' WIB';
 
   return (
     <div className="flex h-screen bg-theme-background">
-
       {/* MODAL LOGIN */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -104,6 +163,7 @@ export default function AppLayout({ header, children }: PropsWithChildren<{ head
 
       {/* SIDEBAR */}
       <aside className="w-64 bg-theme-sidebar text-white/90 p-5 flex flex-col">
+        {/* Profil User + Nama Warung */}
         <div className="flex items-center mb-8">
           <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
             <span className="text-xl font-bold text-theme-sidebar">
@@ -119,15 +179,92 @@ export default function AppLayout({ header, children }: PropsWithChildren<{ head
           </div>
         </div>
 
+        {/* MENU NAVIGASI */}
         <nav className="flex-1 space-y-2">
-          <SidebarLink href="dashboard" icon={LayoutDashboard}>Dasbor</SidebarLink>
-          <SidebarLink href="manajemen" icon={Users}>Manajemen Akun</SidebarLink>
-          <SidebarLink href="masterdata" icon={Box}>Data Induk</SidebarLink>
-          <SidebarLink href="#" icon={ClipboardList}>Stok Harian</SidebarLink>
-          <SidebarLink href="#" icon={ClipboardCheck}>Verifikasi Stok</SidebarLink>
-          <SidebarLink href="#" icon={FileText}>Laporan Aktivitas</SidebarLink>
+          <SidebarLink href="dashboard" icon={LayoutDashboard}>
+            Dasbor
+          </SidebarLink>
+
+          <SidebarLink href="manajemen" icon={Users}>
+            Manajemen Akun
+          </SidebarLink>
+
+          {/* DATA INDUK + CHEVRON + SUB KATEGORI/ITEM/RESEP */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setMasterDataOpen((prev) => !prev)}
+              className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                isDataIndukActive ? 'bg-black/20' : 'hover:bg-black/10'
+              }`}
+            >
+              <span className="flex items-center">
+                <Box className="w-5 h-5 mr-3" />
+                Data Induk
+              </span>
+              <ChevronRight
+                className={`w-4 h-4 transition-transform ${
+                  masterDataOpen ? 'rotate-90' : ''
+                }`}
+              />
+            </button>
+
+            {masterDataOpen && (
+              <>
+                {/* urutan: Kategori, Item, Resep */}
+                <SidebarSubLink href="masterdata.kategori">
+                  Kategori
+                </SidebarSubLink>
+                <SidebarSubLink href="masterdata.item">
+                  Item
+                </SidebarSubLink>
+                <SidebarSubLink href="masterdata.resep">
+                  Resep
+                </SidebarSubLink>
+              </>
+            )}
+          </div>
+
+          {/* STOK HARIAN + CHEVRON + SUB BAR/DAPUR */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setStokHarianOpen((prev) => !prev)}
+              className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                isStokHarianActive ? 'bg-black/20' : 'hover:bg-black/10'
+              }`}
+            >
+              <span className="flex items-center">
+                <ClipboardList className="w-5 h-5 mr-3" />
+                Stok Harian
+              </span>
+              <ChevronRight
+                className={`w-4 h-4 transition-transform ${
+                  stokHarianOpen ? 'rotate-90' : ''
+                }`}
+              />
+            </button>
+
+            {stokHarianOpen && (
+              <>
+                <SidebarSubLink href="stok-harian.bar">Bar</SidebarSubLink>
+                <SidebarSubLink href="stok-harian.dapur">
+                  Dapur
+                </SidebarSubLink>
+              </>
+            )}
+          </div>
+
+          <SidebarLink href="#" icon={ClipboardCheck}>
+            Verifikasi Stok
+          </SidebarLink>
+
+          <SidebarLink href="#" icon={FileText}>
+            Laporan Aktivitas
+          </SidebarLink>
         </nav>
 
+        {/* TOMBOL KELUAR */}
         <div>
           <Link
             href={route('logout')}
@@ -143,18 +280,24 @@ export default function AppLayout({ header, children }: PropsWithChildren<{ head
 
       {/* AREA KANAN */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         {/* HEADER */}
         <header className="bg-white shadow-sm p-6">
           <div className="flex justify-between items-center">
-
             {/* Judul */}
             <div className="flex items-center">
-              <img src="/images/stockhub-logo.png" alt="StockHub Logo" className="h-10" />
-              {header && <div className="ml-6 text-2xl font-semibold text-gray-800">{header}</div>}
+              <img
+                src="/images/stockhub-logo.png"
+                alt="StockHub Logo"
+                className="h-10"
+              />
+              {header && (
+                <div className="ml-6 text-2xl font-semibold text-gray-800">
+                  {header}
+                </div>
+              )}
             </div>
 
-            {/* USER TANGGAL JAM NOTIF */}
+            {/* USER + TANGGAL + JAM + NOTIF */}
             <div className="flex items-center">
               <div className="text-right mr-6">
                 <div className="font-semibold text-gray-800">
@@ -180,9 +323,8 @@ export default function AppLayout({ header, children }: PropsWithChildren<{ head
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8">
-          {children}
-        </main>
+        {/* KONTEN HALAMAN */}
+        <main className="flex-1 overflow-y-auto p-8">{children}</main>
       </div>
     </div>
   );

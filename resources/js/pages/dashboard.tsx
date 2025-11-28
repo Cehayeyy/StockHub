@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { Box, AlertTriangle, Bell, Check, X } from 'lucide-react';
+import type { SharedData } from '@/types';
 
 // Tipe props
 interface PageProps {
@@ -48,7 +49,7 @@ function InfoCard({ title, value, icon: Icon, countBg }: any) {
 }
 
 export default function Dashboard() {
-  const { auth } = usePage<PageProps>().props;
+  const { auth } = usePage<SharedData>().props;
 
   // State untuk Jam Digital
   const [currentTime, setCurrentTime] = useState(new Date());
