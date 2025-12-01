@@ -11,56 +11,38 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
-    public function rules(): array
-    {
-        // --- KITA UBAH BAGIAN INI ---
-        return [
-            'username' => ['required', 'string'], // Ganti 'email'
-            'password' => ['required', 'string'],
-        ];
-        // --- BATAS PERUBAHAN ---
+   public function rules(): array
+{
+    return [
+        'name' => ['required', 'string'],
+        'password' => ['required', 'string'],
+    ];
+}
+
+public function authenticate(): void
+{
+    $this->ensureIsNotRateLimited();
+
+    if (! Auth::attempt(
+        ['name' => $this->input('name'), 'password' => $this->input('password')],
+        $this->boolean('remember')
+    )) {
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'name' => __('auth.failed'),
+        ]);
     }
 
-    /**
-     * Attempt to authenticate the request's credentials.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    public function authenticate(): void
-    {
-        $this->ensureIsNotRateLimited();
+    RateLimiter::clear($this->throttleKey());
+}
 
-        // --- KITA UBAH BAGIAN INI ---
-        if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) { // Ganti 'email'
-            RateLimiter::hit($this->throttleKey());
 
-            throw ValidationException::withMessages([
-                'username' => __('auth.failed'), // Ganti 'email'
-            ]);
-        }
-        // --- BATAS PERUBAHAN ---
-
-        RateLimiter::clear($this->throttleKey());
-    }
-
-    /**
-     * Ensure the login request is not rate limited.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function ensureIsNotRateLimited(): void
     {
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -71,23 +53,17 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
-        // --- KITA UBAH BAGIAN INI ---
         throw ValidationException::withMessages([
-            'username' => __('auth.throttle', [ // Ganti 'email'
+            'name' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
-        // --- BATAS PERUBAHAN ---
     }
 
-    /**
-     * Get the rate limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
-        // --- KITA UBAH BAGIAN INI ---
-        return Str::transliterate(Str::lower($this->string('username')).'|'.$this->ip()); // Ganti 'email'
-        // --- BATAS PERUBAHAN ---
+        // key pakai 'name' juga
+        return Str::transliterate(Str::lower($this->input('name')).'|'.$this->ip());
     }
 }

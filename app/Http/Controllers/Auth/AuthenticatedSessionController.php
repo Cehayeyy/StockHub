@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-// Kita HAPUS 'RouteServiceProvider' karena kita tidak membutuhkannya
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
+
+use App\Models\ActivityLog;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -31,15 +32,22 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
-        // --- INI ADALAH TAMBAHAN BARU ---
-        // Kirim pesan 'login_success' ke sesi (flash)
-        session()->flash('login_success', 'Berhasil! anda berhasil login');
-        // --- BATAS TAMBAHAN ---
+        // Ambil user yang baru saja login
+        $user = Auth::user();
 
-        // Arahkan ke /dashboard secara langsung (ini sudah benar)
+        if ($user) {
+            ActivityLog::create([
+                'user_id'     => $user->id,
+                'activity'    => 'login',
+                'description' => 'User melakukan login ke sistem',
+            ]);
+        }
+
+        // Flash message login sukses
+        session()->flash('login_success', 'Berhasil! anda berhasil login');
+
         return redirect()->intended('/dashboard');
     }
 
@@ -48,13 +56,22 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        // Catat log sebelum logout (karena setelah logout user-nya sudah hilang)
+        $user = Auth::user();
+
+        if ($user) {
+            ActivityLog::create([
+                'user_id'     => $user->id,
+                'activity'    => 'logout',
+                'description' => 'User keluar dari sistem',
+            ]);
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
-        // Arahkan kembali ke halaman login (ini sudah benar)
         return to_route('login');
     }
 }

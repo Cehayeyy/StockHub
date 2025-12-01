@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ActivityLogController; // ⬅️ tambah ini
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -28,12 +29,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/manajemen/{id}', [UserController::class, 'update'])
         ->name('manajemen.update');
 
-    // MASTER DATA (Parent)
+    // MASTER DATA (Parent + sub)
     Route::get('/masterdata', function () {
         return Inertia::render('MasterData/Index');
     })->name('masterdata');
 
-    // Sub menu Master Data
     Route::get('/kategori', function () {
         return Inertia::render('MasterData/Kategori');
     })->name('kategori');
@@ -54,6 +54,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/stok-harian/dapur', function () {
         return Inertia::render('StokHarian/Dapur');
     })->name('stok-harian.dapur');
+
+    // LAPORAN AKTIVITAS (pakai controller)
+    Route::get('/laporan-aktivitas', [ActivityLogController::class, 'index'])
+        ->name('laporan-aktivitas');
 });
 
 // File lain (auth dan settings)

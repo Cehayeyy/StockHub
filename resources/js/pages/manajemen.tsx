@@ -13,15 +13,44 @@ export default function Manajemen() {
 
     const [editId, setEditId] = useState<number | null>(null);
 
-    const [role, setRole] = useState("");
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
+    const [role, setRole] = useState('');
+    const [username, setUsername] = useState('');
+    const [name, setName] = useState('');
+    const [password, setPassword] = useState('');
+
+    // Helper: hitung username berikutnya berdasarkan role & data users
+    const getNextUsername = (roleValue: string) => {
+        if (!roleValue) return '';
+
+        const prefix = roleValue.toLowerCase(); // bar, kitchen, supervisor
+
+        const sameRoleUsers = (users || []).filter(
+            (u: any) => (u.role || '').toLowerCase() === prefix
+        );
+
+        let max = 0;
+
+        sameRoleUsers.forEach((u: any) => {
+            const uname = (u.username || '').toLowerCase();
+            const regex = new RegExp('^' + prefix + '(\\d+)$');
+            const match = uname.match(regex);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (!isNaN(num) && num > max) {
+                    max = num;
+                }
+            }
+        });
+
+        return `${prefix}${max + 1}`;
+    };
 
     // --- OPEN MODAL TAMBAH ---
     const openModal = () => {
-        setRole("");
-        setUsername("");
-        setPassword("");
+        setRole('');
+        setUsername('');
+        setName('');
+        setPassword('');
         setShowModal(true);
     };
 
@@ -29,14 +58,19 @@ export default function Manajemen() {
     const handleSave = (e: any) => {
         e.preventDefault();
 
-        router.post(route('users.store'), {
-            role,
-            username,
-            password,
-        }, {
-            preserveScroll: true,
-            onSuccess: () => setShowModal(false)
-        });
+        router.post(
+            route('users.store'),
+            {
+                role,
+                username,
+                name,
+                password,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => setShowModal(false),
+            }
+        );
     };
 
     // --- OPEN EDIT MODAL ---
@@ -44,7 +78,9 @@ export default function Manajemen() {
         setEditId(u.id);
         setRole(u.role);
         setUsername(u.username);
-        setPassword(u.password); // password lama ditampilkan (dari server)
+        setName(u.name || '');
+        // jangan isi password lama (hash) ke input
+        setPassword('');
         setShowEditModal(true);
     };
 
@@ -53,14 +89,19 @@ export default function Manajemen() {
         e.preventDefault();
         if (!editId) return;
 
-        router.put(route("manajemen.update", editId), {
-            role,
-            username,
-            password,
-        }, {
-            preserveScroll: true,
-            onSuccess: () => setShowEditModal(false)
-        });
+        router.put(
+            route('manajemen.update', editId),
+            {
+                role,
+                username,
+                name,
+                password, // kosong = tidak diubah
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => setShowEditModal(false),
+            }
+        );
     };
 
     // --- DELETE ---
@@ -72,12 +113,12 @@ export default function Manajemen() {
     const handleDelete = () => {
         if (!deleteId) return;
 
-        router.delete(route("manajemen.destroy", deleteId), {
+        router.delete(route('manajemen.destroy', deleteId), {
             preserveScroll: true,
             onSuccess: () => {
                 setConfirmDelete(false);
                 setDeleteId(null);
-            }
+            },
         });
     };
 
@@ -85,8 +126,13 @@ export default function Manajemen() {
         <AppLayout header="Manajemen Akun">
             <Head title="Manajemen Akun" />
 
-            <div className={`${showModal || confirmDelete || showEditModal ? "blur-sm pointer-events-none" : ""}`}>
-
+            <div
+                className={`${
+                    showModal || confirmDelete || showEditModal
+                        ? 'blur-sm pointer-events-none'
+                        : ''
+                }`}
+            >
                 <div className="mb-6 flex items-center justify-between">
                     <h3 className="text-2xl font-semibold">Manajemen Akun</h3>
 
@@ -101,68 +147,108 @@ export default function Manajemen() {
 
                 <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <div className="p-6 text-gray-900">
-                        <h3 className="mb-4 text-lg font-medium">Daftar Pengguna</h3>
+                        <h3 className="mb-4 text-lg font-medium">
+                            Daftar Pengguna
+                        </h3>
 
-                        {/* ---------- TABLE CONTAINER: beri max-height dan overflow-y ---------- */}
+                        {/* TABLE dengan scroll di dalam */}
                         <div className="rounded-lg border border-gray-200">
-                            {/* Jika tabel sangat panjang, scroll di sini.
-                                Sesuaikan max-h sesuai kebutuhan (contoh: 48vh). */}
                             <div className="max-h-[48vh] overflow-y-auto">
                                 <table className="min-w-full table-auto text-left text-sm">
                                     <thead className="border-b">
                                         <tr>
-                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">No</th>
-                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">Username</th>
-                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">Role</th>
-                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">Dibuat</th>
-                                            <th className="px-4 py-2 text-center sticky top-0 bg-gray-100 z-10">Aksi</th>
+                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">
+                                                No
+                                            </th>
+                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">
+                                                Username
+                                            </th>
+                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">
+                                                Role
+                                            </th>
+                                            <th className="px-4 py-2 sticky top-0 bg-gray-100 z-10">
+                                                Dibuat
+                                            </th>
+                                            <th className="px-4 py-2 text-center sticky top-0 bg-gray-100 z-10">
+                                                Aksi
+                                            </th>
                                         </tr>
                                     </thead>
 
                                     <tbody>
                                         {users.length === 0 ? (
                                             <tr>
-                                                <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>
+                                                <td
+                                                    className="px-4 py-6 text-center text-gray-500"
+                                                    colSpan={5}
+                                                >
                                                     Belum ada pengguna.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            users.map((u: any, index: number) => (
-                                                <tr key={u.id} className="border-b hover:bg-gray-50">
-                                                    <td className="px-4 py-2 align-middle">{index + 1}</td>
-                                                    <td className="px-4 py-2 align-middle">{u.username}</td>
-                                                    <td className="px-4 py-2 align-middle uppercase">{u.role}</td>
-                                                    <td className="px-4 py-2 align-middle">
-                                                        {new Date(u.created_at).toLocaleDateString('id-ID')}
-                                                    </td>
+                                            users.map(
+                                                (
+                                                    u: any,
+                                                    index: number
+                                                ) => (
+                                                    <tr
+                                                        key={u.id}
+                                                        className="border-b hover:bg-gray-50"
+                                                    >
+                                                        <td className="px-4 py-2 align-middle">
+                                                            {index + 1}
+                                                        </td>
 
-                                                    <td className="px-4 py-2 text-center flex gap-2 justify-center">
-                                                        {/* --- BUTTON EDIT --- */}
-                                                        <button
-                                                            onClick={() => openEditModal(u)}
-                                                            className="rounded-md bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
-                                                        >
-                                                            Edit
-                                                        </button>
+                                                        {/* TAMPILAN: Nama (usernameIncrement) */}
+                                                        <td className="px-4 py-2 align-middle">
+                                                            {u.name || '-'}
+                                                            {u.username
+                                                                ? ` (${u.username})`
+                                                                : ''}
+                                                        </td>
 
-                                                        {/* --- BUTTON DELETE --- */}
-                                                        <button
-                                                            onClick={() => openDeleteModal(u.id)}
-                                                            className="rounded-md bg-red-600 px-3 py-1 text-xs text-white hover:bg-red-700"
-                                                        >
-                                                            Hapus
-                                                        </button>
+                                                        <td className="px-4 py-2 align-middle uppercase">
+                                                            {u.role}
+                                                        </td>
+                                                        <td className="px-4 py-2 align-middle">
+                                                            {new Date(
+                                                                u.created_at
+                                                            ).toLocaleDateString(
+                                                                'id-ID'
+                                                            )}
+                                                        </td>
 
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        <td className="px-4 py-2 text-center flex gap-2 justify-center">
+                                                            <button
+                                                                onClick={() =>
+                                                                    openEditModal(
+                                                                        u
+                                                                    )
+                                                                }
+                                                                className="rounded-md bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
+                                                            >
+                                                                Edit
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() =>
+                                                                    openDeleteModal(
+                                                                        u.id
+                                                                    )
+                                                                }
+                                                                className="rounded-md bg-red-600 px-3 py-1 text-xs text-white hover:bg-red-700"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            )
                                         )}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                        {/* ---------- END TABLE CONTAINER ---------- */}
-
                     </div>
                 </div>
             </div>
@@ -171,38 +257,81 @@ export default function Manajemen() {
             {showModal && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
                     <div className="bg-white rounded-xl shadow-lg w-[380px] p-6 animate-fadeIn">
-                        <h2 className="text-lg font-semibold mb-4">Tambah Akun Baru</h2>
+                        <h2 className="text-lg font-semibold mb-4">
+                            Tambah Akun Baru
+                        </h2>
 
                         <form onSubmit={handleSave}>
-                            <label className="block text-sm font-medium">Bagian</label>
+                            <label className="block text-sm font-medium">
+                                Bagian
+                            </label>
                             <select
                                 value={role}
-                                onChange={(e) => setRole(e.target.value)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setRole(value);
+                                    setUsername(
+                                        value ? getNextUsername(value) : ''
+                                    );
+                                }}
                                 className="mt-1 w-full rounded-md border p-2"
+                                required
                             >
-                                <option value="">-- Pilih Bagian --</option>
+                                <option value="">
+                                    -- Pilih Bagian --
+                                </option>
                                 <option value="bar">Bar</option>
                                 <option value="kitchen">Kitchen</option>
                                 <option value="supervisor">Supervisor</option>
                             </select>
 
+                            {/* Username otomatis (bar1, kitchen2, dst) */}
                             <div className="mt-4">
-                                <label className="block text-sm font-medium">Username</label>
+                                <label className="block text-sm font-medium">
+                                    Kode Username (otomatis)
+                                </label>
                                 <input
                                     type="text"
                                     value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
+                                    readOnly
+                                    className="mt-1 w-full rounded-md border p-2 bg-gray-100 cursor-not-allowed"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Otomatis: contoh <strong>bar1</strong>,
+                                    <strong> bar2</strong>,{' '}
+                                    <strong>kitchen1</strong>, dst sesuai
+                                    bagian.
+                                </p>
+                            </div>
+
+                            {/* Nama nyata user */}
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium">
+                                    Nama
+                                </label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) =>
+                                        setName(e.target.value)
+                                    }
                                     className="mt-1 w-full rounded-md border p-2"
+                                    required
                                 />
                             </div>
 
                             <div className="mt-4">
-                                <label className="block text-sm font-medium">Password</label>
+                                <label className="block text-sm font-medium">
+                                    Password
+                                </label>
                                 <input
                                     type="password"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) =>
+                                        setPassword(e.target.value)
+                                    }
                                     className="mt-1 w-full rounded-md border p-2"
+                                    required
                                 />
                             </div>
 
@@ -231,40 +360,72 @@ export default function Manajemen() {
             {showEditModal && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
                     <div className="bg-white rounded-xl shadow-lg w-[380px] p-6 animate-fadeIn">
-                        <h2 className="text-lg font-semibold mb-4">Edit Akun</h2>
+                        <h2 className="text-lg font-semibold mb-4">
+                            Edit Akun
+                        </h2>
 
                         <form onSubmit={handleUpdate}>
-                            <label className="block text-sm font-medium">Bagian</label>
+                            <label className="block text-sm font-medium">
+                                Bagian
+                            </label>
                             <select
                                 value={role}
                                 onChange={(e) => setRole(e.target.value)}
                                 className="mt-1 w-full rounded-md border p-2"
+                                required
                             >
                                 <option value="bar">Bar</option>
                                 <option value="kitchen">Kitchen</option>
-                                <option value="supervisor">Supervisor</option>
+                                <option value="supervisor">
+                                    Supervisor
+                                </option>
                             </select>
 
                             <div className="mt-4">
-                                <label className="block text-sm font-medium">Username</label>
+                                <label className="block text-sm font-medium">
+                                    Kode Username
+                                </label>
                                 <input
                                     type="text"
                                     value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
+                                    onChange={(e) =>
+                                        setUsername(e.target.value)
+                                    }
                                     className="mt-1 w-full rounded-md border p-2"
+                                    required
                                 />
                             </div>
 
                             <div className="mt-4">
-                                <label className="block text-sm font-medium">Password</label>
+                                <label className="block text-sm font-medium">
+                                    Nama
+                                </label>
                                 <input
                                     type="text"
+                                    value={name}
+                                    onChange={(e) =>
+                                        setName(e.target.value)
+                                    }
+                                    className="mt-1 w-full rounded-md border p-2"
+                                    required
+                                />
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) =>
+                                        setPassword(e.target.value)
+                                    }
                                     className="mt-1 w-full rounded-md border p-2"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                    *Ubah password yang lama
+                                    Kosongkan jika tidak ingin mengubah
+                                    password.
                                 </p>
                             </div>
 
@@ -293,7 +454,6 @@ export default function Manajemen() {
             {confirmDelete && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
                     <div className="bg-white rounded-2xl px-6 py-5 w-[360px] text-center shadow-lg animate-fadeIn">
-
                         <p className="text-base font-medium mb-6">
                             Anda yakin ingin menghapus user ini?
                         </p>
@@ -313,11 +473,9 @@ export default function Manajemen() {
                                 Hapus
                             </button>
                         </div>
-
                     </div>
                 </div>
             )}
-
         </AppLayout>
     );
 }

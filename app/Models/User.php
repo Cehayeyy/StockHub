@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\ActivityLog; // <--- tambahkan ini
 
 class User extends Authenticatable
 {
@@ -24,7 +25,6 @@ class User extends Authenticatable
         'role',
         'password',
     ];
-     
 
     /**
      * The attributes that should be hidden for serialization.
@@ -47,5 +47,11 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // ================== RELASI KE ACTIVITY LOG ==================
+    public function activityLogs()
+    {
+        return $this->hasMany(ActivityLog::class);
     }
 }

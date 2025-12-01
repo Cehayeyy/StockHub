@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, Head } from '@inertiajs/react';
 import AuthLayout from '@/layouts/auth-layout';
-// Import Splash Screen yang baru dibuat
 import SplashScreen from '@/components/SplashScreen';
 
 const logoPath = '/images/stockhub-logo.png';
 
 export default function LoginPage() {
-  // State untuk mengontrol apakah splash screen tampil atau tidak
+  // State untuk kontrol splash screen
   const [isLoading, setIsLoading] = useState(true);
 
+  // GANTI: dari "username" menjadi "name"
   const { data, setData, post, processing, errors } = useForm({
-    username: '', // Pastikan ini username sesuai backend
+    name: '',        // <- ini yang dikirim ke backend
     password: '',
     remember: false,
   });
@@ -20,8 +20,7 @@ export default function LoginPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2500); // Durasi splash screen (2500ms = 2.5 detik)
-
+    }, 2500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -30,12 +29,12 @@ export default function LoginPage() {
     post(route('login'));
   };
 
-  // Jika masih loading, tampilkan Splash Screen SAJA
+  // Kalau masih loading, tampilkan splash
   if (isLoading) {
     return <SplashScreen />;
   }
 
-  // Jika sudah selesai loading, tampilkan halaman Login biasa
+  // Kalau sudah selesai loading, tampilkan halaman login
   return (
     <AuthLayout>
       <Head title="Login" />
@@ -48,18 +47,27 @@ export default function LoginPage() {
         Login
       </h2>
 
-      <form onSubmit={submit} className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+      <form
+        onSubmit={submit}
+        className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200"
+      >
+        {/* INPUT NAMA (BUKAN USERNAME) */}
         <div className="mb-4">
           <input
             type="text"
-            value={data.username}
-            onChange={(e) => setData('username', e.target.value)}
-            placeholder="Username"
+            value={data.name}
+            onChange={(e) => setData('name', e.target.value)}
+            placeholder="Nama"
             className="w-full px-4 py-3 border border-gray-300 rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#DABA93] transition-all"
           />
-          {errors.username && <div className="text-red-500 text-xs mt-1 ml-2">{errors.username}</div>}
+          {errors.name && (
+            <div className="text-red-500 text-xs mt-1 ml-2">
+              {errors.name}
+            </div>
+          )}
         </div>
 
+        {/* INPUT PASSWORD */}
         <div className="mb-6 relative">
           <input
             type="password"
@@ -68,7 +76,11 @@ export default function LoginPage() {
             placeholder="Password"
             className="w-full px-4 py-3 border border-gray-300 rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#DABA93] transition-all"
           />
-          {errors.password && <div className="text-red-500 text-xs mt-1 ml-2">{errors.password}</div>}
+          {errors.password && (
+            <div className="text-red-500 text-xs mt-1 ml-2">
+              {errors.password}
+            </div>
+          )}
         </div>
 
         <button
@@ -81,9 +93,7 @@ export default function LoginPage() {
       </form>
 
       <div className="mt-8 pt-6 border-t border-gray-200 text-center animate-in fade-in duration-1000 delay-300">
-        <p className="text-gray-500 font-medium">
-          stockHub
-        </p>
+        <p className="text-gray-500 font-medium">stockHub</p>
       </div>
     </AuthLayout>
   );

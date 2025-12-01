@@ -11,6 +11,11 @@ import {
   Bell,
   CheckCircle2,
   ChevronDown,
+  Tag,        // Kategori
+  Package,    // Item
+  BookOpen,   // Resep
+  CupSoda,    // Bar
+  CookingPot, // Dapur
 } from 'lucide-react';
 
 // Tipe data props halaman
@@ -34,7 +39,7 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-// Komponen sidebar link utama
+// Komponen sidebar link utama (menu besar)
 function SidebarLink({
   href,
   icon: Icon,
@@ -67,8 +72,46 @@ function SidebarLink({
       preserveScroll
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeClasses}`}
     >
-      <Icon className="w-5 h-5 mr-3" />
+      <Icon className="w-5 h-5 mr-3 text-white/90" />
       {children}
+    </Link>
+  );
+}
+
+// Link untuk submenu (Kategori, Item, Resep, Bar, Dapur)
+function SubMenuLink({
+  href,
+  icon: Icon,
+  children,
+}: {
+  href: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
+  let isActive = false;
+  let url = '#';
+
+  try {
+    if (route().has(href)) {
+      isActive = route().current(href);
+      url = route(href);
+    }
+  } catch (e) {
+    console.warn(`Route submenu ${href} tidak ditemukan.`);
+  }
+
+  const activeClasses = isActive
+    ? 'bg-black/20 text-white'
+    : 'text-white/90 hover:bg-black/10';
+
+  return (
+    <Link
+      href={url}
+      preserveScroll
+      className={`flex items-center ml-8 px-4 py-2 text-sm rounded-lg transition-colors ${activeClasses}`}
+    >
+      <Icon className="w-4 h-4 mr-3 text-white/90" />
+      <span>{children}</span>
     </Link>
   );
 }
@@ -158,7 +201,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
             Manajemen Akun
           </SidebarLink>
 
-          {/* MASTER DATA + SUB: Kategori, Item, Resep */}
+          {/* DATA INDUK + SUB: Kategori, Item, Resep */}
           <div>
             <button
               type="button"
@@ -166,7 +209,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
               className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
             >
               <div className="flex items-center">
-                <Box className="w-5 h-5 mr-3" />
+                <Box className="w-5 h-5 mr-3 text-white/90" />
                 Data Induk
               </div>
 
@@ -178,24 +221,16 @@ export default function AppLayout({ header, children }: LayoutProps) {
             </button>
 
             {openMasterData && (
-              <div className="ml-10 mt-2 space-y-3 text-sm">
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                  <Link href={route('kategori')} className="block">
-                    Kategori
-                  </Link>
-                </div>
-
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                  <Link href={route('item')} className="block">
-                    Item
-                  </Link>
-                </div>
-
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                  <Link href={route('resep')} className="block">
-                    Resep
-                  </Link>
-                </div>
+              <div className="mt-1 space-y-1">
+                <SubMenuLink href="kategori" icon={Tag}>
+                  Kategori
+                </SubMenuLink>
+                <SubMenuLink href="item" icon={Package}>
+                  Item
+                </SubMenuLink>
+                <SubMenuLink href="resep" icon={BookOpen}>
+                  Resep
+                </SubMenuLink>
               </div>
             )}
           </div>
@@ -208,7 +243,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
               className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
             >
               <div className="flex items-center">
-                <ClipboardList className="w-5 h-5 mr-3" />
+                <ClipboardList className="w-5 h-5 mr-3 text-white/90" />
                 Stok Harian
               </div>
 
@@ -220,18 +255,13 @@ export default function AppLayout({ header, children }: LayoutProps) {
             </button>
 
             {openStokHarian && (
-              <div className="ml-10 mt-2 space-y-3 text-sm">
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                  <Link href={route('stok-harian.bar')} className="block">
-                    Bar
-                  </Link>
-                </div>
-
-                <div className="bg-[#795548] hover:bg-[#6D4C41] text-white px-4 py-3 rounded-lg shadow-md transition">
-                  <Link href={route('stok-harian.dapur')} className="block">
-                    Dapur
-                  </Link>
-                </div>
+              <div className="mt-1 space-y-1">
+                <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
+                  Bar
+                </SubMenuLink>
+                <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
+                  Dapur
+                </SubMenuLink>
               </div>
             )}
           </div>
@@ -240,7 +270,8 @@ export default function AppLayout({ header, children }: LayoutProps) {
             Verifikasi Stok
           </SidebarLink>
 
-          <SidebarLink href="#" icon={FileText}>
+          {/* Laporan Aktivitas mengarah ke route "laporan-aktivitas" */}
+          <SidebarLink href="laporan-aktivitas" icon={FileText}>
             Laporan Aktivitas
           </SidebarLink>
         </nav>
@@ -253,7 +284,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
             as="button"
             className="flex items-center px-4 py-3 w-full text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
           >
-            <LogOut className="w-5 h-5 mr-3" />
+            <LogOut className="w-5 h-5 mr-3 text-white/90" />
             Keluar
           </Link>
         </div>
