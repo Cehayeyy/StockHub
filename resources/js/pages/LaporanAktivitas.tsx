@@ -95,7 +95,7 @@ export default function LaporanAktivitas() {
                 {/* Tombol Unduh (belum ada fungsi export) */}
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#F3CFA2] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#ddb37f]"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#FFFFFF] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#ddb37f]"
                 >
                   <Download className="h-4 w-4" />
                   unduh laporan
@@ -106,7 +106,7 @@ export default function LaporanAktivitas() {
                   <button
                     type="button"
                     onClick={() => setShowCalendar((v) => !v)}
-                    className="inline-flex items-center gap-2 rounded-full bg-[#F3CFA2] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#e8c393]"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#FFFFF] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#e8c393]"
                   >
                     <Calendar className="h-4 w-4" />
                     {displayFilterDate}
@@ -131,7 +131,7 @@ export default function LaporanAktivitas() {
                     placeholder="Search...."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-52 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
+                    className="w-52 rounded-full border border-[#E5C39C] bg-[#FFFFFF] px-4 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
                   />
                   <button
                     type="submit"

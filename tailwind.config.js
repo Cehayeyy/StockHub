@@ -1,3 +1,4 @@
+const defaultTheme = require('tailwindcss/defaultTheme');
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
@@ -7,7 +8,9 @@ export default {
     ],
     theme: {
       extend: {
-        // --- TAMBAHKAN BLOK INI ---
+        fontFamily: {
+            sans: ['Poppins',defaultTheme.fontFamily.sans],
+          },
         colors: {
           'theme-sidebar': '#5D4037',     // Coklat tua untuk sidebar
           'theme-background': '#F5EFE6', // Krem muda untuk background
