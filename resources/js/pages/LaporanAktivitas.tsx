@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Download, Calendar, Search } from 'lucide-react';
 
 interface ActivityLog {
@@ -19,94 +19,90 @@ interface PageProps {
     links: any[];
   };
   filters: {
-    date?: string;
+    date?: string; // YYYY-MM-DD
     search?: string;
   };
-  // supaya kompatibel dengan Inertia PageProps
   [key: string]: any;
 }
 
 export default function LaporanAktivitas() {
   const { logs, filters } = usePage<PageProps>().props;
 
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(filters.date || '');
   const [search, setSearch] = useState(filters.search || '');
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  // Jam realtime (kalau ingin ditampilkan di header, sudah dihandle AppLayout)
-  useEffect(() => {
-    const t = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const formattedHeaderDate = currentTime.toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  const formattedHeaderTime =
-    currentTime
-      .toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-      .replace(/\./g, ':') + ' WIB';
-
-  // Submit filter (tanggal + search)
-  const handleFilterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  // Ubah URL sesuai filter (dipakai untuk date & search)
+  const applyFilter = (dateValue: string, searchValue: string) => {
     const params = new URLSearchParams();
-    if (selectedDate) params.set('date', selectedDate);
-    if (search) params.set('search', search);
+    if (dateValue) params.set('date', dateValue);
+    if (searchValue) params.set('search', searchValue);
 
     window.location.href = `/laporan-aktivitas?${params.toString()}`;
   };
 
-  // Tanggal yang ditampilkan di tombol
+  // Submit search
+  const handleFilterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    applyFilter(selectedDate, search);
+  };
+
+  // Ganti tanggal → langsung filter
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value; // YYYY-MM-DD
+    setSelectedDate(value);
+    applyFilter(value, search);
+  };
+
+  // Tombol unduh .xls (ikut filter tanggal & search)
+  const handleDownload = () => {
+    const params = new URLSearchParams();
+    if (selectedDate) params.set('date', selectedDate);
+    if (search) params.set('search', search);
+
+    window.location.href = `/laporan-aktivitas/export?${params.toString()}`;
+  };
+
   const displayFilterDate = selectedDate
     ? new Date(selectedDate).toLocaleDateString('id-ID', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
       })
-    : formattedHeaderDate;
+    : 'Pilih tanggal';
 
   return (
     <AppLayout header="Laporan Aktivitas">
       <Head title="Laporan Aktivitas" />
 
       <div className="space-y-6">
-        {/* Kartu utama (tetap nuansa krem) */}
         <div className="rounded-3xl bg-[#FFFFFF] p-8 shadow-inner">
           <div className="rounded-3xl bg-[#FFFFFF] p-6 shadow">
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <h2 className="text-xl font-semibold text-[#8B5E3C]">
+                Laporan aktifitas
               </h2>
 
-              {/* Bar filter: unduh, tanggal, search */}
               <form
                 onSubmit={handleFilterSubmit}
                 className="flex flex-col gap-3 md:flex-row md:items-center"
               >
-                {/* Tombol Unduh (belum ada fungsi export) */}
+                {/* Tombol unduh .xls */}
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#FFFFFF] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#ddb37f]"
+                  onClick={handleDownload}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#F3CFA2] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#ddb37f]"
                 >
                   <Download className="h-4 w-4" />
-                  unduh laporan
+                  unduh .xls
                 </button>
 
-                {/* Tombol tanggal + kalender */}
+                {/* Tombol tanggal + picker */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowCalendar((v) => !v)}
-                    className="inline-flex items-center gap-2 rounded-full bg-[#FFFFF] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#e8c393]"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#F3CFA2] px-5 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm hover:bg-[#e8c393]"
                   >
                     <Calendar className="h-4 w-4" />
                     {displayFilterDate}
@@ -117,7 +113,7 @@ export default function LaporanAktivitas() {
                       <input
                         type="date"
                         value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
+                        onChange={handleDateChange}
                         className="rounded-md border border-[#D4A574] px-2 py-1 text-sm bg-white"
                       />
                     </div>
@@ -131,7 +127,7 @@ export default function LaporanAktivitas() {
                     placeholder="Search...."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-52 rounded-full border border-[#E5C39C] bg-[#FFFFFF] px-4 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
+                    className="w-52 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
                   />
                   <button
                     type="submit"
@@ -143,17 +139,17 @@ export default function LaporanAktivitas() {
               </form>
             </div>
 
-            {/* TABEL – warna disamakan dengan Manajemen Akun */}
+            {/* TABEL */}
             <div className="rounded-lg border border-gray-200 bg-white">
               <div className="max-h-[48vh] overflow-y-auto">
                 <table className="min-w-full table-auto text-left text-sm">
                   <thead className="border-b bg-gray-100 text-xs font-semibold uppercase text-gray-700 sticky top-0">
                     <tr>
-                      <th className="px-4 py-3 w-16 sticky top-0">No</th>
-                      <th className="px-4 py-3 w-52 sticky top-0">waktu</th>
-                      <th className="px-4 py-3 w-40 sticky top-0">pengguna</th>
-                      <th className="px-4 py-3 w-40 sticky top-0">aktifitas</th>
-                      <th className="px-4 py-3 sticky top-0">keterangan</th>
+                      <th className="px-4 py-3 w-16">No</th>
+                      <th className="px-4 py-3 w-52">waktu</th>
+                      <th className="px-4 py-3 w-40">pengguna</th>
+                      <th className="px-4 py-3 w-40">aktifitas</th>
+                      <th className="px-4 py-3">keterangan</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -168,10 +164,7 @@ export default function LaporanAktivitas() {
                       </tr>
                     ) : (
                       logs.data.map((log, index) => (
-                        <tr
-                          key={log.id}
-                          className="border-b hover:bg-gray-50"
-                        >
+                        <tr key={log.id} className="border-b hover:bg-gray-50">
                           <td className="px-4 py-3 align-top">
                             {index + 1}
                           </td>
@@ -196,7 +189,9 @@ export default function LaporanAktivitas() {
                             </span>
                           </td>
                           <td className="px-4 py-3 align-top">
-                            {log.username || '-'}
+                            {log.name && log.username
+                              ? `${log.name} (${log.username})`
+                              : log.username || log.name || '-'}
                           </td>
                           <td className="px-4 py-3 align-top">
                             {log.activity}

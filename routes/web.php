@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\ActivityLogController; // ⬅️ tambah ini
+use App\Http\Controllers\ActivityLogController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -55,9 +55,12 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('StokHarian/Dapur');
     })->name('stok-harian.dapur');
 
-    // LAPORAN AKTIVITAS (pakai controller)
+    // LAPORAN AKTIVITAS (index + export)
     Route::get('/laporan-aktivitas', [ActivityLogController::class, 'index'])
         ->name('laporan-aktivitas');
+
+    Route::get('/laporan-aktivitas/export', [ActivityLogController::class, 'export'])
+        ->name('laporan-aktivitas.export');
 });
 
 // File lain (auth dan settings)
