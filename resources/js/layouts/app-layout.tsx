@@ -193,88 +193,102 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
         {/* MENU NAVIGASI */}
         <nav className="flex-1 space-y-2">
-          <SidebarLink href="dashboard" icon={LayoutDashboard}>
-            Dasbor
-          </SidebarLink>
+  {/* Semua role punya akses Dashboard */}
+  <SidebarLink href="dashboard" icon={LayoutDashboard}>
+    Dasbor
+  </SidebarLink>
 
-          <SidebarLink href="manajemen" icon={Users}>
-            Manajemen Akun
-          </SidebarLink>
+  {/* Hanya supervisor yg boleh buka Manajemen Akun */}
+  {auth.user.role === 'supervisor' && (
+    <SidebarLink href="manajemen" icon={Users}>
+      Manajemen Akun
+    </SidebarLink>
+  )}
 
-          {/* DATA INDUK + SUB: Kategori, Item, Resep */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setOpenMasterData(!openMasterData)}
-              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
-            >
-              <div className="flex items-center">
-                <Box className="w-5 h-5 mr-3 text-white/90" />
-                Data Induk
-              </div>
+  {/* Data Induk = hanya supervisor */}
+  {auth.user.role === 'supervisor' && (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpenMasterData(!openMasterData)}
+        className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+      >
+        <div className="flex items-center">
+          <Box className="w-5 h-5 mr-3 text-white/90" />
+          Data Induk
+        </div>
 
-              <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  openMasterData ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+        <ChevronDown
+          className={`w-4 h-4 transition-transform duration-200 ${
+            openMasterData ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
 
-            {openMasterData && (
-              <div className="mt-1 space-y-1">
-                <SubMenuLink href="kategori" icon={Tag}>
-                  Kategori
-                </SubMenuLink>
-                <SubMenuLink href="item" icon={Package}>
-                  Item
-                </SubMenuLink>
-                <SubMenuLink href="resep" icon={BookOpen}>
-                  Resep
-                </SubMenuLink>
-              </div>
-            )}
-          </div>
+      {openMasterData && (
+        <div className="mt-1 space-y-1">
+          <SubMenuLink href="kategori" icon={Tag}>Kategori</SubMenuLink>
+          <SubMenuLink href="item" icon={Package}>Item</SubMenuLink>
+          <SubMenuLink href="resep" icon={BookOpen}>Resep</SubMenuLink>
+        </div>
+      )}
+    </div>
+  )}
 
-          {/* STOK HARIAN + SUB: Bar, Dapur */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setOpenStokHarian(!openStokHarian)}
-              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
-            >
-              <div className="flex items-center">
-                <ClipboardList className="w-5 h-5 mr-3 text-white/90" />
-                Stok Harian
-              </div>
+  {/* Stok Harian — Bar hanya melihat "Bar", Kitchen hanya lihat "Dapur" */}
+  {(auth.user.role === 'bar' || auth.user.role === 'kitchen' || auth.user.role === 'supervisor') && (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpenStokHarian(!openStokHarian)}
+        className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+      >
+        <div className="flex items-center">
+          <ClipboardList className="w-5 h-5 mr-3 text-white/90" />
+          Stok Harian
+        </div>
 
-              <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  openStokHarian ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+        <ChevronDown
+          className={`w-4 h-4 transition-transform duration-200 ${
+            openStokHarian ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
 
-            {openStokHarian && (
-              <div className="mt-1 space-y-1">
-                <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
-                  Bar
-                </SubMenuLink>
-                <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
-                  Dapur
-                </SubMenuLink>
-              </div>
-            )}
-          </div>
+      {openStokHarian && (
+        <div className="mt-1 space-y-1">
+          {/* Bar hanya melihat Bar */}
+          {(auth.user.role === 'bar' || auth.user.role === 'supervisor') && (
+            <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
+              Bar
+            </SubMenuLink>
+          )}
 
-          <SidebarLink href="#" icon={ClipboardCheck}>
-            Verifikasi Stok
-          </SidebarLink>
+          {/* Kitchen hanya melihat Dapur */}
+          {(auth.user.role === 'kitchen' || auth.user.role === 'supervisor') && (
+            <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
+              Dapur
+            </SubMenuLink>
+          )}
+        </div>
+      )}
+    </div>
+  )}
 
-          {/* Laporan Aktivitas mengarah ke route "laporan-aktivitas" */}
-          <SidebarLink href="laporan-aktivitas" icon={FileText}>
-            Laporan Aktifitas
-          </SidebarLink>
-        </nav>
+  {/* Verifikasi Stok hanya supervisor */}
+  {auth.user.role === 'supervisor' && (
+    <SidebarLink href="#" icon={ClipboardCheck}>
+      Verifikasi Stok
+    </SidebarLink>
+  )}
+
+  {/* Laporan Aktivitas hanya supervisor */}
+  {auth.user.role === 'supervisor' && (
+    <SidebarLink href="laporan-aktivitas" icon={FileText}>
+      Laporan Aktivitas
+    </SidebarLink>
+  )}
+</nav>
 
         {/* TOMBOL KELUAR */}
         <div>

@@ -89,6 +89,31 @@ export default function Dashboard() {
       Dasbor
     </h2>
   );
+// Dashboard khusus Bar
+if (auth.user.role === "bar") {
+    return (
+      <AppLayout header="Dashboard Bar">
+        <Head title="Bar - Dashboard" />
+
+        <h1 className="text-2xl font-bold mb-4">Halo, {auth.user.name} (Bar)</h1>
+
+        <p className="text-gray-700">Ini tampilan dashboard khusus untuk staff Bar.</p>
+      </AppLayout>
+    );
+  }
+
+  // Dashboard khusus Kitchen
+  if (auth.user.role === "kitchen") {
+    return (
+      <AppLayout header="Dashboard Dapur">
+        <Head title="Dapur - Dashboard" />
+
+        <h1 className="text-2xl font-bold mb-4">Halo, {auth.user.name} (Dapur)</h1>
+
+        <p className="text-gray-700">Ini tampilan dashboard khusus untuk staff Dapur.</p>
+      </AppLayout>
+    );
+  }
 
 
   return (

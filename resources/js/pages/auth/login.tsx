@@ -8,7 +8,7 @@ const logoPath = '/images/stockhub-logo.png';
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(true);
 
-  // GANTI: pakai field "login" (fleksibel: name / username / email)
+
   const { data, setData, post, processing, errors } = useForm({
     login: '',
     password: '',
@@ -53,7 +53,7 @@ export default function LoginPage() {
             type="text"
             value={data.login}
             onChange={(e) => setData('login', e.target.value)}
-            placeholder="Nama / Username / Email"
+            placeholder="Username"
             className="w-full px-4 py-3 border border-gray-300 rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#DABA93] transition-all"
           />
           {errors.login && (
