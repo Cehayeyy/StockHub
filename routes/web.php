@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\RecipeController; // <-- TAMBAH INI
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -42,9 +43,13 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('MasterData/Item');
     })->name('item');
 
-    Route::get('/resep', function () {
-        return Inertia::render('MasterData/Resep');
-    })->name('resep');
+    // ==== RESEP: PAKAI CONTROLLER ====
+    Route::get('/resep', [RecipeController::class, 'index'])
+        ->name('resep');
+
+    Route::post('/resep', [RecipeController::class, 'store'])
+        ->name('resep.store');
+    // ================================
 
     // STOK HARIAN (submenu: Bar & Dapur)
     Route::get('/stok-harian/bar', function () {

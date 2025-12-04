@@ -272,7 +272,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
           {/* Laporan Aktivitas mengarah ke route "laporan-aktivitas" */}
           <SidebarLink href="laporan-aktivitas" icon={FileText}>
-            Laporan Aktivitas
+            Laporan Aktifitas
           </SidebarLink>
         </nav>
 

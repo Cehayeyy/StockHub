@@ -11,38 +11,73 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    /**
+     * Determine if the user is authorized to make this request.
+     */
     public function authorize(): bool
     {
         return true;
     }
 
-   public function rules(): array
-{
-    return [
-        'name' => ['required', 'string'],
-        'password' => ['required', 'string'],
-    ];
-}
+    /**
+     * Get the validation rules that apply to the request.
+     */
+    public function rules(): array
+    {
+        return [
+            // 1 field login fleksibel: bisa name / username / email
+            'login'    => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ];
+    }
 
-public function authenticate(): void
-{
-    $this->ensureIsNotRateLimited();
+    /**
+     * Attempt to authenticate the request's credentials.
+     *
+     * Login fleksibel: coba email, lalu username, lalu name.
+     */
+    public function authenticate(): void
+    {
+        $this->ensureIsNotRateLimited();
 
-    if (! Auth::attempt(
-        ['name' => $this->input('name'), 'password' => $this->input('password')],
-        $this->boolean('remember')
-    )) {
+        $login    = $this->input('login');
+        $password = $this->input('password');
+        $remember = $this->boolean('remember');
+
+        // Urutan percobaan: email → username → name
+        $attempts = [
+            ['email'    => $login, 'password' => $password],
+            ['username' => $login, 'password' => $password],
+            ['name'     => $login, 'password' => $password],
+        ];
+
+        foreach ($attempts as $credentials) {
+            if (Auth::attempt($credentials, $remember)) {
+                RateLimiter::clear($this->throttleKey());
+                return;
+            }
+        }
+
         RateLimiter::hit($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'name' => __('auth.failed'),
+            'login' => trans('auth.failed'),
         ]);
     }
 
-    RateLimiter::clear($this->throttleKey());
-}
+    /**
+     * Get the rate limiting throttle key for the request.
+     */
+    public function throttleKey(): string
+    {
+        return Str::transliterate(
+            Str::lower($this->input('login')).'|'.$this->ip()
+        );
+    }
 
-
+    /**
+     * Ensure the login request is not rate limited.
+     */
     public function ensureIsNotRateLimited(): void
     {
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -54,16 +89,10 @@ public function authenticate(): void
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'name' => trans('auth.throttle', [
+            'login' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
-    }
-
-    public function throttleKey(): string
-    {
-        // key pakai 'name' juga
-        return Str::transliterate(Str::lower($this->input('name')).'|'.$this->ip());
     }
 }

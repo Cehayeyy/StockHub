@@ -6,17 +6,15 @@ import SplashScreen from '@/components/SplashScreen';
 const logoPath = '/images/stockhub-logo.png';
 
 export default function LoginPage() {
-  // State untuk kontrol splash screen
   const [isLoading, setIsLoading] = useState(true);
 
-  // GANTI: dari "username" menjadi "name"
+  // GANTI: pakai field "login" (fleksibel: name / username / email)
   const { data, setData, post, processing, errors } = useForm({
-    name: '',        // <- ini yang dikirim ke backend
+    login: '',
     password: '',
     remember: false,
   });
 
-  // Efek untuk menghilangkan splash screen setelah 2.5 detik
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -29,12 +27,10 @@ export default function LoginPage() {
     post(route('login'));
   };
 
-  // Kalau masih loading, tampilkan splash
   if (isLoading) {
     return <SplashScreen />;
   }
 
-  // Kalau sudah selesai loading, tampilkan halaman login
   return (
     <AuthLayout>
       <Head title="Login" />
@@ -51,18 +47,18 @@ export default function LoginPage() {
         onSubmit={submit}
         className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200"
       >
-        {/* INPUT NAMA (BUKAN USERNAME) */}
+        {/* INPUT LOGIN FLEKSIBEL */}
         <div className="mb-4">
           <input
             type="text"
-            value={data.name}
-            onChange={(e) => setData('name', e.target.value)}
-            placeholder="Nama"
+            value={data.login}
+            onChange={(e) => setData('login', e.target.value)}
+            placeholder="Nama / Username / Email"
             className="w-full px-4 py-3 border border-gray-300 rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#DABA93] transition-all"
           />
-          {errors.name && (
+          {errors.login && (
             <div className="text-red-500 text-xs mt-1 ml-2">
-              {errors.name}
+              {errors.login}
             </div>
           )}
         </div>

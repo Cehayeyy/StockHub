@@ -72,7 +72,7 @@ export default function LaporanAktivitas() {
     : 'Pilih tanggal';
 
   return (
-    <AppLayout header="Laporan Aktivitas">
+    <AppLayout header="Laporan Aktifitas">
       <Head title="Laporan Aktivitas" />
 
       <div className="space-y-6">
@@ -80,7 +80,6 @@ export default function LaporanAktivitas() {
           <div className="rounded-3xl bg-[#FFFFFF] p-6 shadow">
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <h2 className="text-xl font-semibold text-[#8B5E3C]">
-                Laporan aktifitas
               </h2>
 
               <form
@@ -159,7 +158,7 @@ export default function LaporanAktivitas() {
                           colSpan={5}
                           className="px-4 py-6 text-center text-gray-500"
                         >
-                          Belum ada aktivitas.
+                          Belum ada aktifitas.
                         </td>
                       </tr>
                     ) : (
