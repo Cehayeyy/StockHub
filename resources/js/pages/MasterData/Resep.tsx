@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Search } from 'lucide-react';
+import { Search, Trash } from 'lucide-react';
 
 interface Recipe {
   id: number;
@@ -106,13 +106,12 @@ const Resep: React.FC = () => {
 
       {/* blur kalau modal terbuka */}
       <div className={showModal ? 'pointer-events-none blur-sm' : ''}>
-        <div className="space-y-6">
-          <div className="rounded-3xl bg-[#F5E2C8] p-8 shadow-inner">
-            <div className="rounded-3xl bg-[#FDF3E4] p-6 shadow">
+       <div className="space-y-6">
+         <div className="rounded-3xl p-8">
+             <div className="rounded-3xl bg-white p-6 shadow">
               {/* header + tombol + search */}
               <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-2xl font-semibold text-[#8B5E3C]">
-                  Resep
                 </h2>
 
                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -300,13 +299,14 @@ const Resep: React.FC = () => {
                         />
                       </div>
 
-                      <button
+                    <button
                         type="button"
                         onClick={() => handleRemoveIngredient(ing.id)}
-                        className="ml-2 text-red-500 hover:text-red-600"
-                      >
-                        ✕
-                      </button>
+                        className="ml-2 text-black hover:text-gray-700"
+                    >
+                    <Trash className="w-4 h-4" />
+                    </button>
+
                     </div>
                   ))}
                 </div>

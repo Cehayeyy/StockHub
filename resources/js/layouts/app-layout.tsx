@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import {
   LayoutDashboard,
   Users,
@@ -8,14 +8,13 @@ import {
   ClipboardCheck,
   FileText,
   LogOut,
-  Bell,
   CheckCircle2,
   ChevronDown,
-  Tag,        // Kategori
-  Package,    // Item
-  BookOpen,   // Resep
-  CupSoda,    // Bar
-  CookingPot, // Dapur
+  Tag,
+  Package,
+  BookOpen,
+  CupSoda,
+  CookingPot,
 } from 'lucide-react';
 
 // Tipe data props halaman
@@ -118,6 +117,34 @@ function SubMenuLink({
 
 export default function AppLayout({ header, children }: LayoutProps) {
   const { auth, flash } = usePage<PageProps>().props;
+// AUTO LOGOUT IDLE 10 MENIT + LOGOUT SAAT BROWSER DITUTUP ATAU DEVICE MATI
+useEffect(() => {
+ let timer: ReturnType<typeof setTimeout>;
+  const resetTimer = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      router.post(route("logout"));
+    }, 10 * 60 * 1000); // 10 menit
+  };
+
+  window.addEventListener("mousemove", resetTimer);
+  window.addEventListener("keydown", resetTimer);
+  window.addEventListener("click", resetTimer);
+
+  window.addEventListener("beforeunload", () => {
+    navigator.sendBeacon(route("logout"));
+  });
+
+  resetTimer();
+
+  return () => {
+    clearTimeout(timer);
+    window.removeEventListener("mousemove", resetTimer);
+    window.removeEventListener("keydown", resetTimer);
+    window.removeEventListener("click", resetTimer);
+  };
+}, []);
+
 
   const [showModal, setShowModal] = useState(false);
 
@@ -193,102 +220,88 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
         {/* MENU NAVIGASI */}
         <nav className="flex-1 space-y-2">
-  {/* Semua role punya akses Dashboard */}
-  <SidebarLink href="dashboard" icon={LayoutDashboard}>
-    Dasbor
-  </SidebarLink>
+          <SidebarLink href="dashboard" icon={LayoutDashboard}>
+            Dasbor
+          </SidebarLink>
 
-  {/* Hanya supervisor yg boleh buka Manajemen Akun */}
-  {auth.user.role === 'supervisor' && (
-    <SidebarLink href="manajemen" icon={Users}>
-      Manajemen Akun
-    </SidebarLink>
-  )}
+          <SidebarLink href="manajemen" icon={Users}>
+            Manajemen Akun
+          </SidebarLink>
 
-  {/* Data Induk = hanya supervisor */}
-  {auth.user.role === 'supervisor' && (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpenMasterData(!openMasterData)}
-        className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
-      >
-        <div className="flex items-center">
-          <Box className="w-5 h-5 mr-3 text-white/90" />
-          Data Induk
-        </div>
+          {/* DATA INDUK + SUB: Kategori, Item, Resep */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setOpenMasterData(!openMasterData)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+            >
+              <div className="flex items-center">
+                <Box className="w-5 h-5 mr-3 text-white/90" />
+                Data Induk
+              </div>
 
-        <ChevronDown
-          className={`w-4 h-4 transition-transform duration-200 ${
-            openMasterData ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  openMasterData ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-      {openMasterData && (
-        <div className="mt-1 space-y-1">
-          <SubMenuLink href="kategori" icon={Tag}>Kategori</SubMenuLink>
-          <SubMenuLink href="item" icon={Package}>Item</SubMenuLink>
-          <SubMenuLink href="resep" icon={BookOpen}>Resep</SubMenuLink>
-        </div>
-      )}
-    </div>
-  )}
+            {openMasterData && (
+              <div className="mt-1 space-y-1">
+                <SubMenuLink href="kategori" icon={Tag}>
+                  Kategori
+                </SubMenuLink>
+                <SubMenuLink href="item.index" icon={Package}>
+                  Item
+                </SubMenuLink>
+                <SubMenuLink href="resep" icon={BookOpen}>
+                  Resep
+                </SubMenuLink>
+              </div>
+            )}
+          </div>
 
-  {/* Stok Harian — Bar hanya melihat "Bar", Kitchen hanya lihat "Dapur" */}
-  {(auth.user.role === 'bar' || auth.user.role === 'kitchen' || auth.user.role === 'supervisor') && (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpenStokHarian(!openStokHarian)}
-        className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
-      >
-        <div className="flex items-center">
-          <ClipboardList className="w-5 h-5 mr-3 text-white/90" />
-          Stok Harian
-        </div>
+          {/* STOK HARIAN + SUB: Bar, Dapur */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setOpenStokHarian(!openStokHarian)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+            >
+              <div className="flex items-center">
+                <ClipboardList className="w-5 h-5 mr-3 text-white/90" />
+                Stok Harian
+              </div>
 
-        <ChevronDown
-          className={`w-4 h-4 transition-transform duration-200 ${
-            openStokHarian ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  openStokHarian ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-      {openStokHarian && (
-        <div className="mt-1 space-y-1">
-          {/* Bar hanya melihat Bar */}
-          {(auth.user.role === 'bar' || auth.user.role === 'supervisor') && (
-            <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
-              Bar
-            </SubMenuLink>
-          )}
+            {openStokHarian && (
+              <div className="mt-1 space-y-1">
+                <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
+                  Bar
+                </SubMenuLink>
+                <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
+                  Dapur
+                </SubMenuLink>
+              </div>
+            )}
+          </div>
 
-          {/* Kitchen hanya melihat Dapur */}
-          {(auth.user.role === 'kitchen' || auth.user.role === 'supervisor') && (
-            <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
-              Dapur
-            </SubMenuLink>
-          )}
-        </div>
-      )}
-    </div>
-  )}
+          <SidebarLink href="#" icon={ClipboardCheck}>
+            Verifikasi Stok
+          </SidebarLink>
 
-  {/* Verifikasi Stok hanya supervisor */}
-  {auth.user.role === 'supervisor' && (
-    <SidebarLink href="#" icon={ClipboardCheck}>
-      Verifikasi Stok
-    </SidebarLink>
-  )}
-
-  {/* Laporan Aktivitas hanya supervisor */}
-  {auth.user.role === 'supervisor' && (
-    <SidebarLink href="laporan-aktivitas" icon={FileText}>
-      Laporan Aktivitas
-    </SidebarLink>
-  )}
-</nav>
+          {/* Laporan Aktivitas mengarah ke route "laporan-aktivitas" */}
+          <SidebarLink href="laporan-aktivitas" icon={FileText}>
+            Laporan Aktifitas
+          </SidebarLink>
+        </nav>
 
         {/* TOMBOL KELUAR */}
         <div>
@@ -322,7 +335,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
             </div>
 
             <div className="flex items-center">
-              <div className="text-right mr-6">
+              <div className="text-right mr-1">
                 <div className="font-semibold text-gray-800">
                   {auth.user.name}
                   {auth.user.role ? ` (${auth.user.role})` : ''}
@@ -332,19 +345,12 @@ export default function AppLayout({ header, children }: LayoutProps) {
                   {formattedTime}
                 </div>
               </div>
-
-              <div className="relative p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-                <Bell className="w-6 h-6 text-gray-600" />
-                <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  3
-                </span>
-              </div>
             </div>
           </div>
         </header>
 
         {/* KONTEN HALAMAN */}
-        <main className="flex-1 overflow-y-auto p-8">{children}</main>
+        <main className="flex-1 p-8 overflow-y-visible">{children}</main>
       </div>
     </div>
   );

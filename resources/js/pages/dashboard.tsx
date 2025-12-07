@@ -89,31 +89,6 @@ export default function Dashboard() {
       Dasbor
     </h2>
   );
-// Dashboard khusus Bar
-if (auth.user.role === "bar") {
-    return (
-      <AppLayout header="Dashboard Bar">
-        <Head title="Bar - Dashboard" />
-
-        <h1 className="text-2xl font-bold mb-4">Halo, {auth.user.name} (Bar)</h1>
-
-        <p className="text-gray-700">Ini tampilan dashboard khusus untuk staff Bar.</p>
-      </AppLayout>
-    );
-  }
-
-  // Dashboard khusus Kitchen
-  if (auth.user.role === "kitchen") {
-    return (
-      <AppLayout header="Dashboard Dapur">
-        <Head title="Dapur - Dashboard" />
-
-        <h1 className="text-2xl font-bold mb-4">Halo, {auth.user.name} (Dapur)</h1>
-
-        <p className="text-gray-700">Ini tampilan dashboard khusus untuk staff Dapur.</p>
-      </AppLayout>
-    );
-  }
 
 
   return (
@@ -148,7 +123,7 @@ if (auth.user.role === "bar") {
             Permintaan akses revisi:
           </h3>
 
-          <div className="space-y-4">
+        <div className="space-y-4 ">
             {requests.map((req) => (
               <div key={req.id} className="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 gap-4">
                 {/* Text Kiri */}
