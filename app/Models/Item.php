@@ -12,6 +12,7 @@ class Item extends Model
     protected $fillable = [
         'nama',
         'satuan',
-        'kategori_item',
+        'kategori_item', // Finish / Raw
+        'division',      // bar / kitchen
     ];
 }

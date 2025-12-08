@@ -1,75 +1,93 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
+
+type Division = "bar" | "kitchen";
 
 type Item = {
   id: number;
+  division: Division;
   nama: string;
   satuan?: string | null;
-  kategori_item?: string | null;
+  kategori_item?: string | null; // Finish / Raw
 };
-
-type PaginationData<T> = { data: T[] };
 
 type PageProps = {
-  items?: Item[] | PaginationData<Item>;
-  filters?: {
-    type?: string;
-    search?: string;
-  };
-};
+  items: Item[];
+  division: Division;
+} & Record<string, any>;
 
 export default function ItemPage() {
-  const { items, filters } = usePage<PageProps>().props;
+  const { items, division: initialDivision } = usePage<PageProps>().props;
 
-  const type = filters?.type ?? "all";
+  const [division, setDivision] = useState<Division>(initialDivision ?? "bar");
+  const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
 
-  const itemsArray: Item[] = Array.isArray(items)
-    ? items
-    : items?.data ?? [];
-
-  const [search, setSearch] = useState<string>(filters?.search ?? "");
+  const [search, setSearch] = useState<string>("");
 
   const [openModal, setOpenModal] = useState<boolean>(false);
-
   const [editId, setEditId] = useState<number | null>(null);
+
   const [nama, setNama] = useState<string>("");
+  const [kategoriItem, setKategoriItem] = useState<"Finish" | "Raw" | "">("");
+  const [showKategoriDropdown, setShowKategoriDropdown] = useState(false);
 
-  // ⭐ FIX UTAMA: kategori = bar / dapur
-  const [kategoriItem, setKategoriItem] = useState<string>("");
-
-  const [satuan, setSatuan] = useState<string>("porsi");
-
-  const [showKategori, setShowKategori] = useState<boolean>(false);
-
+  // =========================
   // FILTER SEARCH
-  const filteredItems = itemsArray.filter((item: Item) =>
-    (item.nama ?? "").toLowerCase().includes(search.toLowerCase())
+  // =========================
+  const filteredItems = useMemo(
+    () =>
+      items.filter((item) =>
+        (item.nama ?? "").toLowerCase().includes(search.toLowerCase())
+      ),
+    [items, search]
   );
 
-  const changeType = (value: string) => {
+  // =========================
+  // GANTI DIVISI (Bar / Kitchen)
+  // =========================
+  const changeDivision = (value: Division) => {
+    setDivision(value);
+    setShowDivisionDropdown(false);
+
     router.get(
       route("item.index"),
-      { type: value },
-      { preserveState: true, preserveScroll: true, replace: true }
+      { division: value },
+      { preserveScroll: true, preserveState: true, replace: true }
     );
   };
 
+  // =========================
+  // EDIT
+  // =========================
   const handleEdit = (item: Item) => {
     setEditId(item.id);
     setNama(item.nama);
-    setKategoriItem(item.kategori_item ?? "");
-    setSatuan(item.satuan ?? "porsi");
+    setDivision(item.division);
+    setKategoriItem((item.kategori_item as "Finish" | "Raw") ?? "");
     setOpenModal(true);
   };
 
+  const closeModal = () => {
+    setOpenModal(false);
+    setEditId(null);
+    setNama("");
+    setKategoriItem("");
+  };
+
+  // =========================
+  // SUBMIT (TAMBAH / EDIT)
+  // =========================
   const submitItem = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!kategoriItem) return;
+
     const payload = {
+      division, // bar / kitchen
       nama,
-      kategori_item: kategoriItem,
+      kategori_item: kategoriItem, // Finish / Raw
       satuan: "porsi",
     };
 
@@ -84,50 +102,69 @@ export default function ItemPage() {
     }
   };
 
-  const closeModal = () => {
-    setOpenModal(false);
-    setEditId(null);
-    setNama("");
-    setKategoriItem("");
-    setSatuan("porsi");
-  };
-
   return (
-    <AppLayout
-      header={
-        <h2 className="font-semibold text-xl">
-          {type === "all"
-            ? "Item"
-            : type === "bar"
-            ? "Item Bar"
-            : type === "dapur"
-            ? "Item Dapur"
-            : "Item"}
-        </h2>
-      }
-    >
+    <AppLayout header="Item">
       <Head title="Item" />
 
       <div className="py-6">
-        <div className="bg-white p-6 rounded-2xl shadow-md">
-
+        <div className="bg-white p-6 rounded-3xl shadow-inner">
           {/* FILTER AREA */}
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <select
-              value={type}
-              onChange={(e) => changeType(e.target.value)}
-              className="w-48 rounded-full border bg-[#FDF3E4] px-4 py-2 text-sm"
-            >
-              <option value="all">Item</option>
-              <option value="bar">Bar</option>
-              <option value="dapur">Dapur</option>
-            </select>
+            {/* Dropdown Divisi (Bar / Kitchen) */}
+            <div className="relative inline-block w-40">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDivisionDropdown((prev) => !prev);
+                  setShowKategoriDropdown(false);
+                }}
+                className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm"
+              >
+                <span className="capitalize">
+                  {division === "bar" ? "Bar" : "Kitchen"}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    showDivisionDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
+              {showDivisionDropdown && (
+                <div className="absolute left-0 mt-1 w-full rounded-2xl bg-[#E7BE8B] py-1 text-sm shadow-lg z-20">
+                  <button
+                    type="button"
+                    onClick={() => changeDivision("bar")}
+                    className={`block w-full px-4 py-2 text-left ${
+                      division === "bar" ? "bg-[#F6E1C6] font-semibold" : ""
+                    }`}
+                  >
+                    Bar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => changeDivision("kitchen")}
+                    className={`block w-full px-4 py-2 text-left ${
+                      division === "kitchen" ? "bg-[#F6E1C6] font-semibold" : ""
+                    }`}
+                  >
+                    Kitchen
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Tambah + Search */}
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <button
                 type="button"
-                onClick={() => setOpenModal(true)}
-                className="rounded-full bg-[#D9A978] px-5 py-2 text-sm text-white font-semibold"
+                onClick={() => {
+                  setEditId(null);
+                  setNama("");
+                  setKategoriItem("");
+                  setOpenModal(true);
+                }}
+                className="rounded-full bg-[#D9A978] px-6 py-2 text-sm text-white font-semibold shadow-sm hover:bg-[#c48a5c]"
               >
                 Tambah Item
               </button>
@@ -138,64 +175,75 @@ export default function ItemPage() {
                   placeholder="Search...."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-64 rounded-full border bg-[#FDF3E4] px-4 py-2 pr-10 text-sm"
+                  className="w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
                 />
-                <button className="absolute right-2 top-1/2 -translate-y-1/2 text-[#C38E5F]">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#C38E5F]">
                   <Search className="h-4 w-4" />
-                </button>
+                </span>
               </div>
             </div>
           </div>
 
           {/* TABLE */}
-          <div className="overflow-x-auto rounded-xl border">
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="w-full text-sm border-collapse">
               <thead className="bg-[#F3F3F3] text-gray-700 font-semibold">
                 <tr>
-                  <th className="p-3 border text-center">No</th>
+                  <th className="p-3 border text-center w-16">No</th>
                   <th className="p-3 border">Nama Item</th>
-                  <th className="p-3 border">Kategori</th>
-                  <th className="p-3 border">Satuan</th>
-                  <th className="p-3 border text-center">Aksi</th>
+                  <th className="p-3 border w-40">Kategori</th>
+                  <th className="p-3 border w-32">Satuan</th>
+                  <th className="p-3 border text-center w-40">Aksi</th>
                 </tr>
               </thead>
-
               <tbody>
                 {filteredItems.length > 0 ? (
-                  filteredItems.map((item: Item, index: number) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="p-3 border text-center">{index + 1}</td>
+                  filteredItems.map((item, index) => (
+                    <tr key={item.id} className="hover:bg-[#FFF7EC]">
+                      <td className="p-3 border text-center">
+                        {index + 1}
+                      </td>
                       <td className="p-3 border">{item.nama}</td>
-                      <td className="p-3 border">{item.kategori_item}</td>
-                      <td className="p-3 border">{item.satuan}</td>
+                      <td className="p-3 border">
+                        {item.kategori_item ?? "-"}
+                      </td>
+                      <td className="p-3 border">
+                        {item.satuan ?? "porsi"}
+                      </td>
                       <td className="p-3 border text-center">
                         <div className="flex items-center justify-center gap-2">
-
                           <button
                             onClick={() => handleEdit(item)}
-                            className="bg-blue-500 text-white px-4 py-1 rounded-md text-xs"
+                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#0f6fd1]"
                           >
                             Edit
                           </button>
-
                           <button
                             onClick={() => {
-                              if (confirm("Yakin ingin menghapus item ini?")) {
-                                router.delete(route("item.destroy", item.id));
+                              if (
+                                confirm(
+                                  "Yakin ingin menghapus item ini?"
+                                )
+                              ) {
+                                router.delete(
+                                  route("item.destroy", item.id)
+                                );
                               }
                             }}
-                            className="bg-red-500 text-white px-4 py-1 rounded-md text-xs"
+                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535]"
                           >
                             Hapus
                           </button>
-
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-gray-500">
+                    <td
+                      colSpan={5}
+                      className="p-6 text-center text-gray-500"
+                    >
                       Tidak ada data.
                     </td>
                   </tr>
@@ -206,62 +254,81 @@ export default function ItemPage() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL TAMBAH / EDIT ITEM */}
       {openModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[450px] rounded-3xl shadow-xl p-6">
+          <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
             <h2 className="text-2xl font-bold text-center mb-6">
               {editId ? "Edit Item" : "Tambah Item"}
             </h2>
 
             <form onSubmit={submitItem} className="space-y-5">
-
+              {/* Nama Item */}
               <div>
-                <label className="block mb-1">Nama Item</label>
+                <label className="block mb-1 text-sm font-medium">
+                  Nama Item
+                </label>
                 <input
                   type="text"
                   value={nama}
                   onChange={(e) => setNama(e.target.value)}
-                  className="w-full bg-[#EDEDED] rounded-xl p-3 border"
+                  className="w-full bg-[#EDEDED] rounded-xl p-3 border focus:outline-none focus:ring-2 focus:ring-[#DABA93]"
                   required
                 />
               </div>
 
-              {/* FIX KATEGORI: BAR / DAPUR */}
-              <div className="relative">
-                <label className="block mb-1">Kategori Item</label>
+              {/* Divisi (info saja, ikut dropdown utama) */}
+              <div>
+                <label className="block mb-1 text-sm font-medium">
+                  Divisi
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={division === "bar" ? "Bar" : "Kitchen"}
+                  className="w-full bg-[#EDEDED] rounded-xl p-3 border text-gray-600"
+                />
+              </div>
 
+              {/* Kategori Item: Finish / Raw */}
+              <div className="relative">
+                <label className="block mb-1 text-sm font-medium">
+                  Kategori Item
+                </label>
                 <button
                   type="button"
-                  onClick={() => setShowKategori(!showKategori)}
-                  className="w-full bg-[#EDEDED] border rounded-xl p-3 flex justify-between"
+                  onClick={() =>
+                    setShowKategoriDropdown((prev) => !prev)
+                  }
+                  className="w-full bg-[#EDEDED] border rounded-xl p-3 flex justify-between items-center"
                 >
                   {kategoriItem === ""
                     ? "Pilih"
-                    : kategoriItem === "bar"
-                    ? "Bar"
-                    : "Dapur"}
-                  <span className={`${showKategori ? "rotate-180" : ""}`}>▼</span>
+                    : kategoriItem}
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      showKategoriDropdown ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
 
-                {showKategori && (
+                {showKategoriDropdown && (
                   <div className="absolute w-full bg-white rounded-xl shadow border mt-1 z-50">
                     <button
                       type="button"
                       onClick={() => {
-                        setKategoriItem("bar");
-                        setShowKategori(false);
+                        setKategoriItem("Finish");
+                        setShowKategoriDropdown(false);
                       }}
                       className="w-full text-left px-4 py-3 hover:bg-gray-100"
                     >
                       Finish
                     </button>
-
                     <button
                       type="button"
                       onClick={() => {
-                        setKategoriItem("dapur");
-                        setShowKategori(false);
+                        setKategoriItem("Raw");
+                        setShowKategoriDropdown(false);
                       }}
                       className="w-full text-left px-4 py-3 hover:bg-gray-100"
                     >
@@ -271,8 +338,11 @@ export default function ItemPage() {
                 )}
               </div>
 
+              {/* Satuan (fixed porsi) */}
               <div>
-                <label className="block mb-1">Satuan</label>
+                <label className="block mb-1 text-sm font-medium">
+                  Satuan
+                </label>
                 <input
                   type="text"
                   value="porsi"
@@ -289,7 +359,6 @@ export default function ItemPage() {
                 >
                   Batal
                 </button>
-
                 <button
                   type="submit"
                   className="px-6 py-2 bg-green-500 text-white rounded-xl font-semibold"
@@ -297,7 +366,6 @@ export default function ItemPage() {
                   {editId ? "Update" : "Simpan"}
                 </button>
               </div>
-
             </form>
           </div>
         </div>

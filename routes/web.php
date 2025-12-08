@@ -5,7 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\RecipeController;
-use App\Http\Controllers\ItemController; //
+use App\Http\Controllers\ItemController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -46,23 +46,23 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('MasterData/Index');
     })->name('masterdata');
 
-    // Kategori (masih static page)
-    Route::get('/kategori', function () {
-        return Inertia::render('MasterData/Kategori');
-    })->name('kategori');
+    // Kategori – ambil dari ItemController (bukan dummy)
+    Route::get('/kategori', [ItemController::class, 'kategoriIndex'])
+        ->name('kategori');
 
-// ADD THIS
-Route::get('/item/create', function () {
-    return redirect()->route('item.index');
-})->name('item.create');
+    // Item
+    Route::get('/item', [ItemController::class, 'index'])->name('item.index');
+    Route::get('/item/create', function () {
+        return redirect()->route('item.index');
+    })->name('item.create');
+    Route::get('/item', [ItemController::class, 'index'])->name('item.index');
+    Route::post('/item', [ItemController::class, 'store'])->name('item.store');
+    Route::put('/item/{item}', [ItemController::class, 'update'])->name('item.update');
+    Route::delete('/item/{item}', [ItemController::class, 'destroy'])->name('item.destroy');
 
-// Baru route lainnya
-Route::get('/item', [ItemController::class, 'index'])->name('item.index');
-Route::get('/item/{item}/edit', [ItemController::class, 'edit'])->name('item.edit');
-Route::put('/item/{item}', [ItemController::class, 'update'])->name('item.update');
-Route::delete('/item/{item}', [ItemController::class, 'destroy'])->name('item.destroy');
-Route::post('/item', [ItemController::class, 'store'])->name('item.store');
-
+    // Hapus seluruh item berdasarkan kategori (Finish / Raw)
+    Route::delete('/kategori/{namaKategori}', [ItemController::class, 'destroyCategory'])
+        ->name('kategori.destroy');
 
     /**
      * ===========================
