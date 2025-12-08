@@ -5,21 +5,66 @@ import { Search, ChevronDown } from "lucide-react";
 
 type Division = "bar" | "kitchen";
 
+type ItemCategory = {
+  id: number;
+  name: string;           // nama di DB (bisa "Finish", "Raw", atau nama lain)
+};
+
 type Item = {
   id: number;
   division: Division;
   nama: string;
   satuan?: string | null;
-  kategori_item?: string | null; // Finish / Raw
+  item_category_id?: number | null;
+  item_category?: {
+    id: number;
+    name: string;
+  } | null;
 };
 
 type PageProps = {
   items: Item[];
   division: Division;
+  categories: ItemCategory[];        // master kategori untuk dropdown
 } & Record<string, any>;
 
+// Terjemahan label kategori untuk tampilan
+const translateCategoryName = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower === "finish") return "Menu";
+  if (lower === "raw") return "Mentah";
+  return name;
+};
+
+// Susun kategori: Menu(Finish), Mentah(Raw), baru kategori lain
+const sortCategories = (categories: ItemCategory[]) => {
+  const BASE_ORDER = ["finish", "raw"]; // urutan dasar di DB
+  const baseSlots: (ItemCategory | undefined)[] = [];
+  const others: ItemCategory[] = [];
+
+  categories.forEach((cat) => {
+    const idx = BASE_ORDER.indexOf(cat.name.toLowerCase());
+    if (idx !== -1) {
+      baseSlots[idx] = cat;
+    } else {
+      others.push(cat);
+    }
+  });
+
+  // kategori lain diurutkan alfabetis pakai nama tampilan (supaya "Menu Tambahan" dll rapi)
+  others.sort((a, b) =>
+    translateCategoryName(a.name).localeCompare(
+      translateCategoryName(b.name),
+      "id"
+    )
+  );
+
+  return [...baseSlots.filter(Boolean), ...others] as ItemCategory[];
+};
+
 export default function ItemPage() {
-  const { items, division: initialDivision } = usePage<PageProps>().props;
+  const { items, division: initialDivision, categories } =
+    usePage<PageProps>().props;
 
   const [division, setDivision] = useState<Division>(initialDivision ?? "bar");
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
@@ -30,8 +75,14 @@ export default function ItemPage() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const [nama, setNama] = useState<string>("");
-  const [kategoriItem, setKategoriItem] = useState<"Finish" | "Raw" | "">("");
+  const [kategoriId, setKategoriId] = useState<number | null>(null);
   const [showKategoriDropdown, setShowKategoriDropdown] = useState(false);
+
+  // Kategori yang sudah disortir: Menu, Mentah, lalu lainnya
+  const sortedCategories = useMemo(
+    () => sortCategories(categories ?? []),
+    [categories]
+  );
 
   // =========================
   // FILTER SEARCH
@@ -65,7 +116,7 @@ export default function ItemPage() {
     setEditId(item.id);
     setNama(item.nama);
     setDivision(item.division);
-    setKategoriItem((item.kategori_item as "Finish" | "Raw") ?? "");
+    setKategoriId(item.item_category_id ?? null);
     setOpenModal(true);
   };
 
@@ -73,7 +124,7 @@ export default function ItemPage() {
     setOpenModal(false);
     setEditId(null);
     setNama("");
-    setKategoriItem("");
+    setKategoriId(null);
   };
 
   // =========================
@@ -82,12 +133,12 @@ export default function ItemPage() {
   const submitItem = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!kategoriItem) return;
+    if (!kategoriId) return;
 
     const payload = {
-      division, // bar / kitchen
+      division,                  // bar / kitchen
       nama,
-      kategori_item: kategoriItem, // Finish / Raw
+      item_category_id: kategoriId,
       satuan: "porsi",
     };
 
@@ -101,6 +152,10 @@ export default function ItemPage() {
       });
     }
   };
+
+  const selectedCategory = kategoriId
+    ? sortedCategories.find((c) => c.id === kategoriId)
+    : undefined;
 
   return (
     <AppLayout header="Item">
@@ -161,7 +216,7 @@ export default function ItemPage() {
                 onClick={() => {
                   setEditId(null);
                   setNama("");
-                  setKategoriItem("");
+                  setKategoriId(null);
                   setOpenModal(true);
                 }}
                 className="rounded-full bg-[#D9A978] px-6 py-2 text-sm text-white font-semibold shadow-sm hover:bg-[#c48a5c]"
@@ -205,7 +260,9 @@ export default function ItemPage() {
                       </td>
                       <td className="p-3 border">{item.nama}</td>
                       <td className="p-3 border">
-                        {item.kategori_item ?? "-"}
+                        {item.item_category
+                          ? translateCategoryName(item.item_category.name)
+                          : "-"}
                       </td>
                       <td className="p-3 border">
                         {item.satuan ?? "porsi"}
@@ -290,7 +347,7 @@ export default function ItemPage() {
                 />
               </div>
 
-              {/* Kategori Item: Finish / Raw */}
+              {/* Kategori Item: dari master kategori */}
               <div className="relative">
                 <label className="block mb-1 text-sm font-medium">
                   Kategori Item
@@ -302,9 +359,9 @@ export default function ItemPage() {
                   }
                   className="w-full bg-[#EDEDED] border rounded-xl p-3 flex justify-between items-center"
                 >
-                  {kategoriItem === ""
-                    ? "Pilih"
-                    : kategoriItem}
+                  {selectedCategory
+                    ? translateCategoryName(selectedCategory.name)
+                    : "Pilih"}
                   <ChevronDown
                     className={`h-4 w-4 transition-transform ${
                       showKategoriDropdown ? "rotate-180" : ""
@@ -313,27 +370,26 @@ export default function ItemPage() {
                 </button>
 
                 {showKategoriDropdown && (
-                  <div className="absolute w-full bg-white rounded-xl shadow border mt-1 z-50">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setKategoriItem("Finish");
-                        setShowKategoriDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-100"
-                    >
-                      Finish
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setKategoriItem("Raw");
-                        setShowKategoriDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-100"
-                    >
-                      Raw
-                    </button>
+                  <div className="absolute w-full bg-white rounded-xl shadow border mt-1 z-50 max-h-60 overflow-y-auto">
+                    {sortedCategories.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-500">
+                        Belum ada kategori untuk divisi ini.
+                      </div>
+                    ) : (
+                      sortedCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            setKategoriId(cat.id);
+                            setShowKategoriDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-100"
+                        >
+                          {translateCategoryName(cat.name)}
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

@@ -5,42 +5,66 @@ import { Search, ChevronDown, X } from "lucide-react";
 
 type Division = "bar" | "kitchen";
 
+interface CategoryItem {
+  id: number;
+  nama: string;
+}
+
 interface Category {
   id: number;
-  name: string;       // contoh: "Finish", "Raw"
-  division: Division; // "bar" | "kitchen"
-  total_items: number;
-}
-
-interface ItemSummary {
-  id: number;
-  nama: string;        // nama item (Matcha, Bubuk Matcha, dst)
-  kategori_item: string;
+  name: string;
   division: Division;
+  total_items: number;
+  items: CategoryItem[];
 }
 
-interface InertiaProps {
+type PageProps = {
   division?: Division;
   categories?: Category[];
-  // key biasanya: "finish", "raw" (huruf kecil) → kita handle di frontend
-  itemsByCategory?: Record<string, ItemSummary[]>;
-}
+};
+
+// Terjemahan label kategori untuk tampilan
+const translateCategoryName = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower === "finish") return "Menu";
+  if (lower === "raw") return "Mentah";
+  return name;
+};
+
+// Susun kategori: Menu(Finish), Mentah(Raw), baru lainnya
+const sortCategories = (categories: Category[]) => {
+  const BASE_ORDER = ["finish", "raw"];
+  const baseSlots: (Category | undefined)[] = [];
+  const others: Category[] = [];
+
+  categories.forEach((cat) => {
+    const idx = BASE_ORDER.indexOf(cat.name.toLowerCase());
+    if (idx !== -1) {
+      baseSlots[idx] = cat;
+    } else {
+      others.push(cat);
+    }
+  });
+
+  others.sort((a, b) =>
+    translateCategoryName(a.name).localeCompare(
+      translateCategoryName(b.name),
+      "id"
+    )
+  );
+
+  return [...baseSlots.filter(Boolean), ...others] as Category[];
+};
 
 export default function KategoriPage() {
-  // ===== Ambil props dari Inertia (data asli dari backend) =====
-  const page = usePage<any>();
   const {
     division: serverDivision = "bar",
     categories: serverCategories = [],
-    itemsByCategory = {},
-  } = (page.props || {}) as InertiaProps;
+  } = usePage<PageProps>().props;
 
-  // ===== State untuk dropdown & pencarian =====
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Kategori kita simpan di local state supaya tombol edit/tambah/hapus
-  // tetap bisa bekerja secara visual (walau belum menyentuh DB)
   const [localCategories, setLocalCategories] =
     useState<Category[]>(serverCategories);
 
@@ -48,7 +72,6 @@ export default function KategoriPage() {
     setLocalCategories(serverCategories);
   }, [serverCategories]);
 
-  // ===== Modal state =====
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -58,26 +81,24 @@ export default function KategoriPage() {
     null
   );
 
-  const [selectedCategoryItems, setSelectedCategoryItems] = useState<
-    ItemSummary[]
-  >([]);
-
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editCategoryName, setEditCategoryName] = useState("");
 
-  // ===== FILTER berdasar search =====
+  // ===== FILTER & SORT =====
   const filteredCategories = useMemo(() => {
-    return localCategories
-      .filter((c) =>
-        c.name.toLowerCase().includes(search.trim().toLowerCase())
-      )
-      .map((c, index) => ({
-        ...c,
-        no: index + 1,
-      }));
+    const filtered = localCategories.filter((c) =>
+      translateCategoryName(c.name)
+        .toLowerCase()
+        .includes(search.trim().toLowerCase())
+    );
+    const sorted = sortCategories(filtered);
+    return sorted.map((c, index) => ({
+      ...c,
+      no: index + 1,
+    }));
   }, [localCategories, search]);
 
-  // ===== Ganti divisi: Bar / Kitchen =====
+  // ===== Ganti divisi =====
   const changeDivision = (division: Division) => {
     setShowDivisionDropdown(false);
     router.get(
@@ -92,7 +113,7 @@ export default function KategoriPage() {
   };
 
   // =========================
-  // HANDLER: TAMBAH (UI saja)
+  // TAMBAH KATEGORI (panggil backend)
   // =========================
   const openAddModal = () => {
     setNewCategoryName("");
@@ -104,59 +125,52 @@ export default function KategoriPage() {
     const name = newCategoryName.trim();
     if (!name) return;
 
-    const newCat: Category = {
-      id: localCategories.length
-        ? Math.max(...localCategories.map((c) => c.id)) + 1
-        : 1,
-      name,
-      division: serverDivision,
-      total_items: 0,
-    };
-
-    setLocalCategories((prev) => [...prev, newCat]);
-    setAddModalOpen(false);
+    router.post(
+      route("kategori.store"), // pastikan route ini ada di web.php
+      { name, division: serverDivision },
+      {
+        onSuccess: () => {
+          setAddModalOpen(false);
+        },
+      }
+    );
   };
 
   // =========================
-  // HANDLER: EDIT (UI saja)
+  // EDIT (opsional – masih hanya UI, atau bisa sambung ke backend)
   // =========================
   const openEditModal = (cat: Category) => {
     setSelectedCategory(cat);
-    setEditCategoryName(cat.name);
+    setEditCategoryName(translateCategoryName(cat.name));
     setEditModalOpen(true);
   };
 
   const handleUpdateCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCategory) return;
-
     const name = editCategoryName.trim();
     if (!name) return;
 
-    setLocalCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === selectedCategory.id ? { ...cat, name } : cat
-      )
+    // contoh: sambung ke backend kalau sudah ada route-nya
+    router.put(
+      route("kategori.update", selectedCategory.id),
+      { name },
+      {
+        onSuccess: () => setEditModalOpen(false),
+      }
     );
-    setEditModalOpen(false);
   };
 
   // =========================
-  // HANDLER: VIEW DETAIL
+  // VIEW DETAIL – tampilkan list item
   // =========================
   const openViewModal = (cat: Category) => {
     setSelectedCategory(cat);
-
-    // normalisasi key → huruf kecil
-    const key = cat.name.toLowerCase();
-    const items = itemsByCategory[key] || [];
-
-    setSelectedCategoryItems(items);
     setViewModalOpen(true);
   };
 
   // =========================
-  // HANDLER: HAPUS (UI saja)
+  // HAPUS (kategori + item di kategori itu – backend)
   // =========================
   const openDeleteModal = (cat: Category) => {
     setSelectedCategory(cat);
@@ -166,17 +180,13 @@ export default function KategoriPage() {
   const handleDeleteCategory = () => {
     if (!selectedCategory) return;
 
-    setLocalCategories((prev) =>
-      prev.filter((cat) => cat.id !== selectedCategory.id)
-    );
-    setDeleteModalOpen(false);
+    router.delete(route("kategori.destroy", selectedCategory.id), {
+      onSuccess: () => setDeleteModalOpen(false),
+    });
   };
 
   const titleDivisionLabel = serverDivision === "bar" ? "Bar" : "Kitchen";
 
-  // =========================
-  // RENDER
-  // =========================
   return (
     <AppLayout header={`Kategori ${titleDivisionLabel}`}>
       <Head title={`Kategori ${titleDivisionLabel}`} />
@@ -290,7 +300,9 @@ export default function KategoriPage() {
                         className="border-b last:border-0 hover:bg-[#FFF7EC]"
                       >
                         <td className="px-4 py-3">{cat.no}</td>
-                        <td className="px-4 py-3">{cat.name}</td>
+                        <td className="px-4 py-3">
+                          {translateCategoryName(cat.name)}
+                        </td>
                         <td className="px-4 py-3">
                           {cat.total_items} Bahan
                         </td>
@@ -371,67 +383,13 @@ export default function KategoriPage() {
         </Modal>
       )}
 
-      {/* MODAL: EDIT */}
-      {editModalOpen && selectedCategory && (
-        <Modal onClose={() => setEditModalOpen(false)}>
-          <form
-            onSubmit={handleUpdateCategory}
-            className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-xl"
-          >
-            <h3 className="mb-6 text-center text-2xl font-semibold text-gray-800">
-              Edit Kategori
-            </h3>
-
-            <div className="mb-4">
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Nama kategori
-              </label>
-              <input
-                type="text"
-                value={selectedCategory.name}
-                disabled
-                className="w-full cursor-not-allowed rounded-xl border border-gray-300 bg-[#F1F1F1] px-4 py-2 text-gray-500"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Nama kategori baru
-              </label>
-              <input
-                type="text"
-                value={editCategoryName}
-                onChange={(e) => setEditCategoryName(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-[#F1F1F1] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#DABA93]"
-              />
-            </div>
-
-            <div className="flex justify-between gap-4">
-              <button
-                type="button"
-                onClick={() => setEditModalOpen(false)}
-                className="flex-1 rounded-xl bg-[#E5E5E5] py-2 text-sm font-semibold text-gray-700 hover:bg-[#d5d5d5]"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                className="flex-1 rounded-xl bg-[#1D8CFF] py-2 text-sm font-semibold text-white hover:bg-[#0f6fd1]"
-              >
-                Update
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* MODAL: VIEW (detail item per kategori) */}
+      {/* MODAL: VIEW – tampilkan daftar item */}
       {viewModalOpen && selectedCategory && (
         <Modal onClose={() => setViewModalOpen(false)}>
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-xl font-semibold text-gray-800">
-                Detail Kategori {selectedCategory.name}
+                Detail Kategori {translateCategoryName(selectedCategory.name)}
               </h3>
               <button
                 type="button"
@@ -442,8 +400,8 @@ export default function KategoriPage() {
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-gray-200">
-              <table className="min-w-full table-auto text-left text-sm">
+            <div className="overflow-hidden rounded-2xl border border-gray-200">
+              <table className="min-w-full table-auto text-sm">
                 <thead className="bg-gray-100 text-xs font-semibold uppercase text-gray-700">
                   <tr>
                     <th className="px-4 py-3 w-16">No</th>
@@ -451,7 +409,7 @@ export default function KategoriPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedCategoryItems.length === 0 ? (
+                  {selectedCategory.items.length === 0 ? (
                     <tr>
                       <td
                         colSpan={2}
@@ -461,7 +419,7 @@ export default function KategoriPage() {
                       </td>
                     </tr>
                   ) : (
-                    selectedCategoryItems.map((item, idx) => (
+                    selectedCategory.items.map((item, idx) => (
                       <tr
                         key={item.id}
                         className={
@@ -480,7 +438,7 @@ export default function KategoriPage() {
         </Modal>
       )}
 
-      {/* MODAL: HAPUS (UI saja) */}
+      {/* MODAL: HAPUS */}
       {deleteModalOpen && selectedCategory && (
         <Modal onClose={() => setDeleteModalOpen(false)}>
           <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-xl">
@@ -489,13 +447,13 @@ export default function KategoriPage() {
             </h3>
 
             <p className="mb-4 text-center text-sm text-gray-700">
-              (Saat ini penghapusan hanya menghapus kategori di tampilan
-              sementara, belum menghapus data item di database.)
+              Menghapus kategori dapat menghapus juga item yang memakai
+              kategori ini (sesuai logika di backend).
             </p>
             <p className="mb-8 text-center text-sm text-gray-700">
               Apakah Anda yakin ingin menghapus kategori{" "}
               <span className="font-semibold">
-                "{selectedCategory.name}"
+                "{translateCategoryName(selectedCategory.name)}"
               </span>
               ?
             </p>

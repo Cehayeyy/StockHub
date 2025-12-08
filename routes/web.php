@@ -46,22 +46,23 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('MasterData/Index');
     })->name('masterdata');
 
-    // Kategori – ambil dari ItemController (bukan dummy)
+    // KATEGORI
     Route::get('/kategori', [ItemController::class, 'kategoriIndex'])
         ->name('kategori');
+    Route::post('/kategori', [ItemController::class, 'kategoriStore'])
+        ->name('kategori.store');
 
-    // Item
+    // ITEM
     Route::get('/item', [ItemController::class, 'index'])->name('item.index');
     Route::get('/item/create', function () {
         return redirect()->route('item.index');
     })->name('item.create');
-    Route::get('/item', [ItemController::class, 'index'])->name('item.index');
     Route::post('/item', [ItemController::class, 'store'])->name('item.store');
     Route::put('/item/{item}', [ItemController::class, 'update'])->name('item.update');
-    Route::delete('/item/{item}', [ItemController::class, 'destroy'])->name('item.destroy');
+    Route::delete('/item/{item}', [ItemController::class, 'destroy'])->name('item.destroy');;
 
     // Hapus seluruh item berdasarkan kategori (Finish / Raw)
-    Route::delete('/kategori/{namaKategori}', [ItemController::class, 'destroyCategory'])
+    Route::delete('/kategori/{itemCategory}', [ItemController::class, 'destroyCategory'])
         ->name('kategori.destroy');
 
     /**

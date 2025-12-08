@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\ItemCategory;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,18 +21,26 @@ class ItemController extends Controller
             $division = 'bar';
         }
 
-        $items = Item::where('division', $division)
+        // Item + relasi kategori
+        $items = Item::with('itemCategory')
+            ->where('division', $division)
             ->orderBy('nama')
             ->get();
 
+        // Master kategori untuk dropdown
+        $categories = ItemCategory::where('division', $division)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return Inertia::render('MasterData/Item', [
-            'division' => $division,
-            'items'    => $items,
+            'division'   => $division,
+            'items'      => $items,
+            'categories' => $categories,
         ]);
     }
 
     /**
-     * LIST KATEGORI (diambil dari tabel items, dikelompokkan per division + kategori_item)
+     * LIST KATEGORI (master + jumlah & detail item)
      */
     public function kategoriIndex(Request $request): Response
     {
@@ -41,24 +50,23 @@ class ItemController extends Controller
             $division = 'bar';
         }
 
-        // Ambil kategori unik + jumlah item-nya dari tabel items
-        $raw = Item::selectRaw('division, TRIM(kategori_item) as kategori_item, COUNT(*) as total_items')
-            ->where('division', $division)
-            ->whereNotNull('kategori_item')
-            ->where('kategori_item', '<>', '')
-            ->groupBy('division', 'kategori_item')
-            ->orderBy('kategori_item')
-            ->get();
+        $categories = ItemCategory::where('division', $division)
+            ->orderBy('name')
+            ->get()
+            ->map(function (ItemCategory $cat) use ($division) {
+                $items = $cat->items()
+                    ->where('division', $division)   // jaga-jaga
+                    ->orderBy('nama')
+                    ->get(['id', 'nama']);
 
-        // Bentuk data yang rapi untuk frontend
-        $categories = $raw->map(function ($row, $index) {
-            return [
-                'id'          => $index + 1,         // hanya untuk keperluan "No" di tabel
-                'name'        => $row->kategori_item,
-                'division'    => $row->division,
-                'total_items' => $row->total_items, // "2 Bahan", "3 Bahan", dll
-            ];
-        });
+                return [
+                    'id'          => $cat->id,
+                    'name'        => $cat->name,
+                    'division'    => $cat->division,
+                    'total_items' => $items->count(),
+                    'items'       => $items,
+                ];
+            });
 
         return Inertia::render('MasterData/Kategori', [
             'division'   => $division,
@@ -67,20 +75,54 @@ class ItemController extends Controller
     }
 
     /**
+     * TAMBAH KATEGORI (dari halaman Kategori)
+     */
+    public function kategoriStore(Request $request)
+    {
+        $data = $request->validate([
+            'name'     => 'required|string|max:100',
+            'division' => 'required|in:bar,kitchen',
+        ]);
+
+        $exists = ItemCategory::where('division', $data['division'])
+            ->where('name', $data['name'])
+            ->exists();
+
+        if ($exists) {
+            return back()->with('error', 'Kategori sudah ada untuk divisi ini.');
+        }
+
+        ItemCategory::create($data);
+
+        return redirect()
+            ->route('kategori', ['division' => $data['division']])
+            ->with('success', 'Kategori berhasil ditambahkan!');
+    }
+
+    /**
      * SIMPAN ITEM BARU
      */
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nama'          => 'required|string|max:255',
-            'kategori_item' => 'required|string|max:50',     // Finish / Raw
-            'division'      => 'required|in:bar,kitchen',    // bar / kitchen
-            'satuan'        => 'nullable|string|max:50',
+            'nama'             => 'required|string|max:255',
+            'item_category_id' => 'required|exists:item_categories,id',
+            'division'         => 'required|in:bar,kitchen',
+            'satuan'           => 'nullable|string|max:50',
         ]);
+
+        // cek kategori benar2 milik divisi yg sama
+        $category = ItemCategory::findOrFail($data['item_category_id']);
+        if ($category->division !== $data['division']) {
+            return back()->with('error', 'Kategori tidak sesuai dengan divisi.');
+        }
 
         if (empty($data['satuan'])) {
             $data['satuan'] = 'porsi';
         }
+
+        // optional: simpan nama kategori ke kolom lama (kategori_item)
+        $data['kategori_item'] = $category->name;
 
         Item::create($data);
 
@@ -95,15 +137,22 @@ class ItemController extends Controller
     public function update(Request $request, Item $item)
     {
         $data = $request->validate([
-            'nama'          => 'required|string|max:255',
-            'kategori_item' => 'required|string|max:50',
-            'division'      => 'required|in:bar,kitchen',
-            'satuan'        => 'nullable|string|max:50',
+            'nama'             => 'required|string|max:255',
+            'item_category_id' => 'required|exists:item_categories,id',
+            'division'         => 'required|in:bar,kitchen',
+            'satuan'           => 'nullable|string|max:50',
         ]);
+
+        $category = ItemCategory::findOrFail($data['item_category_id']);
+        if ($category->division !== $data['division']) {
+            return back()->with('error', 'Kategori tidak sesuai dengan divisi.');
+        }
 
         if (empty($data['satuan'])) {
             $data['satuan'] = 'porsi';
         }
+
+        $data['kategori_item'] = $category->name;
 
         $item->update($data);
 
@@ -125,4 +174,22 @@ class ItemController extends Controller
             ->route('item.index', ['division' => $division])
             ->with('success', 'Item berhasil dihapus!');
     }
+
+    public function destroyCategory(ItemCategory $itemCategory)
+    {
+        $division = $itemCategory->division;
+
+        Item::where('item_category_id', $itemCategory->id)
+            ->update([
+                'item_category_id' => null,
+                'kategori_item'    => null,
+            ]);
+
+        $itemCategory->delete();
+
+        return redirect()
+            ->route('kategori', ['division' => $division])
+            ->with('success', 'Kategori berhasil dihapus!');
+    }
 }
+
