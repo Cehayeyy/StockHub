@@ -7,7 +7,7 @@ type Division = "bar" | "kitchen";
 
 type ItemCategory = {
   id: number;
-  name: string;           // nama di DB (bisa "Finish", "Raw", atau nama lain)
+  name: string;
 };
 
 type Item = {
@@ -25,10 +25,9 @@ type Item = {
 type PageProps = {
   items: Item[];
   division: Division;
-  categories: ItemCategory[];        // master kategori untuk dropdown
+  categories: ItemCategory[];
 } & Record<string, any>;
 
-// Terjemahan label kategori untuk tampilan
 const translateCategoryName = (name: string) => {
   const lower = name.toLowerCase();
   if (lower === "finish") return "Menu";
@@ -36,22 +35,17 @@ const translateCategoryName = (name: string) => {
   return name;
 };
 
-// Susun kategori: Menu(Finish), Mentah(Raw), baru kategori lain
 const sortCategories = (categories: ItemCategory[]) => {
-  const BASE_ORDER = ["finish", "raw"]; // urutan dasar di DB
+  const BASE_ORDER = ["finish", "raw"];
   const baseSlots: (ItemCategory | undefined)[] = [];
   const others: ItemCategory[] = [];
 
   categories.forEach((cat) => {
     const idx = BASE_ORDER.indexOf(cat.name.toLowerCase());
-    if (idx !== -1) {
-      baseSlots[idx] = cat;
-    } else {
-      others.push(cat);
-    }
+    if (idx !== -1) baseSlots[idx] = cat;
+    else others.push(cat);
   });
 
-  // kategori lain diurutkan alfabetis pakai nama tampilan (supaya "Menu Tambahan" dll rapi)
   others.sort((a, b) =>
     translateCategoryName(a.name).localeCompare(
       translateCategoryName(b.name),
@@ -69,24 +63,36 @@ export default function ItemPage() {
   const [division, setDivision] = useState<Division>(initialDivision ?? "bar");
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
 
-  const [search, setSearch] = useState<string>("");
+  const [search, setSearch] = useState("");
 
-  const [openModal, setOpenModal] = useState<boolean>(false);
+  const [openModal, setOpenModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
 
-  const [nama, setNama] = useState<string>("");
+  const [nama, setNama] = useState("");
   const [kategoriId, setKategoriId] = useState<number | null>(null);
   const [showKategoriDropdown, setShowKategoriDropdown] = useState(false);
 
-  // Kategori yang sudah disortir: Menu, Mentah, lalu lainnya
+  // === MODAL HAPUS ===
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  const openDeleteConfirm = (id: number) => {
+    setDeleteId(id);
+    setOpenDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteId) return;
+    router.delete(route("item.destroy", deleteId), {
+      onSuccess: () => setOpenDeleteModal(false),
+    });
+  };
+
   const sortedCategories = useMemo(
     () => sortCategories(categories ?? []),
     [categories]
   );
 
-  // =========================
-  // FILTER SEARCH
-  // =========================
   const filteredItems = useMemo(
     () =>
       items.filter((item) =>
@@ -95,9 +101,6 @@ export default function ItemPage() {
     [items, search]
   );
 
-  // =========================
-  // GANTI DIVISI (Bar / Kitchen)
-  // =========================
   const changeDivision = (value: Division) => {
     setDivision(value);
     setShowDivisionDropdown(false);
@@ -109,9 +112,6 @@ export default function ItemPage() {
     );
   };
 
-  // =========================
-  // EDIT
-  // =========================
   const handleEdit = (item: Item) => {
     setEditId(item.id);
     setNama(item.nama);
@@ -127,16 +127,12 @@ export default function ItemPage() {
     setKategoriId(null);
   };
 
-  // =========================
-  // SUBMIT (TAMBAH / EDIT)
-  // =========================
   const submitItem = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!kategoriId) return;
 
     const payload = {
-      division,                  // bar / kitchen
+      division,
       nama,
       item_category_id: kategoriId,
       satuan: "porsi",
@@ -165,7 +161,7 @@ export default function ItemPage() {
         <div className="bg-white p-6 rounded-3xl shadow-inner">
           {/* FILTER AREA */}
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* Dropdown Divisi (Bar / Kitchen) */}
+            {/* Divisi Dropdown */}
             <div className="relative inline-block w-40">
               <button
                 type="button"
@@ -200,7 +196,9 @@ export default function ItemPage() {
                     type="button"
                     onClick={() => changeDivision("kitchen")}
                     className={`block w-full px-4 py-2 text-left ${
-                      division === "kitchen" ? "bg-[#F6E1C6] font-semibold" : ""
+                      division === "kitchen"
+                        ? "bg-[#F6E1C6] font-semibold"
+                        : ""
                     }`}
                   >
                     Kitchen
@@ -209,7 +207,7 @@ export default function ItemPage() {
               )}
             </div>
 
-            {/* Tambah + Search */}
+            {/* Tambah & Search */}
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <button
                 type="button"
@@ -255,18 +253,16 @@ export default function ItemPage() {
                 {filteredItems.length > 0 ? (
                   filteredItems.map((item, index) => (
                     <tr key={item.id} className="hover:bg-[#FFF7EC]">
-                      <td className="p-3 border text-center">
-                        {index + 1}
-                      </td>
+                      <td className="p-3 border text-center">{index + 1}</td>
                       <td className="p-3 border">{item.nama}</td>
                       <td className="p-3 border">
                         {item.item_category
                           ? translateCategoryName(item.item_category.name)
                           : "-"}
                       </td>
-                      <td className="p-3 border">
-                        {item.satuan ?? "porsi"}
-                      </td>
+                      <td className="p-3 border">{item.satuan ?? "porsi"}</td>
+
+                      {/* BUTTON ACTION */}
                       <td className="p-3 border text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
@@ -275,18 +271,9 @@ export default function ItemPage() {
                           >
                             Edit
                           </button>
+
                           <button
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  "Yakin ingin menghapus item ini?"
-                                )
-                              ) {
-                                router.delete(
-                                  route("item.destroy", item.id)
-                                );
-                              }
-                            }}
+                            onClick={() => openDeleteConfirm(item.id)}
                             className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535]"
                           >
                             Hapus
@@ -297,10 +284,7 @@ export default function ItemPage() {
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="p-6 text-center text-gray-500"
-                    >
+                    <td colSpan={5} className="p-6 text-center text-gray-500">
                       Tidak ada data.
                     </td>
                   </tr>
@@ -311,7 +295,9 @@ export default function ItemPage() {
         </div>
       </div>
 
-      {/* MODAL TAMBAH / EDIT ITEM */}
+      {/* ============================
+          MODAL TAMBAH / EDIT ITEM
+      ============================ */}
       {openModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
@@ -334,11 +320,9 @@ export default function ItemPage() {
                 />
               </div>
 
-              {/* Divisi (info saja, ikut dropdown utama) */}
+              {/* Divisi */}
               <div>
-                <label className="block mb-1 text-sm font-medium">
-                  Divisi
-                </label>
+                <label className="block mb-1 text-sm font-medium">Divisi</label>
                 <input
                   type="text"
                   readOnly
@@ -347,7 +331,7 @@ export default function ItemPage() {
                 />
               </div>
 
-              {/* Kategori Item: dari master kategori */}
+              {/* Kategori */}
               <div className="relative">
                 <label className="block mb-1 text-sm font-medium">
                   Kategori Item
@@ -394,11 +378,9 @@ export default function ItemPage() {
                 )}
               </div>
 
-              {/* Satuan (fixed porsi) */}
+              {/* Satuan */}
               <div>
-                <label className="block mb-1 text-sm font-medium">
-                  Satuan
-                </label>
+                <label className="block mb-1 text-sm font-medium">Satuan</label>
                 <input
                   type="text"
                   value="porsi"
@@ -423,6 +405,44 @@ export default function ItemPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================
+          MODAL HAPUS ITEM
+      ============================ */}
+      {openDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
+            <h2 className="text-2xl font-bold text-center mb-4">
+              Hapus item..? ⚠️
+            </h2>
+
+            <p className="text-center text-gray-700 mb-2">
+              Menghapus item ini dapat menghapus juga pada data item pada resep
+              dan kategori.
+            </p>
+
+            <p className="text-center text-gray-900 font-medium mb-6">
+              Apakah Anda yakin ingin menghapus item ini?
+            </p>
+
+            <div className="flex justify-between mt-6">
+              <button
+                className="px-6 py-2 bg-gray-300 rounded-xl font-medium"
+                onClick={() => setOpenDeleteModal(false)}
+              >
+                Batal
+              </button>
+
+              <button
+                className="px-6 py-2 bg-red-500 text-white rounded-xl font-semibold"
+                onClick={confirmDelete}
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

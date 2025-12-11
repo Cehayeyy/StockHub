@@ -1,337 +1,468 @@
-import React, { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { Head, usePage, router } from '@inertiajs/react';
-import { Search, Trash } from 'lucide-react';
+// resources/js/Pages/MasterData/Resep.tsx
+import React, { useState } from "react";
+import AppLayout from "@/layouts/app-layout";
+import { Head, usePage, router } from "@inertiajs/react";
+import { Search, Trash } from "lucide-react";
 
 interface Recipe {
   id: number;
   name: string;
   total_ingredients: number;
   created_at: string;
+  ingredients?: { item_id: number; item_name: string; amount: number; unit: string }[];
+}
+
+interface Item {
+  id: number;
+  name: string;
+  unit?: string;
 }
 
 interface Ingredient {
   id: number;
-  name: string;
-  amount: string;
+  item_id: number | null;
+  item_name: string;
+  amount: number;
   unit: string;
 }
 
 interface PageProps {
   recipes: Recipe[];
-  errors: Record<string, string>;
-  [key: string]: any;
+  bahan_menu: Item[];
+  bahan_mentah: Item[];
 }
 
 const Resep: React.FC = () => {
-  const { recipes = [], errors } = usePage<PageProps>().props;
+  const { recipes = [], bahan_menu = [], bahan_mentah = [] } =
+    usePage<PageProps>().props;
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
+
+  // === TAMBAH ===
   const [showModal, setShowModal] = useState(false);
-
-  const [menuName, setMenuName] = useState('');
+  const [menuName, setMenuName] = useState("");
   const [ingredients, setIngredients] = useState<Ingredient[]>([
-    { id: 1, name: '', amount: '', unit: '' },
+    { id: 1, item_id: null, item_name: "", amount: 1, unit: "porsi" },
   ]);
 
-  // Filter untuk search
-  const filteredRecipes = recipes.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // === VIEW ===
+  const [openViewModal, setOpenViewModal] = useState(false);
+  const [viewRecipe, setViewRecipe] = useState<Recipe | null>(null);
 
-  // Tambah baris bahan
-  const handleAddIngredient = () => {
+  // === HAPUS ===
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  // === EDIT ===
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editIngredients, setEditIngredients] = useState<Ingredient[]>([]);
+
+  const findRawItemById = (id: number | null) =>
+    bahan_mentah.find((it) => it.id === id);
+
+  const findRawItemByName = (name: string) =>
+    bahan_mentah.find((it) => it.name === name);
+
+  // === DELETE ===
+  const openDeleteConfirm = (id: number) => {
+    setDeleteId(id);
+    setOpenDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteId) return;
+    router.delete(route("resep.destroy", deleteId), {
+      onSuccess: () => setOpenDeleteModal(false),
+    });
+  };
+
+  // === VIEW ===
+  const openViewRecipe = (recipe: Recipe) => {
+    setViewRecipe(recipe);
+    setOpenViewModal(true);
+  };
+
+  // === TAMBAH BAHAN ===
+  const addIngredient = () => {
     setIngredients((prev) => [
       ...prev,
       {
         id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-        name: '',
-        amount: '',
-        unit: '',
+        item_id: null,
+        item_name: "",
+        amount: 1,
+        unit: "porsi",
       },
     ]);
   };
 
-  // Hapus baris bahan
-  const handleRemoveIngredient = (id: number) => {
+  const removeIngredient = (id: number) => {
     setIngredients((prev) => prev.filter((ing) => ing.id !== id));
   };
 
-  // Ubah field bahan
-  const handleChangeIngredient = (
-    id: number,
-    field: keyof Ingredient,
-    value: string
-  ) => {
+  const changeIngredient = (id: number, field: keyof Ingredient, value: any) => {
     setIngredients((prev) =>
-      prev.map((ing) => (ing.id === id ? { ...ing, [field]: value } : ing))
+      prev.map((ing) => {
+        if (ing.id !== id) return ing;
+        const next = { ...ing, [field]: value };
+
+        if (field === "item_name") {
+          const match = findRawItemByName(value);
+          next.item_id = match?.id ?? null;
+          next.unit = match?.unit ?? next.unit;
+        }
+
+        if (field === "item_id") {
+          const match = findRawItemById(Number(value));
+          if (match) {
+            next.item_name = match.name;
+            next.unit = match.unit ?? next.unit;
+          }
+        }
+
+        return next;
+      })
     );
   };
 
-  // Reset form
-  const resetForm = () => {
-    setMenuName('');
-    setIngredients([{ id: 1, name: '', amount: '', unit: '' }]);
-  };
-
-  const handleCancel = () => {
-    resetForm();
-    setShowModal(false);
-  };
-
-  const handleSave = (e: React.FormEvent) => {
+  // === SIMPAN RESEP BARU ===
+  const saveRecipe = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const payload = {
-      name: menuName,
-      ingredients: ingredients.map((ing) => ({
-        name: ing.name,
+    const invalid = ingredients.some((ing) => !ing.item_id || ing.amount <= 0);
+    if (invalid) {
+      alert("Pastikan semua bahan valid dan jumlah > 0");
+      return;
+    }
+
+    router.post(
+      route("resep.store"),
+      {
+        name: menuName,
+        ingredients: ingredients.map((ing) => ({
+          item_id: ing.item_id,
+          amount: ing.amount,
+          unit: ing.unit,
+        })),
+      },
+      {
+        onSuccess: () => {
+          setShowModal(false);
+          setMenuName("");
+          setIngredients([
+            { id: 1, item_id: null, item_name: "", amount: 1, unit: "porsi" },
+          ]);
+        },
+      }
+    );
+  };
+
+  // === BUKA EDIT ===
+  const openEdit = (recipe: Recipe) => {
+    setEditId(recipe.id);
+    setEditName(recipe.name);
+
+    setEditIngredients(
+      recipe.ingredients?.map((ing, i) => ({
+        id: i + 1,
+        item_id: ing.item_id,
+        item_name: bahan_mentah.find((x) => x.id === ing.item_id)?.name ?? "",
         amount: ing.amount,
         unit: ing.unit,
-      })),
-    };
+      })) ?? []
+    );
 
-    router.post(route('resep.store'), payload, {
-      preserveScroll: true,
-      onSuccess: () => {
-        resetForm();
-        setShowModal(false);
+  setOpenEditModal(true);
+};
+
+// === SIMPAN EDIT RESEP ===
+const updateRecipe = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const invalid = editIngredients.some(
+      (ing) => !ing.item_id || ing.amount <= 0
+    );
+    if (invalid) {
+      alert("Pastikan semua bahan valid & jumlah > 0");
+      return;
+    }
+
+    router.put(
+      route("resep.update", editId),
+      {
+        name: editName,
+        ingredients: editIngredients.map((ing) => ({
+          item_id: ing.item_id,
+          amount: ing.amount,
+          unit: ing.unit,
+        })),
       },
-    });
+      {
+        onSuccess: () => {
+          setOpenEditModal(false);
+        },
+      }
+    );
   };
+
+  // === FUNGSI EDIT INGREDIENT ===
+  const changeEditIngredient = (
+    id: number,
+    field: keyof Ingredient,
+    value: any
+  ) => {
+    setEditIngredients((prev) =>
+      prev.map((ing) => {
+        if (ing.id !== id) return ing;
+        const next = { ...ing, [field]: value };
+
+        if (field === "item_name") {
+          const raw = findRawItemByName(value);
+          next.item_id = raw?.id ?? null;
+          next.unit = raw?.unit ?? next.unit;
+        }
+
+        if (field === "item_id") {
+          const raw = findRawItemById(Number(value));
+          if (raw) {
+            next.item_name = raw.name;
+            next.unit = raw.unit ?? next.unit;
+          }
+        }
+
+        return next;
+      })
+    );
+  };
+
+  const addEditIngredient = () => {
+    setEditIngredients((prev) => [
+      ...prev,
+      {
+        id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+        item_id: null,
+        item_name: "",
+        amount: 1,
+        unit: "porsi",
+      },
+    ]);
+  };
+
+  const removeEditIngredient = (id: number) => {
+    setEditIngredients((prev) => prev.filter((ing) => ing.id !== id));
+  };
+// FILTER SEARCH
+const filteredRecipes = recipes.filter((r) =>
+    r.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // =========================
+  // RETURN UI
+  // =========================
 
   return (
     <AppLayout header="Resep">
       <Head title="Resep" />
 
-      {/* blur kalau modal terbuka */}
-      <div className={showModal ? 'pointer-events-none blur-sm' : ''}>
-       <div className="space-y-6">
-         <div className="rounded-3xl p-8">
-             <div className="rounded-3xl bg-white p-6 shadow">
-              {/* header + tombol + search */}
-              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <h2 className="text-2xl font-semibold text-[#8B5E3C]">
-                </h2>
+      {/* datalist menu */}
+      <datalist id="menu-datalist">
+        {bahan_menu.map((it) => (
+          <option key={it.id} value={it.name} />
+        ))}
+      </datalist>
 
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(true)}
-                    className="rounded-full bg-[#D9A978] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#c39160]"
-                  >
-                    Tambah Resep
-                  </button>
+      {/* datalist bahan mentah */}
+      <datalist id="raw-datalist">
+        {bahan_mentah.map((it) => (
+          <option key={it.id} value={it.name} />
+        ))}
+      </datalist>
 
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search...."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#C38E5F]"
-                    >
-                      <Search className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+      {/* TABLE LIST */}
+      <div className={showModal || openViewModal || openEditModal || openDeleteModal ? "blur-sm pointer-events-none" : ""}>
+        <div className="p-8">
+          <div className="bg-white p-6 rounded-3xl shadow space-y-6">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => setShowModal(true)}
+                className="rounded-full bg-[#D9A978] px-5 py-2 text-sm font-semibold text-white"
+              >
+                Tambah Resep
+              </button>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-64 rounded-full bg-[#FDF3E4] px-4 py-2 text-sm border"
+                />
+                <Search className="absolute right-3 top-2 h-4 w-4 text-[#C38E5F]" />
               </div>
+            </div>
 
-              {/* tabel */}
-              <div className="rounded-lg border border-gray-200 bg-white">
-                <div className="max-h-[48vh] overflow-y-auto">
-                  <table className="min-w-full table-auto text-left text-sm">
-                    <thead className="border-b bg-gray-100 text-xs font-semibold uppercase text-gray-700 sticky top-0">
-                      <tr>
-                        <th className="px-4 py-3 w-16">No</th>
-                        <th className="px-4 py-3">Menu Finish</th>
-                        <th className="px-4 py-3 w-40">Total bahan</th>
-                        <th className="px-4 py-3 w-40">Dibuat pada</th>
-                        <th className="px-4 py-3 w-40 text-center">Aksi</th>
+            {/* TABLE */}
+            <div className="border rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="p-3">No</th>
+                    <th className="p-3">Menu Finish</th>
+                    <th className="p-3">Total Bahan</th>
+                    <th className="p-3">Dibuat</th>
+                    <th className="p-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recipes.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="text-center py-6 text-gray-500"
+                      >
+                        Belum ada resep.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredRecipes.map((r, i) => (
+                        <tr key={r.id} className="border-t">
+                        <td className="p-3">{i + 1}</td>
+                        <td className="p-3">{r.name}</td>
+                        <td className="p-3">{r.total_ingredients} bahan</td>
+                        <td className="p-3">
+                          {new Date(r.created_at).toLocaleDateString("id-ID")}
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs"
+                              onClick={() => openEdit(r)}
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs"
+                              onClick={() => openViewRecipe(r)}
+                            >
+                              View
+                            </button>
+
+                            <button
+                              onClick={() => openDeleteConfirm(r.id)}
+                              className="px-3 py-1 bg-red-500 text-white rounded-full text-xs"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRecipes.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            className="px-4 py-6 text-center text-gray-500"
-                          >
-                            Belum ada resep.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredRecipes.map((r, idx) => (
-                          <tr
-                            key={r.id}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="px-4 py-3 align-middle">
-                              {idx + 1}
-                            </td>
-                            <td className="px-4 py-3 align-middle">
-                              {r.name}
-                            </td>
-                            <td className="px-4 py-3 align-middle">
-                              {r.total_ingredients} Bahan
-                            </td>
-                            <td className="px-4 py-3 align-middle">
-                              {r.created_at
-                                ? new Date(r.created_at).toLocaleDateString(
-                                    'id-ID',
-                                    {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      year: 'numeric',
-                                    }
-                                  )
-                                : '-'}
-                            </td>
-                            <td className="px-4 py-3 align-middle text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button className="rounded-full bg-[#005DFF] px-4 py-1 text-xs font-semibold text-white hover:bg-[#0048c2]">
-                                  edit
-                                </button>
-                                <button className="rounded-full bg-[#005DFF] px-4 py-1 text-xs font-semibold text-white hover:bg-[#0048c2]">
-                                  view
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              {/* end tabel */}
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ==================== */}
       {/* MODAL TAMBAH RESEP */}
+      {/* ==================== */}
+
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-xl rounded-3xl bg-white px-8 py-8 shadow-2xl">
-            <h3 className="mb-6 text-center text-2xl font-semibold text-gray-800">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-xl">
+            <h3 className="text-xl font-semibold text-center mb-4">
               Tambah Resep
             </h3>
 
-            <form onSubmit={handleSave} className="space-y-5">
+            <form onSubmit={saveRecipe} className="space-y-5">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-800">
-                  Nama menu Jadi
-                </label>
+                <label className="font-semibold text-sm">Nama Menu Jadi</label>
                 <input
                   type="text"
+                  list="menu-datalist"
                   value={menuName}
                   onChange={(e) => setMenuName(e.target.value)}
-                  placeholder="Contoh : Matcha"
-                  className="w-full rounded-xl bg-[#EDEDED] px-4 py-3 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  className="w-full bg-gray-100 px-4 py-2 rounded"
                   required
                 />
-                {errors.name && (
-                  <p className="mt-1 text-xs text-red-500">
-                    {errors.name}
-                  </p>
-                )}
               </div>
 
               <div>
-                <p className="mb-2 text-sm font-semibold text-gray-800">
-                  Daftar bahan mentah
-                </p>
+                <p className="font-semibold text-sm">Bahan Mentah</p>
 
-                <div className="space-y-2">
-                  {ingredients.map((ing, index) => (
-                    <div
-                      key={ing.id}
-                      className="flex items-center gap-2 rounded-xl bg-[#EDEDED] px-3 py-2 text-sm"
-                    >
-                      <span className="mr-1 text-gray-700">
-                        {index + 1}.
-                      </span>
-                      <div className="flex flex-1 flex-wrap gap-2">
-                        <input
-                          type="text"
-                          placeholder="Nama bahan"
-                          value={ing.name}
-                          onChange={(e) =>
-                            handleChangeIngredient(
-                              ing.id,
-                              'name',
-                              e.target.value
-                            )
-                          }
-                          className="min-w-[120px] flex-1 rounded-md bg-white px-2 py-1 text-xs outline-none"
-                          required
-                        />
-                        <input
-                          type="text"
-                          placeholder="Jumlah"
-                          value={ing.amount}
-                          onChange={(e) =>
-                            handleChangeIngredient(
-                              ing.id,
-                              'amount',
-                              e.target.value
-                            )
-                          }
-                          className="w-20 rounded-md bg-white px-2 py-1 text-xs outline-none"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Satuan (porsi, gr, ml...)"
-                          value={ing.unit}
-                          onChange={(e) =>
-                            handleChangeIngredient(
-                              ing.id,
-                              'unit',
-                              e.target.value
-                            )
-                          }
-                          className="min-w-[100px] rounded-md bg-white px-2 py-1 text-xs outline-none"
-                        />
-                      </div>
+                {ingredients.map((ing, idx) => (
+                  <div
+                    key={ing.id}
+                    className="bg-gray-100 p-2 rounded-xl flex gap-2 items-center"
+                  >
+                    <span>{idx + 1}.</span>
+
+                    <input
+                      type="text"
+                      list="raw-datalist"
+                      value={ing.item_name}
+                      onChange={(e) =>
+                        changeIngredient(ing.id, "item_name", e.target.value)
+                      }
+                      className="bg-white rounded px-2 py-1 text-xs"
+                      placeholder="pilih bahan..."
+                    />
+
+                    <input
+                      type="number"
+                      value={ing.amount}
+                      onChange={(e) =>
+                        changeIngredient(ing.id, "amount", Number(e.target.value))
+                      }
+                      className="w-20 bg-white rounded px-2 py-1 text-xs"
+                    />
+
+                    <input
+                      type="text"
+                      value={ing.unit}
+                      onChange={(e) =>
+                        changeIngredient(ing.id, "unit", e.target.value)
+                      }
+                      className="w-20 bg-white rounded px-2 py-1 text-xs"
+                    />
 
                     <button
-                        type="button"
-                        onClick={() => handleRemoveIngredient(ing.id)}
-                        className="ml-2 text-black hover:text-gray-700"
+                      type="button"
+                      className="text-red-500"
+                      onClick={() => removeIngredient(ing.id)}
                     >
-                    <Trash className="w-4 h-4" />
+                      <Trash className="w-4 h-4" />
                     </button>
-
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
 
                 <button
                   type="button"
-                  onClick={handleAddIngredient}
-                  className="mt-3 rounded-xl bg-[#E0E0E0] px-4 py-2 text-sm font-medium text-gray-800 hover:bg-[#d0d0d0]"
+                  onClick={addIngredient}
+                  className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm"
                 >
                   Tambah Bahan
                 </button>
               </div>
 
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between">
+              <div className="flex justify-between pt-4">
                 <button
                   type="button"
-                  onClick={handleCancel}
-                  className="w-full rounded-xl bg-[#E0E0E0] px-4 py-2 text-sm font-medium text-gray-800 hover:bg-[#d0d0d0] sm:w-32"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded-xl"
                 >
                   Batal
                 </button>
 
                 <button
                   type="submit"
-                  className="w-full rounded-xl bg-[#005DFF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0048c2] sm:w-32"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl"
                 >
                   Simpan
                 </button>
@@ -340,8 +471,187 @@ const Resep: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ==================== */}
+      {/* MODAL VIEW */}
+      {/* ==================== */}
+      {openViewModal && viewRecipe && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-3xl w-full max-w-md shadow-xl">
+            <h2 className="text-xl font-bold text-center mb-4">
+              Detail Resep: {viewRecipe.name}
+            </h2>
+
+            <div className="space-y-3">
+              {viewRecipe.ingredients?.map((ing, idx) => {
+                const raw = findRawItemById(ing.item_id);
+                return (
+                  <div
+                    key={idx}
+                    className="flex justify-between border-b pb-2"
+                  >
+                    <p className="font-semibold">
+                      {raw ? raw.name : ing.item_name}
+                    </p>
+                    <p>
+                      {ing.amount} {ing.unit}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => setOpenViewModal(false)}
+                className="px-6 py-2 bg-gray-300 rounded-xl"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== */}
+      {/* MODAL EDIT */}
+      {/* ==================== */}
+      {openEditModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-xl">
+            <h3 className="text-xl font-semibold text-center mb-4">
+              Edit Resep
+            </h3>
+
+            <form onSubmit={updateRecipe} className="space-y-5">
+              <div>
+                <label className="font-semibold text-sm">Nama Menu Jadi</label>
+                <input
+                  type="text"
+                  list="menu-datalist"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-gray-100 px-4 py-2 rounded"
+                  required
+                />
+              </div>
+
+              <div>
+                <p className="font-semibold text-sm">Bahan Mentah</p>
+
+                {editIngredients.map((ing, idx) => (
+                  <div
+                    key={ing.id}
+                    className="bg-gray-100 p-2 rounded-xl flex gap-2 items-center"
+                  >
+                    <span>{idx + 1}.</span>
+
+                    <input
+                      type="text"
+                      list="raw-datalist"
+                      value={ing.item_name}
+                      onChange={(e) =>
+                        changeEditIngredient(ing.id, "item_name", e.target.value)
+                      }
+                      className="bg-white rounded px-2 py-1 text-xs"
+                    />
+
+                    <input
+                      type="number"
+                      value={ing.amount}
+                      onChange={(e) =>
+                        changeEditIngredient(
+                          ing.id,
+                          "amount",
+                          Number(e.target.value)
+                        )
+                      }
+                      className="w-20 bg-white rounded px-2 py-1 text-xs"
+                    />
+
+                    <input
+                      type="text"
+                      value={ing.unit}
+                      onChange={(e) =>
+                        changeEditIngredient(ing.id, "unit", e.target.value)
+                      }
+                      className="w-20 bg-white rounded px-2 py-1 text-xs"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => removeEditIngredient(ing.id)}
+                      className="text-red-500"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addEditIngredient}
+                  className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm"
+                >
+                  Tambah Bahan
+                </button>
+              </div>
+
+              <div className="flex justify-between pt-4">
+                <button
+                  type="button"
+                  onClick={() => setOpenEditModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded-xl"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl"
+                >
+                  Update
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== */}
+      {/* MODAL HAPUS */}
+      {/* ==================== */}
+      {openDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-3xl w-full max-w-md shadow-xl">
+            <h2 className="text-xl font-bold text-center mb-4">
+              Hapus Resep?
+            </h2>
+
+            <p className="text-center text-gray-700 mb-4">
+              Menghapus resep ini akan menghapus semua bahan terkait.
+            </p>
+
+            <div className="flex justify-between mt-6">
+              <button
+                onClick={() => setOpenDeleteModal(false)}
+                className="px-6 py-2 bg-gray-300 rounded-xl"
+              >
+                Batal
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-6 py-2 bg-red-500 text-white rounded-xl font-semibold"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
-};
+  };
 
-export default Resep;
+  export default Resep;

@@ -70,11 +70,19 @@ Route::middleware(['auth'])->group(function () {
      * RESEP
      * ===========================
      */
-    Route::get('/resep', [RecipeController::class, 'index'])
-        ->name('resep');
+    Route::get('/resep', [RecipeController::class, 'index'])->name('resep');
+    Route::post('/resep', [RecipeController::class, 'store'])->name('resep.store');
 
-    Route::post('/resep', [RecipeController::class, 'store'])
-        ->name('resep.store');
+    // Detail resep
+    Route::get('/resep/{recipe}', [RecipeController::class, 'show'])->name('resep.show');
+
+    // Edit resep (opsional, bisa pakai modal yang sama)
+    Route::get('/resep/{recipe}/edit', [RecipeController::class, 'edit'])->name('resep.edit');
+    Route::put('/resep/{recipe}', [RecipeController::class, 'update'])->name('resep.update');
+
+    // Hapus resep
+    Route::delete('/resep/{recipe}', [RecipeController::class, 'destroy'])->name('resep.destroy');
+
 
     /**
      * ===========================

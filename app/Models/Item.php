@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\ItemCategory;
 
 class Item extends Model
 {
@@ -13,17 +11,27 @@ class Item extends Model
 
     protected $fillable = [
         'nama',
+        'item_category_id',
+        'division',
         'satuan',
-        'division',        // bar / kitchen
-        'kategori_item',   // optional (teks lama)
-        'item_category_id' // <-- FK ke item_categories
+        'kategori_item',
     ];
 
     /**
-     * Relasi ke master kategori (ItemCategory)
+     * Relasi ke kategori.
+     * Setiap item punya satu kategori.
      */
-    public function itemCategory(): BelongsTo
+    public function itemCategory()
     {
-        return $this->belongsTo(ItemCategory::class);
+        return $this->belongsTo(ItemCategory::class, 'item_category_id');
+    }
+
+    /**
+     * Relasi ke resep.
+     * Satu item bisa punya banyak resep.
+     */
+    public function resep()
+    {
+        return $this->hasMany(Recipe::class, 'item_id');
     }
 }

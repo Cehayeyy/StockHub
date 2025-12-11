@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Recipe extends Model
 {
@@ -11,10 +11,11 @@ class Recipe extends Model
 
     protected $fillable = [
         'name',
-        'ingredients',        // json
-        'total_ingredients',  // jumlah bahan
+        'ingredients',
+        'total_ingredients',
     ];
 
+    // Laravel otomatis konversi array ↔ JSON
     protected $casts = [
         'ingredients' => 'array',
     ];
