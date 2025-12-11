@@ -14,30 +14,40 @@ class ItemController extends Controller
      * LIST ITEM (per divisi: bar / kitchen)
      */
     public function index(Request $request): Response
-    {
-        $division = $request->query('division', 'bar');
+{
+    $division = $request->query('division', 'bar');
 
-        if (!in_array($division, ['bar', 'kitchen'])) {
-            $division = 'bar';
-        }
-
-        // Item + relasi kategori
-        $items = Item::with('itemCategory')
-            ->where('division', $division)
-            ->orderBy('nama')
-            ->get();
-
-        // Master kategori untuk dropdown
-        $categories = ItemCategory::where('division', $division)
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        return Inertia::render('MasterData/Item', [
-            'division'   => $division,
-            'items'      => $items,
-            'categories' => $categories,
-        ]);
+    if (!in_array($division, ['bar', 'kitchen'])) {
+        $division = 'bar';
     }
+
+    // Mulai query dasar
+    $query = Item::with('itemCategory')
+        ->where('division', $division);
+
+    // === SEARCH FIX ===
+    if ($request->search) {
+        $query->where('nama', 'like', '%' . $request->search . '%');
+    }
+
+    // === PAGINATION FIX ===
+    $items = $query->orderBy('nama')
+        ->paginate(8)             // BEBAS kamu mau 5, 10, 20
+        ->withQueryString();      // penting agar search ikut pagination
+
+    // Category tetap
+    $categories = ItemCategory::where('division', $division)
+        ->orderBy('name')
+        ->get(['id', 'name']);
+
+    return Inertia::render('MasterData/Item', [
+        'division'   => $division,
+        'items'      => $items,
+        'categories' => $categories,
+        'search'     => $request->search,  // kirim ke frontend
+    ]);
+}
+
 
     /**
      * LIST KATEGORI (master + jumlah & detail item)

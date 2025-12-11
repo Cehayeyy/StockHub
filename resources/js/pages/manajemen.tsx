@@ -138,7 +138,7 @@ export default function Manajemen() {
 
                     <button
                         onClick={openModal}
-                        className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                        className="flex items-center gap-2 rounded-lg bg-[#D9A978] px-4 py-2 text-sm font-semibold text-white hover:bg-[#D9A978]"
                     >
                         <span className="text-xl font-bold">+</span>
                         Tambah Akun

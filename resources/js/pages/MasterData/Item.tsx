@@ -22,10 +22,19 @@ type Item = {
   } | null;
 };
 
+type PaginatedItems = {
+  data: Item[];
+  links: {
+    url: string | null;
+    label: string;
+    active: boolean;
+  }[];
+};
+
 type PageProps = {
-  items: Item[];
+  items?: PaginatedItems;   // ← dibuat optional supaya tidak undefined
   division: Division;
-  categories: ItemCategory[];
+  categories?: ItemCategory[];
 } & Record<string, any>;
 
 const translateCategoryName = (name: string) => {
@@ -60,6 +69,14 @@ export default function ItemPage() {
   const { items, division: initialDivision, categories } =
     usePage<PageProps>().props;
 
+  // --- FIX: fallback aman untuk semua props ---
+  const safeItems: PaginatedItems = {
+    data: items?.data ?? [],
+    links: items?.links ?? [],
+  };
+
+  const safeCategories = categories ?? [];
+
   const [division, setDivision] = useState<Division>(initialDivision ?? "bar");
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
 
@@ -72,7 +89,6 @@ export default function ItemPage() {
   const [kategoriId, setKategoriId] = useState<number | null>(null);
   const [showKategoriDropdown, setShowKategoriDropdown] = useState(false);
 
-  // === MODAL HAPUS ===
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
@@ -89,16 +105,16 @@ export default function ItemPage() {
   };
 
   const sortedCategories = useMemo(
-    () => sortCategories(categories ?? []),
-    [categories]
+    () => sortCategories(safeCategories),
+    [safeCategories]
   );
 
   const filteredItems = useMemo(
     () =>
-      items.filter((item) =>
+      safeItems.data.filter((item) =>
         (item.nama ?? "").toLowerCase().includes(search.toLowerCase())
       ),
-    [items, search]
+    [safeItems.data, search]
   );
 
   const changeDivision = (value: Division) => {
@@ -159,9 +175,10 @@ export default function ItemPage() {
 
       <div className="py-6">
         <div className="bg-white p-6 rounded-3xl shadow-inner">
-          {/* FILTER AREA */}
+          {/* FILTER */}
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* Divisi Dropdown */}
+
+            {/* Division */}
             <div className="relative inline-block w-40">
               <button
                 type="button"
@@ -169,7 +186,7 @@ export default function ItemPage() {
                   setShowDivisionDropdown((prev) => !prev);
                   setShowKategoriDropdown(false);
                 }}
-                className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm"
+                className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B]"
               >
                 <span className="capitalize">
                   {division === "bar" ? "Bar" : "Kitchen"}
@@ -182,9 +199,8 @@ export default function ItemPage() {
               </button>
 
               {showDivisionDropdown && (
-                <div className="absolute left-0 mt-1 w-full rounded-2xl bg-[#E7BE8B] py-1 text-sm shadow-lg z-20">
+                <div className="absolute left-0 mt-1 w-full rounded-2xl bg-[#E7BE8B] py-1 text-sm z-20">
                   <button
-                    type="button"
                     onClick={() => changeDivision("bar")}
                     className={`block w-full px-4 py-2 text-left ${
                       division === "bar" ? "bg-[#F6E1C6] font-semibold" : ""
@@ -193,7 +209,6 @@ export default function ItemPage() {
                     Bar
                   </button>
                   <button
-                    type="button"
                     onClick={() => changeDivision("kitchen")}
                     className={`block w-full px-4 py-2 text-left ${
                       division === "kitchen"
@@ -207,17 +222,16 @@ export default function ItemPage() {
               )}
             </div>
 
-            {/* Tambah & Search */}
+            {/* Add + Search */}
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <button
-                type="button"
                 onClick={() => {
                   setEditId(null);
                   setNama("");
                   setKategoriId(null);
                   setOpenModal(true);
                 }}
-                className="rounded-full bg-[#D9A978] px-6 py-2 text-sm text-white font-semibold shadow-sm hover:bg-[#c48a5c]"
+                className="rounded-full bg-[#D9A978] px-6 py-2 text-sm text-white font-semibold"
               >
                 Tambah Item
               </button>
@@ -227,20 +241,28 @@ export default function ItemPage() {
                   type="text"
                   placeholder="Search...."
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    router.get(
+                      route("item.index"),
+                      { division, search: e.target.value },
+                      { preserveScroll: true, preserveState: true }
+                    );
+                  }}
+
+                  className="w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm"
+
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#C38E5F]">
-                  <Search className="h-4 w-4" />
-                </span>
+
+                <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#C38E5F]" />
               </div>
             </div>
           </div>
 
           {/* TABLE */}
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-[#F3F3F3] text-gray-700 font-semibold">
+          <div className="max-h-[450px] overflow-y-auto rounded-xl border bg-white">
+            <table className="w-full text-sm">
+              <thead className="bg-[#F3F3F3] sticky top-0 font-semibold text-gray-700">
                 <tr>
                   <th className="p-3 border text-center w-16">No</th>
                   <th className="p-3 border">Nama Item</th>
@@ -249,6 +271,7 @@ export default function ItemPage() {
                   <th className="p-3 border text-center w-40">Aksi</th>
                 </tr>
               </thead>
+
               <tbody>
                 {filteredItems.length > 0 ? (
                   filteredItems.map((item, index) => (
@@ -260,21 +283,20 @@ export default function ItemPage() {
                           ? translateCategoryName(item.item_category.name)
                           : "-"}
                       </td>
-                      <td className="p-3 border">{item.satuan ?? "porsi"}</td>
-
-                      {/* BUTTON ACTION */}
+                      <td className="p-3 border">
+                        {item.satuan ?? "porsi"}
+                      </td>
                       <td className="p-3 border text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleEdit(item)}
-                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#0f6fd1]"
+                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold"
                           >
                             Edit
                           </button>
-
                           <button
                             onClick={() => openDeleteConfirm(item.id)}
-                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535]"
+                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold"
                           >
                             Hapus
                           </button>
@@ -291,13 +313,33 @@ export default function ItemPage() {
                 )}
               </tbody>
             </table>
+
+            {/* PAGINATION */}
+            <div className="flex justify-center mt-4 mb-2">
+              <div className="flex gap-1">
+                {safeItems.links.map((link, i) => (
+                  <button
+                    key={i}
+                    disabled={!link.url}
+                    onClick={() =>
+                      link.url &&
+                      router.get(link.url, {}, { preserveScroll: true })
+                    }
+                    className={`px-3 py-1 border rounded text-sm ${
+                      link.active
+                        ? "bg-[#D9A978] text-white font-semibold"
+                        : "bg-white hover:bg-gray-100"
+                    } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
+                    dangerouslySetInnerHTML={{ __html: link.label }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ============================
-          MODAL TAMBAH / EDIT ITEM
-      ============================ */}
+      {/* MODAL ADD/EDIT */}
       {openModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
@@ -306,7 +348,6 @@ export default function ItemPage() {
             </h2>
 
             <form onSubmit={submitItem} className="space-y-5">
-              {/* Nama Item */}
               <div>
                 <label className="block mb-1 text-sm font-medium">
                   Nama Item
@@ -315,12 +356,11 @@ export default function ItemPage() {
                   type="text"
                   value={nama}
                   onChange={(e) => setNama(e.target.value)}
-                  className="w-full bg-[#EDEDED] rounded-xl p-3 border focus:outline-none focus:ring-2 focus:ring-[#DABA93]"
+                  className="w-full bg-[#EDEDED] rounded-xl p-3 border"
                   required
                 />
               </div>
 
-              {/* Divisi */}
               <div>
                 <label className="block mb-1 text-sm font-medium">Divisi</label>
                 <input
@@ -331,21 +371,20 @@ export default function ItemPage() {
                 />
               </div>
 
-              {/* Kategori */}
               <div className="relative">
                 <label className="block mb-1 text-sm font-medium">
                   Kategori Item
                 </label>
+
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowKategoriDropdown((prev) => !prev)
-                  }
-                  className="w-full bg-[#EDEDED] border rounded-xl p-3 flex justify-between items-center"
+                  onClick={() => setShowKategoriDropdown((prev) => !prev)}
+                  className="w-full bg-[#EDEDED] rounded-xl p-3 flex justify-between items-center"
                 >
                   {selectedCategory
                     ? translateCategoryName(selectedCategory.name)
                     : "Pilih"}
+
                   <ChevronDown
                     className={`h-4 w-4 transition-transform ${
                       showKategoriDropdown ? "rotate-180" : ""
@@ -357,7 +396,7 @@ export default function ItemPage() {
                   <div className="absolute w-full bg-white rounded-xl shadow border mt-1 z-50 max-h-60 overflow-y-auto">
                     {sortedCategories.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-gray-500">
-                        Belum ada kategori untuk divisi ini.
+                        Belum ada kategori.
                       </div>
                     ) : (
                       sortedCategories.map((cat) => (
@@ -378,9 +417,10 @@ export default function ItemPage() {
                 )}
               </div>
 
-              {/* Satuan */}
               <div>
-                <label className="block mb-1 text-sm font-medium">Satuan</label>
+                <label className="block mb-1 text-sm font-medium">
+                  Satuan
+                </label>
                 <input
                   type="text"
                   value="porsi"
@@ -409,28 +449,25 @@ export default function ItemPage() {
         </div>
       )}
 
-      {/* ============================
-          MODAL HAPUS ITEM
-      ============================ */}
+      {/* MODAL DELETE */}
       {openDeleteModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
             <h2 className="text-2xl font-bold text-center mb-4">
               Hapus item..? ⚠️
             </h2>
 
             <p className="text-center text-gray-700 mb-2">
-              Menghapus item ini dapat menghapus juga pada data item pada resep
-              dan kategori.
+              Menghapus item ini dapat berdampak pada data terkait.
             </p>
 
             <p className="text-center text-gray-900 font-medium mb-6">
-              Apakah Anda yakin ingin menghapus item ini?
+              Yakin ingin menghapus item ini?
             </p>
 
             <div className="flex justify-between mt-6">
               <button
-                className="px-6 py-2 bg-gray-300 rounded-xl font-medium"
+                className="px-6 py-2 bg-gray-300 rounded-xl"
                 onClick={() => setOpenDeleteModal(false)}
               >
                 Batal

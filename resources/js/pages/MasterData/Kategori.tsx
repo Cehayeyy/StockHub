@@ -336,6 +336,7 @@ export default function KategoriPage() {
                   )}
                 </tbody>
               </table>
+
             </div>
           </div>
         </div>
