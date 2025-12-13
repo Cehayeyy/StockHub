@@ -201,7 +201,7 @@ useEffect(() => {
       )}
 
       {/* Sidebar */}
-      <aside className="w-64 bg-theme-sidebar text-white/90 p-5 flex flex-col">
+      <aside className="w-64 bg-[#502A07] text-white/90 p-5 flex flex-col">
         {/* Profil User + Nama Warung */}
         <div className="flex items-center mb-8">
           <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">

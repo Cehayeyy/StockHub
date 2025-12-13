@@ -8,8 +8,9 @@ use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ItemController;
 
 Route::get('/', function () {
-    return Inertia::render('welcome');
+    return Inertia::render('LandingPage');
 })->name('home');
+
 
 Route::middleware(['auth'])->group(function () {
 
