@@ -91,10 +91,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('stok-harian-mentah.store');
     });
 
-     Route::post('/stok-harian/menu', [StokHarianDapurController::class, 'storeMenu'])
+     Route::post('/stok-harian/menu', [StokHarianController::class, 'storeMenu'])
             ->name('stok-harian-menu.store');
 
-        Route::post('/stok-harian/mentah', [StokHarianDapurController::class, 'storeMentah'])
+        Route::post('/stok-harian/mentah', [StokHarianController::class, 'storeMentah'])
             ->name('stok-harian-mentah.store');
 
 
