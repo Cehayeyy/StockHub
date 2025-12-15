@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Recipe extends Model
 {
@@ -11,13 +11,14 @@ class Recipe extends Model
 
     protected $fillable = [
         'name',
+        'division',          // pastikan ada
         'ingredients',
         'total_ingredients',
         'division',
     ];
 
     protected $casts = [
-        'ingredients' => 'array',
+        'ingredients' => 'array', // wajib kalau simpan array
     ];
 
     public function dailyStocks()

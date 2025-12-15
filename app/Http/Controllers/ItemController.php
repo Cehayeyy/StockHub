@@ -189,11 +189,11 @@ class ItemController extends Controller
     {
         $division = $itemCategory->division;
 
-        Item::where('item_category_id', $itemCategory->id)
-            ->update([
-                'item_category_id' => null,
-                'kategori_item'    => null,
-            ]);
+         Item::where('item_category_id', $itemCategory->id)
+        ->update([
+            'item_category_id' => null,
+            'kategori_item' => null,
+        ]);
 
         $itemCategory->delete();
 

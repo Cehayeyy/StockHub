@@ -11,13 +11,13 @@ class RecipeIngredient extends Model
 
     protected $fillable = [
         'recipe_id',
-        'name',
+        'item_id',
         'amount',
         'unit',
     ];
 
-    public function recipe()
+    public function item()
     {
-        return $this->belongsTo(Recipe::class);
+        return $this->belongsTo(Item::class);
     }
 }
