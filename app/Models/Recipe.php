@@ -14,9 +14,15 @@ class Recipe extends Model
         'division',          // pastikan ada
         'ingredients',
         'total_ingredients',
+        'division',
     ];
 
     protected $casts = [
         'ingredients' => 'array', // wajib kalau simpan array
     ];
+
+    public function dailyStocks()
+    {
+        return $this->hasMany(DailyMenuStock::class);
+    }
 }
