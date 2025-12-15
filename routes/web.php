@@ -73,11 +73,10 @@ Route::middleware(['auth'])->group(function () {
 
     // VIEW (SEMUA ROLE)
     Route::get('/stok-harian/bar', [StokHarianController::class, 'bar'])
-        ->name('stok-harian.bar');
+    ->name('stok-harian.bar');
 
-    Route::get('/stok-harian/dapur', function () {
-        return Inertia::render('StokHarian/Dapur');
-    })->name('stok-harian.dapur');
+    Route::get('/stok-harian/dapur', [StokHarianController::class, 'dapur'])
+    ->name('stok-harian.dapur');
 
     // ===========================
     // INPUT STOK AWAL
@@ -91,6 +90,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/stok-harian/mentah', [StokHarianController::class, 'storeMentah'])
             ->name('stok-harian-mentah.store');
     });
+
+     Route::post('/stok-harian/menu', [StokHarianDapurController::class, 'storeMenu'])
+            ->name('stok-harian-menu.store');
+
+        Route::post('/stok-harian/mentah', [StokHarianDapurController::class, 'storeMentah'])
+            ->name('stok-harian-mentah.store');
+
 
     // ===========================
     // LAPORAN AKTIVITAS

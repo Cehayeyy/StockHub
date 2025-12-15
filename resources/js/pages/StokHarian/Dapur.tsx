@@ -39,7 +39,7 @@ interface PageProps {
    tanggal: string;
 }
 
-export default function Bar() {
+export default function Dapur() {
  const {
   items: serverItems,
   tab: serverTab = "menu",
@@ -69,7 +69,7 @@ useEffect(() => {
   const handleTab = (newTab: "menu" | "mentah") => {
     setTab(newTab);
     router.get(
-      route("stok-harian.bar"),
+      route("stok-harian.dapur"),
       { tab: newTab, search },
       { preserveScroll: true, preserveState: true }
     );
@@ -79,7 +79,7 @@ useEffect(() => {
     const value = e.target.value;
     setSearch(value);
     router.get(
-      route("stok-harian.bar"),
+      route("stok-harian.dapur"),
       { tab, search: value },
       { preserveScroll: true, preserveState: true }
     );

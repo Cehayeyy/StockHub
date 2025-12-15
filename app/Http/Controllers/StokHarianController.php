@@ -73,8 +73,70 @@ class StokHarianController extends Controller
     }
 
     // =========================
+    // VIEW DAPUR
+    // =========================
+    public function dapur(Request $request)
+    {
+        $tab     = $request->tab ?? 'menu';
+        $search  = $request->search;
+        $tanggal = $request->tanggal ?? now()->toDateString();
+
+        if ($tab === 'menu') {
+            $items = StokHarianMenu::with('item')
+                ->whereDate('tanggal', $tanggal)
+                ->when($search, function ($q) use ($search) {
+                    $q->whereHas('item', fn ($i) =>
+                        $i->where('nama', 'like', "%{$search}%")
+                    );
+                })
+                ->orderByDesc('id')
+                ->paginate(10)
+                ->through(fn ($s) => [
+                    'id'         => $s->item_id,
+                    'nama'       => $s->item->nama,
+                    'satuan'     => 'porsi',
+                    'stok_awal'  => $s->stok_awal,
+                    'stok_masuk' => $s->stok_masuk,
+                    'stok_total' => $s->stok_masuk !== null
+                        ? $s->stok_awal + $s->stok_masuk
+                        : null,
+                    'pemakaian'  => $s->stok_keluar,
+                    'tersisa'    => $s->stok_akhir,
+                ]);
+        } else {
+            $items = StokHarianMentah::with('item')
+                ->whereDate('tanggal', $tanggal)
+                ->when($search, function ($q) use ($search) {
+                    $q->whereHas('item', fn ($i) =>
+                        $i->where('nama', 'like', "%{$search}%")
+                    );
+                })
+                ->orderByDesc('id')
+                ->paginate(10)
+                ->through(fn ($s) => [
+                    'id'         => $s->item_id,
+                    'nama'       => $s->item->nama,
+                    'satuan'     => $s->unit,
+                    'stok_awal'  => $s->stok_awal,
+                    'stok_masuk' => $s->stok_masuk,
+                    'stok_total' => $s->stok_masuk !== null
+                        ? $s->stok_awal + $s->stok_masuk
+                        : null,
+                    'pemakaian'  => $s->stok_keluar,
+                    'tersisa'    => $s->stok_akhir,
+                ]);
+        }
+
+        return Inertia::render('StokHarian/Dapur', [
+            'items'    => $items,
+            'tab'      => $tab,
+            'division' => 'dapur',
+            'tanggal'  => $tanggal,
+        ]);
+    }
+
+    // =========================
     // STORE MENU
-    // (SUPERVISOR / OWNER)
     // =========================
     public function storeMenu(Request $request)
     {
@@ -102,7 +164,6 @@ class StokHarianController extends Controller
 
     // =========================
     // STORE MENTAH
-    // (SUPERVISOR / OWNER)
     // =========================
     public function storeMentah(Request $request)
     {
