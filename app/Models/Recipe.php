@@ -13,10 +13,15 @@ class Recipe extends Model
         'name',
         'ingredients',
         'total_ingredients',
+        'division',
     ];
 
-    // Laravel otomatis konversi array ↔ JSON
     protected $casts = [
         'ingredients' => 'array',
     ];
+
+    public function dailyStocks()
+    {
+        return $this->hasMany(DailyMenuStock::class);
+    }
 }
