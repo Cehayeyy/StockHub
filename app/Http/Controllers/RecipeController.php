@@ -3,19 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Recipe;
-use App\Models\Item;
-use App\Models\StokHarianMenu;
-use App\Models\StokHarianMentah;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\Item; // Pastikan model Item di-import
 
 class RecipeController extends Controller
 {
     public function index(Request $request)
     {
-        $division = $request->input('division', 'dapur');
+        $division = $request->input('division', 'bar');
 
         $recipes = Recipe::where('division', $division)
             ->latest()
@@ -25,20 +22,21 @@ class RecipeController extends Controller
                 'name'              => $r->name,
                 'ingredients'       => $r->ingredients,
                 'total_ingredients' => $r->total_ingredients,
-                'created_at'        => $r->created_at->toIso8601String(),
+                'created_at'        => $r->created_at->format('d/m/Y'),
             ]);
 
+        // Ambil item untuk dropdown bahan
         $items = Item::with('itemCategory')->get()->map(fn ($i) => [
-            'id'            => $i->id,
-            'name'          => $i->nama,
-            'unit'          => $i->satuan,
-            'category_name' => $i->itemCategory->name ?? null,
+            'id'       => $i->id,
+            'name'     => $i->nama,
+            'unit'     => $i->satuan,
+            'category' => $i->itemCategory->name ?? null,
         ]);
 
         return Inertia::render('MasterData/Resep', [
             'recipes'      => $recipes,
-            'bahan_menu'   => $items->where('category_name', 'Menu')->values(),
-            'bahan_mentah' => $items->where('category_name', 'Mentah')->values(),
+            'bahan_menu'   => $items->where('category', 'Menu')->values(),
+            'bahan_mentah' => $items->where('category', 'Mentah')->values(),
             'division'     => $division,
         ]);
     }
@@ -46,98 +44,41 @@ class RecipeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'                  => 'required|string|max:255',
-            'division'              => 'required|in:bar,dapur',
-
-            // 🔑 MENU JADI HARUS DIPILIH
-            'menu_item_id'          => 'required_if:division,bar|exists:items,id',
-
-            'ingredients'           => 'required|array|min:1',
-            'ingredients.*.item_id' => 'required|integer|exists:items,id',
+            'name'              => 'required|string|max:255',
+            'division'          => 'required|in:bar,dapur',
+            // Validasi menu_item_id jika perlu, tapi kita hanya butuh nama & ingredients untuk resep
+            'menu_item_id'      => 'nullable|exists:items,id',
+            'ingredients'       => 'required|array|min:1',
+            'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
-            'ingredients.*.unit'    => 'required|string|max:50',
+            'ingredients.*.unit'    => 'required|string',
         ]);
 
         DB::transaction(function () use ($validated) {
-
-            // ===============================
-            // 1️⃣ SIMPAN RESEP
-            // ===============================
-            $recipe = Recipe::create([
+            // 1. SIMPAN RESEP SAJA
+            // Tidak ada logika insert ke stok_harian_menu di sini
+            Recipe::create([
                 'name'              => $validated['name'],
                 'division'          => $validated['division'],
                 'ingredients'       => $validated['ingredients'],
                 'total_ingredients' => count($validated['ingredients']),
             ]);
-
-            // ===============================
-            // 2️⃣ KHUSUS BAR
-            // ===============================
-            if ($validated['division'] !== 'bar') {
-                return;
-            }
-
-            $today = Carbon::today();
-
-            // ===============================
-            // 3️⃣ MENU JADI → STOK HARIAN MENU
-            // ===============================
-            StokHarianMenu::firstOrCreate(
-                [
-                    'item_id' => $validated['menu_item_id'],
-                    'tanggal' => $today,
-                ],
-                [
-                    'stok_awal'    => 0,
-                    'stok_masuk'  => 0,
-                    'stok_keluar' => 0,
-                    'stok_akhir'  => 0,
-                ]
-            );
-
-            // ===============================
-            // 4️⃣ BAHAN MENTAH → STOK HARIAN MENTAH
-            // ===============================
-            foreach ($validated['ingredients'] as $ing) {
-
-                $item = Item::where('id', $ing['item_id'])
-                    ->whereHas('itemCategory', fn ($q) =>
-                        $q->where('name', 'Mentah')
-                    )
-                    ->first();
-
-                if (!$item) continue;
-
-                StokHarianMentah::firstOrCreate(
-                    [
-                        'item_id' => $item->id,
-                        'tanggal' => $today,
-                    ],
-                    [
-                        'stok_awal'    => 0,
-                        'stok_masuk'  => 0,
-                        'stok_keluar' => 0,
-                        'stok_akhir'  => 0,
-                        'unit'        => $item->satuan,
-                    ]
-                );
-            }
         });
 
         return redirect()->route('resep', [
             'division' => $validated['division'],
-        ]);
+        ])->with('success', 'Resep berhasil dibuat. Silakan input stok awal di menu Stok Harian.');
     }
 
     public function update(Request $request, Recipe $recipe)
     {
         $validated = $request->validate([
-            'name'                  => 'required|string|max:255',
-            'division'              => 'required|in:bar,dapur',
-            'ingredients'           => 'required|array|min:1',
-            'ingredients.*.item_id' => 'required|integer|exists:items,id',
+            'name'              => 'required|string|max:255',
+            'division'          => 'required|in:bar,dapur',
+            'ingredients'       => 'required|array|min:1',
+            'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
-            'ingredients.*.unit'    => 'required|string|max:50',
+            'ingredients.*.unit'    => 'required|string',
         ]);
 
         $recipe->update([
