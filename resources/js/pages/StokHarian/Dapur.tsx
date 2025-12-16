@@ -31,7 +31,7 @@ interface PageProps {
   tanggal: string;
 }
 
-export default function Bar() {
+export default function Dapur() {
   const { items, availableMenus, inputableMenus, tab, tanggal } = usePage<any>().props as PageProps;
 
   const [search, setSearch] = useState("");
@@ -55,16 +55,16 @@ export default function Bar() {
   // --- Handlers ---
   const handleSearch = (e: any) => {
     setSearch(e.target.value);
-    router.get(route("stok-harian.bar"), { tab, tanggal: date, search: e.target.value }, { preserveScroll: true });
+    router.get(route("stok-harian.dapur"), { tab, tanggal: date, search: e.target.value }, { preserveScroll: true });
   };
 
   const handleDateChange = (e: any) => {
     setDate(e.target.value);
-    router.get(route("stok-harian.bar"), { tab, search, tanggal: e.target.value }, { preserveScroll: true });
+    router.get(route("stok-harian.dapur"), { tab, search, tanggal: e.target.value }, { preserveScroll: true });
   };
 
   const handleTabSwitch = (t: any) => {
-    router.get(route("stok-harian.bar"), { tab: t, tanggal: date, search }, { preserveScroll: true });
+    router.get(route("stok-harian.dapur"), { tab: t, tanggal: date, search }, { preserveScroll: true });
   };
 
   const resetForm = () => {
@@ -124,7 +124,7 @@ export default function Bar() {
 
   return (
     <AppLayout header={`Stok Harian ${tab === 'menu' ? 'Menu' : 'Bahan Mentah'}`}>
-      <Head title="Stok Harian Bar" />
+      <Head title="Stok Harian Dapur" />
 
       <div className="py-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px]">

@@ -8,6 +8,8 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\StokHarianController;
+use App\Http\Controllers\StokHarianDapurController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -103,44 +105,60 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/resep/{recipe}', [RecipeController::class, 'destroy'])
         ->name('resep.destroy');
 
-    // ===========================
-    // STOK HARIAN (VIEW)
-    // ===========================
+     // =========================================================
+    // STOK HARIAN - BAR
+    // =========================================================
     Route::get('/stok-harian/bar', [StokHarianController::class, 'bar'])
         ->name('stok-harian.bar');
 
-    // ===========================
-    // STOK HARIAN (ACTIONS: STORE, UPDATE, DELETE)
-    // ===========================
     Route::middleware(['role:owner,supervisor,bar'])->group(function () {
 
-        // --- STOK MENU JADI ---
-        // Simpan (Create & Auto-Generate Mentah)
         Route::post('/stok-harian/menu', [StokHarianController::class, 'storeMenu'])
             ->name('stok-harian-menu.store');
 
-        // Edit (Update)
         Route::put('/stok-harian/menu/{id}', [StokHarianController::class, 'updateMenu'])
             ->name('stok-harian-menu.update');
 
-        // Hapus (Destroy)
         Route::delete('/stok-harian/menu/{id}', [StokHarianController::class, 'destroyMenu'])
             ->name('stok-harian-menu.destroy');
 
-
-        // --- STOK BAHAN MENTAH ---
-        // Simpan Manual
         Route::post('/stok-harian/mentah', [StokHarianController::class, 'storeMentah'])
             ->name('stok-harian-mentah.store');
 
-        // Edit (Update) - [PERBAIKAN 404]
         Route::put('/stok-harian/mentah/{id}', [StokHarianController::class, 'updateMentah'])
             ->name('stok-harian-mentah.update');
 
-        // Hapus (Destroy) - [PERBAIKAN 404]
         Route::delete('/stok-harian/mentah/{id}', [StokHarianController::class, 'destroyMentah'])
             ->name('stok-harian-mentah.destroy');
     });
+
+    // =========================================================
+    // STOK HARIAN - DAPUR ✅
+    // =========================================================
+    Route::get('/stok-harian/dapur', [StokHarianDapurController::class, 'dapur'])
+        ->name('stok-harian.dapur');
+
+    Route::middleware(['role:owner,supervisor,dapur'])->group(function () {
+
+        Route::post('/stok-harian-dapur/menu', [StokHarianDapurController::class, 'storeMenu'])
+            ->name('stok-harian-dapur-menu.store');
+
+        Route::put('/stok-harian-dapur/menu/{id}', [StokHarianDapurController::class, 'updateMenu'])
+            ->name('stok-harian-dapur-menu.update');
+
+        Route::delete('/stok-harian-dapur/menu/{id}', [StokHarianDapurController::class, 'destroyMenu'])
+            ->name('stok-harian-dapur-menu.destroy');
+
+        Route::post('/stok-harian-dapur/mentah', [StokHarianDapurController::class, 'storeMentah'])
+            ->name('stok-harian-dapur-mentah.store');
+
+        Route::put('/stok-harian-dapur/mentah/{id}', [StokHarianDapurController::class, 'updateMentah'])
+            ->name('stok-harian-dapur-mentah.update');
+
+        Route::delete('/stok-harian-dapur/mentah/{id}', [StokHarianDapurController::class, 'destroyMentah'])
+            ->name('stok-harian-dapur-mentah.destroy');
+    });
+
 
     // ===========================
     // LAPORAN AKTIVITAS

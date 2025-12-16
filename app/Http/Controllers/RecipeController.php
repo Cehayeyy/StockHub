@@ -22,7 +22,7 @@ class RecipeController extends Controller
                 'name'              => $r->name,
                 'ingredients'       => $r->ingredients,
                 'total_ingredients' => $r->total_ingredients,
-                'created_at'        => $r->created_at->format('d/m/Y'),
+                'created_at'        => $r->created_at?->toISOString(),
             ]);
 
         // Ambil item untuk dropdown bahan
