@@ -11,18 +11,18 @@ class Recipe extends Model
 
     protected $fillable = [
         'name',
-        'division',          // pastikan ada
+        'division',
         'ingredients',
         'total_ingredients',
-        'division',
     ];
 
     protected $casts = [
-        'ingredients' => 'array', // wajib kalau simpan array
+        'ingredients' => 'array',
     ];
 
-    public function dailyStocks()
-    {
-        return $this->hasMany(DailyMenuStock::class);
-    }
+    // ❌ RELASI DAPUR DIHAPUS
+    // public function dailyStocks()
+    // {
+    //     return $this->hasMany(DailyMenuStock::class);
+    // }
 }
