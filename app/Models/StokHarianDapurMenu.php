@@ -9,12 +9,13 @@ class StokHarianDapurMenu extends Model
     protected $table = 'stok_harian_dapur_menu';
 
     protected $fillable = [
-        'item_id',
+        'recipe_id',
         'tanggal',
         'stok_awal',
         'stok_masuk',
         'stok_keluar',
         'stok_akhir',
+        'unit',
     ];
 
     protected $casts = [
@@ -26,8 +27,8 @@ class StokHarianDapurMenu extends Model
      * RELATION
      * =========================
      */
-    public function item()
+    public function recipe()
     {
-        return $this->belongsTo(Item::class);
+        return $this->belongsTo(Recipe::class);
     }
 }

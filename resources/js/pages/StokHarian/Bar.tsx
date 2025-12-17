@@ -182,10 +182,17 @@ export default function Bar() {
                         <td className="p-3 border border-gray-300 text-center font-bold">{item.tersisa}</td>
                         <td className="p-3 border border-gray-300 text-center">
                         <div className="flex justify-center gap-2">
-                            <button className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold">
+                             <button
+                            onClick={() => handleEditClick(item)}
+                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold"
+                            >
                             Edit
                             </button>
-                            <button className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold">
+
+                            <button
+                            onClick={() => handleDeleteClick(item.id)}
+                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold"
+                            >
                             Hapus
                             </button>
                         </div>
@@ -227,7 +234,10 @@ export default function Bar() {
                                 const selected = source.find(m => (tab === 'menu' ? m.id : m.item_id) === id);
                                 if(selected) {
                                     setFormSatuan(selected.satuan || "porsi");
-                                    if(selected.stok_awal !== undefined) setFormStokAwal(selected.stok_awal);
+                                    setFormStokAwal(prev =>
+                                    prev === "" || prev === 0
+                                    ? selected.stok_awal ?? ""
+                                    : prev);
                                 }
                             }}
                             className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
@@ -244,10 +254,34 @@ export default function Bar() {
                     <label className="block text-sm font-medium mb-1">Satuan</label>
                     <input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" />
                 </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Stok Awal</label>
-                    <input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" />
+               <div>
+                <label className="block text-sm font-medium mb-1">Stok Awal</label>
+                <input
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    value={formStokAwal}
+                    onChange={(e) =>
+                    setFormStokAwal(
+                        e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                    }
+                    placeholder="Masukkan stok awal"
+                    className="
+                    w-full
+                    bg-white
+                    border
+                    rounded-xl
+                    px-4
+                    py-2.5
+                    text-sm
+                    focus:outline-none
+                    focus:ring-2
+                    focus:ring-[#D9A978]
+                    "
+                />
                 </div>
+
                 <div className="flex justify-end gap-3 mt-4">
                     <button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button>
                     <button type="submit" disabled={!formItemId} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold">Simpan</button>

@@ -7,211 +7,272 @@ use Illuminate\Http\Request;
 use App\Models\StokHarianDapurMenu;
 use App\Models\StokHarianDapurMentah;
 use App\Models\Recipe;
-use App\Models\Item;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class StokHarianDapurController extends Controller
 {
-    // =========================================================
-    // METHOD DAPUR (TAMPILAN & DATA DROPDOWN)
-    // =========================================================
+    /* =========================================================
+     * DAPUR - HALAMAN UTAMA
+     * ========================================================= */
     public function dapur(Request $request)
     {
-        $tab     = $request->tab ?? 'menu';
+        $tab     = $request->get('tab', 'menu');
         $search  = $request->search;
-        $tanggal = $request->tanggal ?? Carbon::now()->toDateString();
+        $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
-        // --- 1. LOGIKA TABEL (LIST DATA) ---
         if ($tab === 'menu') {
-            $query = StokHarianDapurMenu::with('item')->whereDate('tanggal', $tanggal);
-            if ($search) $query->whereHas('item', fn($q) => $q->where('nama', 'like', "%{$search}%"));
 
-            $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
-                'id'         => $s->id,       // ID Record Stok Harian
-                'item_id'    => $s->item_id,  // ID Item Master
-                'nama'       => $s->item->nama,
-                'satuan'     => $s->item->satuan ?? 'porsi',
-                'stok_awal'  => $s->stok_awal,
-                'stok_masuk' => $s->stok_masuk,
-                'stok_total' => ($s->stok_awal + $s->stok_masuk),
-                'pemakaian'  => $s->stok_keluar,
-                'tersisa'    => $s->stok_akhir,
-            ])->withQueryString();
+            $query = StokHarianDapurMenu::with('recipe')
+                ->whereDate('tanggal', $tanggal);
+
+            if ($search) {
+                $query->whereHas('recipe', fn ($q) =>
+                    $q->where('name', 'like', "%{$search}%")
+                );
+            }
+
+            $items = $query->orderBy('id')
+                ->paginate(10)
+                ->through(fn ($s) => [
+                    'id'         => $s->id,
+                    'recipe_id'  => $s->recipe_id,
+                    'nama'       => $s->recipe->name,
+                    'satuan'     => $s->unit,
+                    'stok_awal'  => $s->stok_awal,
+                    'stok_masuk' => $s->stok_masuk,
+                    'stok_total' => $s->stok_awal + $s->stok_masuk,
+                    'pemakaian'  => $s->stok_keluar,
+                    'tersisa'    => $s->stok_akhir,
+                ]);
+
         } else {
-            // Logika Tab Mentah
-            $query = StokHarianDapurMentah::with('item')->whereDate('tanggal', $tanggal);
-            if ($search) $query->whereHas('item', fn($q) => $q->where('nama', 'like', "%{$search}%"));
 
-            $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
-                'id'         => $s->id,
-                'item_id'    => $s->item_id,
-                'nama'       => $s->item->nama,
-                'satuan'     => $s->unit ?? $s->item->satuan,
-                'stok_awal'  => $s->stok_awal,
-                'stok_masuk' => $s->stok_masuk,
-                'stok_total' => ($s->stok_awal + $s->stok_masuk),
-                'pemakaian'  => $s->stok_keluar,
-                'tersisa'    => $s->stok_akhir,
-            ])->withQueryString();
+            $query = StokHarianDapurMentah::with('item')
+                ->whereDate('tanggal', $tanggal);
+
+            if ($search) {
+                $query->whereHas('item', fn ($q) =>
+                    $q->where('nama', 'like', "%{$search}%")
+                );
+            }
+
+            $items = $query->orderBy('id')
+                ->paginate(10)
+                ->through(fn ($s) => [
+                    'id'         => $s->id,
+                    'item_id'    => $s->item_id,
+                    'nama'       => $s->item->nama,
+                    'satuan'     => $s->unit ?? $s->item->satuan,
+                    'stok_awal'  => $s->stok_awal,
+                    'stok_masuk' => $s->stok_masuk,
+                    'stok_total' => $s->stok_awal + $s->stok_masuk,
+                    'pemakaian'  => $s->stok_keluar,
+                    'tersisa'    => $s->stok_akhir,
+                ]);
         }
 
-        // --- 2. DATA DROPDOWN ---
-        $availableMenus = []; // Item baru (belum ada di tabel)
-        $inputableMenus = []; // Item sudah ada (untuk input manual)
+        $availableMenus = [];
+        $inputableMenus = [];
 
         if ($tab === 'menu') {
-            $usedItemIds = StokHarianDapurMenu::whereDate('tanggal', $tanggal)->pluck('item_id');
-            $recipeNames = Recipe::where('division', 'dapur')->pluck('name');
+            $usedRecipeIds = StokHarianDapurMenu::whereDate('tanggal', $tanggal)
+                ->pluck('recipe_id');
 
-            // A. Available Menus: Punya Resep TAPI Belum ada di Tabel
-            $availableMenus = Item::where('division', 'dapur')
-                ->whereIn('nama', $recipeNames)
-                ->whereNotIn('id', $usedItemIds)
-                ->orderBy('nama')
-                ->get(['id', 'nama', 'satuan']);
+            $availableMenus = Recipe::where('division', 'dapur')
+                ->whereNotIn('id', $usedRecipeIds)
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($r) => [
+                    'id'   => $r->id,
+                    'nama' => $r->name,
+                ]);
 
-            // B. Inputable Menus: SUDAH ada di Tabel (Untuk dropdown Input Data)
-            $inputableMenus = StokHarianDapurMenu::with('item')
+            $inputableMenus = StokHarianDapurMenu::with('recipe')
                 ->whereDate('tanggal', $tanggal)
                 ->get()
-                ->map(fn($s) => [
-                    'id'        => $s->item_id,
-                    'nama'      => $s->item->nama,
-                    'satuan'    => $s->item->satuan ?? 'porsi',
-                    'stok_awal' => $s->stok_awal
+                ->map(fn ($s) => [
+                    'id'     => $s->recipe_id,
+                    'nama'   => $s->recipe->name,
+                    'satuan' => $s->unit,
                 ]);
         }
 
         return Inertia::render('StokHarian/Dapur', [
             'items'          => $items,
             'tab'            => $tab,
-            'division'       => 'dapur',
             'tanggal'        => $tanggal,
             'availableMenus' => $availableMenus,
             'inputableMenus' => $inputableMenus,
         ]);
     }
 
-    // =========================================================
-    // STORE MENU & AUTO-GENERATE MENTAH
-    // =========================================================
+    /* =========================================================
+     * STORE MENU (FINAL)
+     * ========================================================= */
     public function storeMenu(Request $request)
-    {
-        $data = $request->validate([
-            'item_id'   => 'required|exists:items,id',
-            'tanggal'   => 'required|date',
-            'stok_awal' => 'required|numeric|min:0',
-        ]);
+{
+    $data = $request->validate([
+        'recipe_id' => 'required|exists:recipes,id',
+        'tanggal'   => 'required|date',
+        'stok_awal' => 'required|numeric|min:0',
+    ]);
 
-        // 1. Simpan Stok Menu Jadi
+    DB::transaction(function () use ($data) {
+
+        // STOK MENU
         StokHarianDapurMenu::updateOrCreate(
-            ['item_id' => $data['item_id'], 'tanggal' => $data['tanggal']],
+            [
+                'recipe_id' => $data['recipe_id'],
+                'tanggal'   => $data['tanggal'],
+            ],
             [
                 'stok_awal'   => $data['stok_awal'],
-                'stok_masuk'  => DB::raw('stok_masuk'),
-                'stok_keluar' => DB::raw('stok_keluar'),
+                'stok_masuk'  => 0,
+                'stok_keluar' => 0,
                 'stok_akhir'  => $data['stok_awal'],
+                'unit'        => 'porsi',
             ]
         );
 
-        // 2. GENERATE / UPDATE STOK MENTAH BERDASARKAN RESEP
-        $menuItem = Item::find($data['item_id']);
+        // STOK BAHAN MENTAH (IKUT STOK AWAL MENU)
+        $recipe = Recipe::findOrFail($data['recipe_id']);
 
-        if ($menuItem) {
-            $recipe = Recipe::where('name', $menuItem->nama)->first();
+        if (is_array($recipe->ingredients)) {
+            foreach ($recipe->ingredients as $ing) {
 
-            if ($recipe && !empty($recipe->ingredients)) {
+                $qty = $data['stok_awal'] * ($ing['amount'] ?? 0);
 
-                foreach ($recipe->ingredients as $ing) {
-                    $rawItemId = $ing['item_id'] ?? null;
-                    $amountPerPortion = isset($ing['amount']) ? (float)$ing['amount'] : 0;
-                    $totalRawRequired = $data['stok_awal'] * $amountPerPortion;
+                $stokMentah = StokHarianDapurMentah::where([
+                    'item_id' => $ing['item_id'],
+                    'tanggal' => $data['tanggal'],
+                ])->first();
 
-                    if ($rawItemId) {
-                        $existingRaw = StokHarianDapurMentah::where('item_id', $rawItemId)
-                            ->where('tanggal', $data['tanggal'])
-                            ->first();
+                if ($stokMentah) {
+                    // ❌ JANGAN stok_masuk
+                    $stokMentah->update([
+                        'stok_awal'  => $stokMentah->stok_awal + $qty,
+                        'stok_akhir' => $stokMentah->stok_akhir + $qty,
+                    ]);
+                } else {
+                    StokHarianDapurMentah::create([
+                        'item_id'     => $ing['item_id'],
+                        'tanggal'     => $data['tanggal'],
+                        'stok_awal'   => $qty,
+                        'stok_masuk'  => 0,
+                        'stok_keluar' => 0,
+                        'stok_akhir'  => $qty,
+                        'unit'        => $ing['unit'] ?? null,
+                    ]);
+                }
+            }
+        }
+    });
 
-                        if ($existingRaw) {
-                            $newStokAwal = $existingRaw->stok_awal + $totalRawRequired;
+    return back()->with('success', 'Stok menu berhasil disimpan.');
+}
 
-                            $existingRaw->update([
-                                'stok_awal'  => $newStokAwal,
-                                'stok_akhir' => $newStokAwal + $existingRaw->stok_masuk - $existingRaw->stok_keluar
-                            ]);
-                        } else {
-                            StokHarianDapurMentah::create([
-                                'item_id'     => $rawItemId,
-                                'tanggal'     => $data['tanggal'],
-                                'stok_awal'   => $totalRawRequired,
-                                'stok_masuk'  => 0,
-                                'stok_keluar' => 0,
-                                'stok_akhir'  => $totalRawRequired,
-                                'unit'        => $ing['unit'] ?? 'porsi',
-                            ]);
-                        }
-                    }
+
+    /* =========================================================
+     * UPDATE MENU
+     * ========================================================= */
+    public function updateMenu(Request $request, $id)
+{
+    $data = $request->validate([
+        'stok_awal' => 'required|numeric|min:0',
+    ]);
+
+    DB::transaction(function () use ($data, $id) {
+
+        $stokMenu = StokHarianDapurMenu::with('recipe')->findOrFail($id);
+        $tanggal  = $stokMenu->tanggal;
+
+        // 1️⃣ UPDATE STOK MENU
+        $stokMenu->update([
+            'stok_awal'  => $data['stok_awal'],
+            'stok_akhir' => ($data['stok_awal'] + $stokMenu->stok_masuk) - $stokMenu->stok_keluar,
+        ]);
+
+        // 2️⃣ UPDATE STOK BAHAN MENTAH BERDASARKAN RESEP
+        if (!is_array($stokMenu->recipe->ingredients)) return;
+
+        foreach ($stokMenu->recipe->ingredients as $ing) {
+
+            $qty = $data['stok_awal'] * ($ing['amount'] ?? 0);
+
+            StokHarianDapurMentah::updateOrCreate(
+                [
+                    'item_id' => $ing['item_id'],
+                    'tanggal' => $tanggal,
+                ],
+                [
+                    'stok_awal'   => $qty,
+                    'stok_masuk'  => 0,
+                    'stok_keluar' => 0,
+                    'stok_akhir'  => $qty,
+                    'unit'        => $ing['unit'] ?? null,
+                ]
+            );
+        }
+    });
+
+    return back()->with('success', 'Stok menu & bahan mentah berhasil diperbarui.');
+}
+
+
+    /* =========================================================
+     * DELETE MENU
+     * ========================================================= */
+   public function destroyMenu($id)
+{
+    DB::transaction(function () use ($id) {
+
+        $stokMenu = StokHarianDapurMenu::with('recipe')
+            ->findOrFail($id);
+
+        if (is_array($stokMenu->recipe->ingredients)) {
+            foreach ($stokMenu->recipe->ingredients as $ing) {
+
+                $qty = $stokMenu->stok_awal * ($ing['amount'] ?? 0);
+
+                $stokMentah = StokHarianDapurMentah::where([
+                    'item_id' => $ing['item_id'],
+                    'tanggal' => $stokMenu->tanggal,
+                ])->first();
+
+                if (!$stokMentah) continue;
+
+                $sisaAwal  = $stokMentah->stok_awal - $qty;
+                $sisaAkhir = $stokMentah->stok_akhir - $qty;
+
+                // 🔥 JIKA HABIS TOTAL → HAPUS ROW
+                if (
+                    $sisaAwal <= 0 &&
+                    $stokMentah->stok_masuk == 0 &&
+                    $stokMentah->stok_keluar == 0
+                ) {
+                    $stokMentah->delete();
+                } else {
+                    // 🔁 MASIH ADA → UPDATE ANGKA
+                    $stokMentah->update([
+                        'stok_awal'  => max(0, $sisaAwal),
+                        'stok_akhir' => max(0, $sisaAkhir),
+                    ]);
                 }
             }
         }
 
-        return back()->with('success', 'Data menu berhasil disimpan & stok bahan mentah disesuaikan.');
-    }
-
-    // =========================================================
-    // UPDATE STOK MENU (EDIT)
-    // =========================================================
-    public function updateMenu(Request $request, $id)
-    {
-        $data = $request->validate([
-            'item_id'   => 'required|exists:items,id',
-            'stok_awal' => 'required|numeric|min:0',
-        ]);
-
-        $stok = StokHarianDapurMenu::findOrFail($id);
-
-        $stok->update([
-            'item_id'    => $data['item_id'],
-            'stok_awal'  => $data['stok_awal'],
-            'stok_total' => $data['stok_awal'] + $stok->stok_masuk,
-            'stok_akhir' => ($data['stok_awal'] + $stok->stok_masuk) - $stok->stok_keluar,
-        ]);
-
-        return back()->with('success', 'Data stok menu berhasil diperbarui.');
-    }
-
-    // =========================================================
-    // HAPUS STOK MENU (AUTO HAPUS MENTAH)
-    // =========================================================
-    public function destroyMenu($id)
-    {
-        // 1. Ambil data stok menu yang akan dihapus
-        $stokMenu = StokHarianDapurMenu::with('item')->findOrFail($id);
-
-        // 2. Cari Resep berdasarkan nama item menu
-        $recipe = Recipe::where('name', $stokMenu->item->nama)->first();
-
-        // 3. Jika resep ditemukan, hapus bahan mentah terkait di tanggal yang sama
-        if ($recipe && !empty($recipe->ingredients)) {
-            $rawItemIds = collect($recipe->ingredients)->pluck('item_id')->filter();
-
-            if ($rawItemIds->isNotEmpty()) {
-                StokHarianDapurMentah::whereIn('item_id', $rawItemIds)
-                    ->whereDate('tanggal', $stokMenu->tanggal)
-                    ->delete();
-            }
-        }
-
-        // 4. Hapus Stok Menu
+        // 🗑️ HAPUS MENU
         $stokMenu->delete();
+    });
 
-        return back()->with('success', 'Data menu dan bahan mentah terkait berhasil dihapus.');
-    }
+    return back()->with('success', 'Menu & stok bahan mentah terkait berhasil dihapus.');
+}
 
-    // =========================================================
-    // STORE MENTAH (MANUAL INPUT)
-    // =========================================================
+
+    /* =========================================================
+     * STORE MENTAH MANUAL
+     * ========================================================= */
     public function storeMentah(Request $request)
     {
         $data = $request->validate([
@@ -221,46 +282,24 @@ class StokHarianDapurController extends Controller
         ]);
 
         StokHarianDapurMentah::updateOrCreate(
-            ['item_id' => $data['item_id'], 'tanggal' => $data['tanggal']],
             [
-                'stok_awal'  => $data['stok_awal'],
-                'stok_akhir' => $data['stok_awal'],
+                'item_id' => $data['item_id'],
+                'tanggal' => $data['tanggal'],
+            ],
+            [
+                'stok_awal'   => $data['stok_awal'],
+                'stok_masuk'  => 0,
+                'stok_keluar' => 0,
+                'stok_akhir'  => $data['stok_awal'],
             ]
         );
 
-        return back()->with('success', 'Stok bahan mentah berhasil disimpan.');
+        return back()->with('success', 'Stok bahan mentah disimpan.');
     }
 
-    // =========================================================
-    // UPDATE STOK MENTAH (EDIT)
-    // =========================================================
-    public function updateMentah(Request $request, $id)
-    {
-        $data = $request->validate([
-            'item_id'   => 'required|exists:items,id',
-            'stok_awal' => 'required|numeric|min:0',
-        ]);
-
-        $stok = StokHarianDapurMentah::findOrFail($id);
-
-        $stok->update([
-            'item_id'    => $data['item_id'],
-            'stok_awal'  => $data['stok_awal'],
-            'stok_total' => $data['stok_awal'] + $stok->stok_masuk,
-            'stok_akhir' => ($data['stok_awal'] + $stok->stok_masuk) - $stok->stok_keluar,
-        ]);
-
-        return back()->with('success', 'Stok bahan mentah berhasil diperbarui.');
-    }
-
-    // =========================================================
-    // HAPUS STOK MENTAH
-    // =========================================================
     public function destroyMentah($id)
     {
-        $stok = StokHarianDapurMentah::findOrFail($id);
-        $stok->delete();
-
-        return back()->with('success', 'Stok bahan mentah berhasil dihapus.');
+        StokHarianDapurMentah::findOrFail($id)->delete();
+        return back()->with('success', 'Stok bahan mentah dihapus.');
     }
 }

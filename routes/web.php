@@ -5,19 +5,14 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\StokHarianController;
 use App\Http\Controllers\StokHarianDapurController;
 
 
-/*
-|--------------------------------------------------------------------------
-| PUBLIC
-|--------------------------------------------------------------------------
-*/
 Route::get('/', function () {
-    // Pastikan file LandingPage.tsx ada di resources/js/pages
     return Inertia::render('LandingPage');
 })->name('home');
 
@@ -31,9 +26,11 @@ Route::middleware(['auth'])->group(function () {
     // ===========================
     // DASHBOARD
     // ===========================
-    Route::get('/dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware(['auth'])
+        ->name('dashboard');
+
+
 
     // ===========================
     // MANAJEMEN AKUN
