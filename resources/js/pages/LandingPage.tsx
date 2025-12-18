@@ -111,12 +111,12 @@ export default function LandingPage() {
     <div>
       <h3 className="font-semibold text-lg mb-3">Kontak & Sosial</h3>
 
-      <ul className="space-y-3 text-black">
+      <ul className="space-y-3 text-white">
         <li>
           <a
             href="https://instagram.com/warungcangkruk"
             target="_blank"
-            className="flex items-center gap-3 hover:text-white transition"
+            className="flex items-center gap-3 hover:text-black transition"
           >
             <Instagram className="w-5 h-5" />
             <span>Instagram</span>
@@ -127,7 +127,7 @@ export default function LandingPage() {
           <a
             href="https://warungcangkruk.com"
             target="_blank"
-            className="flex items-center gap-3 hover:text-white transition"
+            className="flex items-center gap-3 hover:text-black transition"
           >
             <Globe className="w-5 h-5" />
             <span>Website</span>
@@ -138,7 +138,7 @@ export default function LandingPage() {
           <a
             href="https://www.facebook.com/warung.cangkringan"
             target="_blank"
-            className="flex items-center gap-3 hover:text-white transition"
+            className="flex items-center gap-3 hover:text-black transition"
           >
             <MapPin className="w-5 h-5" />
             <span>Facebook</span>

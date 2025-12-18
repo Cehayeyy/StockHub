@@ -69,13 +69,11 @@ export default function Dashboard() {
 
   // Akses revisi
   const [aksesRevisi, setAksesRevisi] = useState([
-    { id: 1, name: "Permintaan A", status: "pending" },
-    { id: 2, name: "Permintaan B", status: "pending" },
-    { id: 3, name: "Permintaan C", status: "pending" },
-    { id: 4, name: "Permintaan D", status: "pending" },
-    { id: 5, name: "Permintaan E", status: "pending" },
-    { id: 6, name: "Permintaan F", status: "pending" },
-    { id: 7, name: "Permintaan G", status: "pending" },
+    { id: 1, name: "Bar 1 meminta akses revisi stok harian", status: "pending" },
+    { id: 2, name: "Bar 2 meminta akses revisi stok harian", status: "pending" },
+    { id: 3, name: "Kitchen 1 meminta akses revisi stok harian", status: "pending" },
+    { id: 4, name: "Kitchen 2 meminta akses revisi stok harian", status: "pending" },
+
   ]);
 
   const [chartRevisi, setChartRevisi] = useState([
@@ -83,20 +81,6 @@ export default function Dashboard() {
     { name: "Diterima", value: 0 },
     { name: "Ditolak", value: 0 },
   ]);
-
-  const almostEmptyItems = [
-    { id: 1, name: "Susu", stok: 2 },
-    { id: 2, name: "Gula", stok: 4 },
-    { id: 3, name: "Telur", stok: 3 },
-    { id: 4, name: "Kopi Bubuk", stok: 1 },
-    { id: 5, name: "Roti", stok: 5 },
-  ];
-
-  const recentRecipes = [
-    { id: 1, name: "Kopi Susu", created_at: "2025-12-12" },
-    { id: 2, name: "Roti Bakar", created_at: "2025-12-13" },
-    { id: 3, name: "Telur Dadar", created_at: "2025-12-14" },
-  ];
 
   // Fungsi tombol setujui/tolak
   const handleApprove = (id: number) => {
@@ -201,24 +185,7 @@ export default function Dashboard() {
       ) : null
     )}
   </motion.div>
-
-  {/* Mini Counter */}
-  <div className="grid grid-cols-3 gap-3 mt-4 mb-4">
-    <div className="bg-[#EADFD6] rounded-lg p-3 text-center">
-      <p className="text-xs text-gray-600">Pending</p>
-      <p className="text-xl font-bold text-[#8B5E3C]">{chartRevisi[0].value}</p>
-    </div>
-    <div className="bg-[#E3EFE6] rounded-lg p-3 text-center">
-      <p className="text-xs text-gray-600">Disetujui</p>
-      <p className="text-xl font-bold text-green-700">{chartRevisi[1].value}</p>
-    </div>
-    <div className="bg-[#F3E2E2] rounded-lg p-3 text-center">
-      <p className="text-xs text-gray-600">Ditolak</p>
-      <p className="text-xl font-bold text-red-700">{chartRevisi[2].value}</p>
-    </div>
-  </div>
 </div>
-
       </div>
     </AppLayout>
   );

@@ -16,10 +16,6 @@ use App\Http\Controllers\StokHarianController;
 |--------------------------------------------------------------------------
 */
 Route::get('/', function () {
-<<<<<<< HEAD
-=======
-    // Pastikan file LandingPage.tsx ada di resources/js/pages
->>>>>>> 79955bb44940c55f88a4e72207ac32b8ebd54f26
     return Inertia::render('LandingPage');
 })->name('home');
 
