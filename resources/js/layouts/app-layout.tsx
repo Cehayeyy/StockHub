@@ -117,6 +117,10 @@ function SubMenuLink({
 
 export default function AppLayout({ header, children }: LayoutProps) {
   const { auth, flash } = usePage<PageProps>().props;
+  const role = auth.user.role;
+  const isStaff = role === 'bar' || role === 'kitchen';
+
+
 // AUTO LOGOUT IDLE 10 MENIT + LOGOUT SAAT BROWSER DITUTUP ATAU DEVICE MATI
 useEffect(() => {
  let timer: ReturnType<typeof setTimeout>;
@@ -224,9 +228,12 @@ useEffect(() => {
             Dasbor
           </SidebarLink>
 
-          <SidebarLink href="manajemen" icon={Users}>
-            Manajemen Akun
-          </SidebarLink>
+          {!isStaff && (
+  <SidebarLink href="manajemen" icon={Users}>
+    Manajemen Akun
+  </SidebarLink>
+)}
+
 
           {/* DATA INDUK + SUB: Kategori, Item, Resep */}
           <div>
@@ -298,9 +305,12 @@ useEffect(() => {
           </SidebarLink>
 
           {/* Laporan Aktivitas mengarah ke route "laporan-aktivitas" */}
-          <SidebarLink href="laporan-aktivitas" icon={FileText}>
-            Laporan Aktifitas
-          </SidebarLink>
+          {!isStaff && (
+  <SidebarLink href="laporan-aktivitas" icon={FileText}>
+    Laporan Aktifitas
+  </SidebarLink>
+)}
+
         </nav>
 
         {/* TOMBOL KELUAR */}

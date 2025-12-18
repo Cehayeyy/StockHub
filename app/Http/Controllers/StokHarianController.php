@@ -33,8 +33,7 @@ class StokHarianController extends Controller
                 'nama'       => $s->item->nama,
                 'satuan'     => $s->item->satuan ?? 'porsi',
                 'stok_awal'  => $s->stok_awal,
-                // Stok Total = Stok Awal (Karena Stok Masuk dihapus)
-                'stok_total' => $s->stok_awal,
+                'stok_total' => $s->stok_awal, // Total = Awal (Stok Masuk dihapus)
                 'pemakaian'  => $s->stok_keluar,
                 'tersisa'    => $s->stok_akhir,
             ])->withQueryString();
@@ -48,8 +47,7 @@ class StokHarianController extends Controller
                 'nama'       => $s->item->nama,
                 'satuan'     => $s->unit ?? $s->item->satuan,
                 'stok_awal'  => $s->stok_awal,
-                // Stok Total = Stok Awal
-                'stok_total' => $s->stok_awal,
+                'stok_total' => $s->stok_awal, // Total = Awal
                 'pemakaian'  => $s->stok_keluar,
                 'tersisa'    => $s->stok_akhir,
             ])->withQueryString();
@@ -79,7 +77,6 @@ class StokHarianController extends Controller
                     'stok_awal' => $s->stok_awal
                 ]);
         } else {
-            // Untuk tab mentah, ambil data yang sudah ada di tabel
             $inputableMenus = StokHarianMentah::with('item')
                 ->whereDate('tanggal', $tanggal)
                 ->get()
@@ -117,14 +114,12 @@ class StokHarianController extends Controller
             ['item_id' => $data['item_id'], 'tanggal' => $data['tanggal']],
             [
                 'stok_awal'   => $data['stok_awal'],
-                'stok_masuk'  => 0, // Set 0 karena tidak dipakai
-                'stok_keluar' => DB::raw('stok_keluar'), // Pertahankan nilai lama pemakaian
-                // Rumus Akhir: Stok Awal - Stok Keluar (Pemakaian)
+                'stok_masuk'  => 0,
+                'stok_keluar' => DB::raw('stok_keluar'),
                 'stok_akhir'  => DB::raw($data['stok_awal'] . " - stok_keluar"),
             ]
         );
 
-        // Generate Stok Mentah dari Resep
         $menuItem = Item::find($data['item_id']);
         if ($menuItem) {
             $recipe = Recipe::where('name', $menuItem->nama)->first();
@@ -141,7 +136,6 @@ class StokHarianController extends Controller
 
                         if ($existingRaw) {
                             $newStokAwal = $existingRaw->stok_awal + $totalRawRequired;
-                            // Update Stok Awal & Akhir (Awal - Pemakaian)
                             $existingRaw->update([
                                 'stok_awal'  => $newStokAwal,
                                 'stok_akhir' => $newStokAwal - $existingRaw->stok_keluar
@@ -176,11 +170,10 @@ class StokHarianController extends Controller
         ]);
 
         $stok = StokHarianMenu::findOrFail($id);
-
         $stok->update([
             'item_id'    => $data['item_id'],
             'stok_awal'  => $data['stok_awal'],
-            'stok_total' => $data['stok_awal'], // Total = Awal
+            'stok_total' => $data['stok_awal'],
             'stok_akhir' => $data['stok_awal'] - $stok->stok_keluar,
         ]);
 
@@ -227,7 +220,6 @@ class StokHarianController extends Controller
                 'stok_awal'   => $data['stok_awal'],
                 'stok_masuk'  => 0,
                 'stok_keluar' => $stokKeluar,
-                // Stok Akhir = Stok Awal - Stok Keluar
                 'stok_akhir'  => $data['stok_awal'] - $stokKeluar,
             ]
         );

@@ -25,10 +25,9 @@ class RecipeController extends Controller
                 'name'              => $r->name,
                 'ingredients'       => $r->ingredients,
                 'total_ingredients' => $r->total_ingredients,
-                'created_at'        => $r->created_at->format('d/m/Y'),
+                'created_at'        => $r->created_at?->format('d/m/Y'),
             ]);
 
-        // Ambil item untuk dropdown bahan
         $items = Item::with('itemCategory')->get()->map(fn ($i) => [
             'id'       => $i->id,
             'name'     => $i->nama,
@@ -104,9 +103,6 @@ class RecipeController extends Controller
         ])->with('success', 'Resep berhasil dibuat & Stok Harian otomatis disiapkan.');
     }
 
-    // =========================================================================
-    // UPDATE DENGAN LOGIKA SINKRONISASI STOK HARIAN
-    // =========================================================================
     public function update(Request $request, Recipe $recipe)
     {
         $validated = $request->validate([
@@ -121,7 +117,7 @@ class RecipeController extends Controller
         DB::transaction(function () use ($validated, $recipe) {
             $today = Carbon::now()->toDateString();
 
-            // 1. Ambil nama lama sebelum update untuk mencari Item ID lama
+            // 1. Ambil nama lama
             $oldName = $recipe->name;
             $oldDivision = $recipe->division;
 
@@ -133,74 +129,36 @@ class RecipeController extends Controller
                 'total_ingredients' => count($validated['ingredients']),
             ]);
 
-            // 3. SINKRONISASI STOK MENU JADI (Jika Nama Berubah)
-            $oldItem = Item::where('nama', $oldName)->where('division', $oldDivision)->first();
+            // 3. SINKRONISASI STOK MENU JADI
             $newItem = Item::where('nama', $validated['name'])->where('division', $validated['division'])->first();
-
-            $currentMenuStock = 0; // Untuk perhitungan bahan mentah nanti
+            $currentMenuStock = 0;
 
             if ($newItem) {
-                // Cek apakah ada stok untuk item lama hari ini?
-                if ($oldItem && $oldItem->id !== $newItem->id) {
-                    $existingStok = StokHarianMenu::where('item_id', $oldItem->id)
-                        ->where('tanggal', $today)
-                        ->first();
-
-                    if ($existingStok) {
-                        // Jika ada, update item_id nya ke yang baru
-                        $existingStok->update(['item_id' => $newItem->id]);
-                        $currentMenuStock = $existingStok->stok_awal;
-                    } else {
-                        // Jika tidak ada stok lama, buat baru untuk item baru
-                        $newStock = StokHarianMenu::firstOrCreate(
-                            ['item_id' => $newItem->id, 'tanggal' => $today],
-                            ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]
-                        );
-                        $currentMenuStock = $newStock->stok_awal;
-                    }
-                } else {
-                    // Jika nama tidak berubah, cukup pastikan data ada dan ambil stoknya
-                    $menuStock = StokHarianMenu::firstOrCreate(
-                        ['item_id' => $newItem->id, 'tanggal' => $today],
-                        ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]
-                    );
-                    $currentMenuStock = $menuStock->stok_awal;
-                }
+                $menuStock = StokHarianMenu::firstOrCreate(
+                    ['item_id' => $newItem->id, 'tanggal' => $today],
+                    ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]
+                );
+                $currentMenuStock = $menuStock->stok_awal;
             }
 
             // 4. SINKRONISASI STOK BAHAN MENTAH
-            // Kita loop bahan-bahan baru di resep
             if (!empty($validated['ingredients'])) {
                 foreach ($validated['ingredients'] as $ing) {
                     $rawItemId = $ing['item_id'] ?? null;
                     $amount = $ing['amount'] ?? 0;
 
                     if ($rawItemId) {
-                        // Hitung kebutuhan stok mentah berdasarkan stok menu saat ini
-                        // Rumus: Stok Menu Saat Ini * Jumlah di Resep
                         $calculatedRawStock = $currentMenuStock * $amount;
-
-                        // Cek apakah stok mentah sudah ada
-                        $rawStock = StokHarianMentah::where('item_id', $rawItemId)
-                            ->where('tanggal', $today)
-                            ->first();
+                        $rawStock = StokHarianMentah::where('item_id', $rawItemId)->where('tanggal', $today)->first();
 
                         if ($rawStock) {
-                            // Jika sudah ada, kita update stok awalnya (AKUMULASI / UPDATE)
-                            // Catatan: Ini akan menambah ke stok yang sudah ada, atau mengupdate?
-                            // Agar aman, kita update stok_awal minimal sebesar kalkulasi baru
-                            // (atau tambahkan selisih jika diperlukan, disini kita set updated value)
-
-                            // Opsi sederhana: Update stok awal dengan nilai kalkulasi baru
-                            // (Perhatian: ini bisa menimpa input manual jika ada)
                             if ($calculatedRawStock > 0) {
                                 $rawStock->update([
                                     'stok_awal' => $rawStock->stok_awal + $calculatedRawStock,
-                                    'stok_akhir' => ($rawStock->stok_awal + $calculatedRawStock) + $rawStock->stok_masuk - $rawStock->stok_keluar
+                                    'stok_akhir' => ($rawStock->stok_awal + $calculatedRawStock) - $rawStock->stok_keluar
                                 ]);
                             }
                         } else {
-                            // Jika belum ada, buat baru
                             StokHarianMentah::create([
                                 'item_id'     => $rawItemId,
                                 'tanggal'     => $today,

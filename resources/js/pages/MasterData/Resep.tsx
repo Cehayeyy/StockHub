@@ -7,7 +7,7 @@ interface Recipe {
   id: number;
   name: string;
   total_ingredients: number;
-  created_at: string;
+  created_at: string | null;
   ingredients?: {
     item_id: number;
     item_name: string;
@@ -313,7 +313,16 @@ const Resep: React.FC = () => {
                         <td className="p-3 border">{i + 1}</td>
                         <td className="p-3 border">{r.name}</td>
                         <td className="p-3 border">{r.total_ingredients} bahan</td>
-                        <td className="p-3 border">{new Date(r.created_at).toLocaleDateString("id-ID")}</td>
+                        <td className="p-3 border">
+                        {r.created_at
+                            ? new Date(r.created_at).toLocaleDateString("id-ID", {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                            })
+                            : "-"}
+                        </td>
+
                         <td className="p-3 border text-center">
                           <div className="flex justify-center gap-2">
                             <button

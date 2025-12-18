@@ -77,11 +77,8 @@ export default function Bar() {
   }
 
   // --- Actions ---
-
-  // 1. Simpan Baru (Input Data Mentah)
   const submitCreate = () => {
     const routeName = "stok-harian-mentah.store";
-
     router.post(route(routeName), {
         item_id: formItemId,
         tanggal: date,
@@ -94,7 +91,6 @@ export default function Bar() {
     });
   };
 
-  // 2. Klik Edit
   const handleEditClick = (item: ItemData) => {
       setFormRecordId(item.id);
       setFormItemId(item.item_id);
@@ -105,42 +101,25 @@ export default function Bar() {
       setShowEditModal(true);
   }
 
-  // 3. Submit Update
   const submitUpdate = () => {
       if(!formRecordId) return;
-
-      const routeName = tab === 'menu'
-        ? "stok-harian-menu.update"
-        : "stok-harian-mentah.update";
-
-      const payload: any = {
-          item_id: formItemId,
-          stok_awal: formStokAwal,
-      };
-
-      if (tab === 'mentah') {
-          payload.stok_keluar = formPemakaian === "" ? 0 : formPemakaian;
-      }
+      const routeName = tab === 'menu' ? "stok-harian-menu.update" : "stok-harian-mentah.update";
+      const payload: any = { item_id: formItemId, stok_awal: formStokAwal };
+      if (tab === 'mentah') { payload.stok_keluar = formPemakaian === "" ? 0 : formPemakaian; }
 
       router.put(route(routeName, formRecordId), payload, {
           onSuccess: () => { setShowEditModal(false); resetForm(); }
       });
   }
 
-  // 4. Klik Delete
   const handleDeleteClick = (id: number) => {
       setFormRecordId(id);
       setShowDeleteModal(true);
   }
 
-  // 5. Submit Delete
   const submitDelete = () => {
       if(!formRecordId) return;
-
-      const routeName = tab === 'menu'
-        ? "stok-harian-menu.destroy"
-        : "stok-harian-mentah.destroy";
-
+      const routeName = tab === 'menu' ? "stok-harian-menu.destroy" : "stok-harian-mentah.destroy";
       router.delete(route(routeName, formRecordId), {
           onSuccess: () => { setShowDeleteModal(false); resetForm(); }
       });
@@ -186,7 +165,6 @@ export default function Bar() {
                   <th className="p-4">Nama</th>
                   <th className="p-4 text-center">Satuan</th>
                   <th className="p-4 text-center">Stok Awal</th>
-                  {/* STOK MASUK DIHAPUS DARI HEADER */}
                   <th className="p-4 text-center">Stok Total</th>
                   <th className="p-4 text-center">Pemakaian</th>
                   <th className="p-4 text-center">Tersisa</th>
@@ -201,25 +179,14 @@ export default function Bar() {
                       <td className="p-4 font-medium">{item.nama}</td>
                       <td className="p-4 text-center text-gray-500">{item.satuan}</td>
                       <td className="p-4 text-center">{item.stok_awal}</td>
-                      {/* STOK MASUK DIHAPUS DARI BODY */}
                       <td className="p-4 text-center">{item.stok_total}</td>
                       <td className="p-4 text-center">{item.pemakaian}</td>
                       <td className="p-4 text-center font-bold">{item.tersisa}</td>
 
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">
-                            <button
-                                onClick={() => handleEditClick(item)}
-                                className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] transition"
-                            >
-                                Edit
-                            </button>
-                            <button
-                                onClick={() => handleDeleteClick(item.id)}
-                                className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535] transition"
-                            >
-                                Hapus
-                            </button>
+                            <button onClick={() => handleEditClick(item)} className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] transition">Edit</button>
+                            <button onClick={() => handleDeleteClick(item.id)} className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535] transition">Hapus</button>
                         </div>
                       </td>
                     </tr>
@@ -239,16 +206,11 @@ export default function Bar() {
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
             <h2 className="text-lg font-bold text-center mb-6">Input Stok & Pemakaian</h2>
             <form onSubmit={(e) => { e.preventDefault(); submitCreate(); }} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium mb-1">Tanggal</label>
-                    <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div>
-                </div>
+                <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Nama Item</label>
                     <div className="relative">
-                        <select
-                            value={formItemId}
-                            onChange={(e) => {
+                        <select value={formItemId} onChange={(e) => {
                                 const id = Number(e.target.value);
                                 setFormItemId(id);
                                 const source: any[] = inputableMenus;
@@ -258,34 +220,17 @@ export default function Bar() {
                                     if(selected.stok_awal !== undefined) setFormStokAwal(selected.stok_awal);
                                     if(selected.pemakaian !== undefined) setFormPemakaian(selected.pemakaian);
                                 }
-                            }}
-                            className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-                        >
+                            }} className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]">
                             <option value="">Pilih Item...</option>
-                            {(inputableMenus as any[]).map((m) => (
-                                <option key={m.id} value={m.id}>{m.nama}</option>
-                            ))}
+                            {(inputableMenus as any[]).map((m) => (<option key={m.id} value={m.id}>{m.nama}</option>))}
                         </select>
                         <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
                     </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Satuan</label>
-                    <input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Stok Awal</label>
-                    <input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Pemakaian</label>
-                    <input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" />
-                </div>
-
-                <div className="flex justify-end gap-3 mt-4">
-                    <button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button>
-                    <button type="submit" disabled={!formItemId} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold">Simpan</button>
-                </div>
+                <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
+                <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
+                <div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
+                <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" disabled={!formItemId} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold">Simpan</button></div>
             </form>
           </div>
         </div>
@@ -297,38 +242,12 @@ export default function Bar() {
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
             <h2 className="text-lg font-bold text-center mb-6">Edit Stok {tab === 'menu' ? 'Menu' : 'Bahan'}</h2>
             <form onSubmit={(e) => { e.preventDefault(); submitUpdate(); }} className="space-y-4">
-
-                <div>
-                    <label className="block text-sm font-medium mb-1">Tanggal</label>
-                    <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium mb-1">Nama Item</label>
-                    <input type="text" value={formItemName} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600" />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium mb-1">Satuan</label>
-                    <input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium mb-1">Stok Awal</label>
-                    <input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" />
-                </div>
-
-                {tab === 'mentah' && (
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Pemakaian</label>
-                        <input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" />
-                    </div>
-                )}
-
-                <div className="flex justify-end gap-3 mt-4">
-                    <button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button>
-                    <button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold">Update</button>
-                </div>
+                <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
+                <div><label className="block text-sm font-medium mb-1">Nama Item</label><input type="text" value={formItemName} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600" /></div>
+                <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
+                <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
+                {tab === 'mentah' && (<div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
+                <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold">Update</button></div>
             </form>
           </div>
         </div>
@@ -338,19 +257,13 @@ export default function Bar() {
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[350px] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 text-center">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 className="text-red-500 w-6 h-6" />
-            </div>
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 className="text-red-500 w-6 h-6" /></div>
             <h2 className="text-lg font-bold text-gray-800 mb-2">Hapus Data?</h2>
             <p className="text-sm text-gray-500 mb-6">Data yang dihapus tidak dapat dikembalikan.</p>
-            <div className="flex justify-center gap-3">
-              <button onClick={() => setShowDeleteModal(false)} className="px-5 py-2 rounded-full border text-sm font-semibold">Batal</button>
-              <button onClick={submitDelete} className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Hapus</button>
-            </div>
+            <div className="flex justify-center gap-3"><button onClick={() => setShowDeleteModal(false)} className="px-5 py-2 rounded-full border text-sm font-semibold">Batal</button><button onClick={submitDelete} className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Hapus</button></div>
           </div>
         </div>
       )}
-
     </AppLayout>
   );
 }
