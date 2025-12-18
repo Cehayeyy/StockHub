@@ -14,11 +14,11 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request)
     {
-        // Ambil parameter filter dari query string
-        $dateParam = $request->input('date');   // YYYY-MM-DD dari input date
-        $search    = $request->input('search'); // dari kotak search
+        // 1. Ambil parameter filter
+        $dateParam = $request->input('date');   // YYYY-MM-DD
+        $search    = $request->input('search'); // Keyword pencarian
 
-        // Jika tidak ada date → pakai hari ini
+        // 2. Tentukan Tanggal (Default: Hari Ini jika kosong/invalid)
         if ($dateParam) {
             try {
                 $selectedDate = Carbon::createFromFormat('Y-m-d', $dateParam)->toDateString();
@@ -29,11 +29,12 @@ class ActivityLogController extends Controller
             $selectedDate = now()->toDateString();
         }
 
+        // 3. Query Dasar
         $query = ActivityLog::with('user')
             ->whereDate('created_at', $selectedDate)
             ->orderBy('created_at', 'desc');
 
-        // FILTER SEARCH (nama, username, activity, description)
+        // 4. Filter Pencarian (Nama, Username, Aktivitas, Keterangan)
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($uq) use ($search) {
@@ -45,9 +46,10 @@ class ActivityLogController extends Controller
             });
         }
 
-        $logs = $query->paginate(20)->withQueryString();
+        // 5. Pagination (10 Per Halaman sesuai permintaan)
+        $logs = $query->paginate(10)->withQueryString();
 
-        // Map ke bentuk sederhana untuk front-end
+        // 6. Transformasi Data untuk Frontend
         $logs->getCollection()->transform(function ($log) {
             return [
                 'id'          => $log->id,
@@ -60,6 +62,7 @@ class ActivityLogController extends Controller
             ];
         });
 
+        // 7. Return ke Inertia View
         return Inertia::render('LaporanAktivitas', [
             'logs' => $logs,
             'filters' => [
@@ -70,14 +73,15 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Export laporan aktivitas ke file .xls (bisa dibuka di Excel).
-     * Mengikuti filter tanggal & search yang sama seperti index().
+     * Export laporan aktivitas ke file .xls (HTML Table).
      */
     public function export(Request $request)
     {
+        // Ambil filter yang sama dengan index
         $dateParam = $request->input('date');
         $search    = $request->input('search');
 
+        // Validasi Tanggal
         if ($dateParam) {
             try {
                 $selectedDate = Carbon::createFromFormat('Y-m-d', $dateParam)->toDateString();
@@ -88,9 +92,11 @@ class ActivityLogController extends Controller
             $selectedDate = now()->toDateString();
         }
 
+        // Query Data (Tanpa Pagination untuk Export)
         $query = ActivityLog::with('user')
             ->whereDate('created_at', $selectedDate);
 
+        // Filter Pencarian
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($uq) use ($search) {
@@ -102,11 +108,13 @@ class ActivityLogController extends Controller
             });
         }
 
-        // Untuk export, kita urutkan ASC (dari paling lama ke terbaru)
+        // Urutkan dari terlama ke terbaru untuk laporan excel
         $logs = $query->orderBy('created_at', 'asc')->get();
 
+        // Nama File
         $fileName = 'laporan_aktivitas_' . $selectedDate . '.xls';
 
+        // Header HTTP untuk download file
         $headers = [
             'Content-Type'        => 'application/vnd.ms-excel; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
@@ -114,15 +122,19 @@ class ActivityLogController extends Controller
             'Expires'             => '0',
         ];
 
+        // Callback untuk streaming konten HTML Table
         $callback = function () use ($logs) {
             echo '<table border="1">';
-            echo '<tr>
-                    <th>No</th>
-                    <th>Waktu</th>
-                    <th>Pengguna</th>
-                    <th>Aktifitas</th>
-                    <th>Keterangan</th>
-                  </tr>';
+            echo '<thead>
+                    <tr>
+                        <th style="background-color: #f0f0f0;">No</th>
+                        <th style="background-color: #f0f0f0;">Waktu</th>
+                        <th style="background-color: #f0f0f0;">Pengguna</th>
+                        <th style="background-color: #f0f0f0;">Aktifitas</th>
+                        <th style="background-color: #f0f0f0;">Keterangan</th>
+                    </tr>
+                  </thead>';
+            echo '<tbody>';
 
             foreach ($logs as $index => $log) {
                 $waktu = $log->created_at->format('d-m-Y H:i');
@@ -139,6 +151,7 @@ class ActivityLogController extends Controller
                 echo '</tr>';
             }
 
+            echo '</tbody>';
             echo '</table>';
         };
 
