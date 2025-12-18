@@ -29,10 +29,12 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
-            ...parent::share($request),
+        return [parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+                'role' => $request->user()?->role,
+                'division' => $request->user()?->division,
+
             ],
             // --- INI ADALAH TAMBAHAN BARU ---
             // Ambil pesan 'flash' dari sesi dan kirimkan ke prop 'flash'

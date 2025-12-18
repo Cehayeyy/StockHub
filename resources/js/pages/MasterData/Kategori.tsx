@@ -57,10 +57,16 @@ const sortCategories = (categories: Category[]) => {
 };
 
 export default function KategoriPage() {
-  const {
-    division: serverDivision = "bar",
-    categories: serverCategories = [],
-  } = usePage<PageProps>().props;
+    const {
+        division: serverDivision = "bar",
+        categories: serverCategories = [],
+        auth,
+      } = usePage<PageProps & { auth: any }>().props;
+
+      const role = auth.user.role;
+      const isStaff = role === "bar" || role === "kitchen";
+
+
 
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
   const [search, setSearch] = useState("");
@@ -249,6 +255,8 @@ export default function KategoriPage() {
 
               {/* Right controls: Tambah + Search */}
               <div className="flex flex-col gap-3 md:flex-row md:items-center">
+
+              {!isStaff && (
                 <button
                   type="button"
                   onClick={openAddModal}
@@ -256,7 +264,7 @@ export default function KategoriPage() {
                 >
                   Tambah Kategori
                 </button>
-
+              )}
                 <div className="relative">
                   <input
                     type="text"
@@ -307,29 +315,37 @@ export default function KategoriPage() {
                           {cat.total_items} Bahan
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(cat)}
-                              className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
-                            >
-                              edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openViewModal(cat)}
-                              className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
-                            >
-                              view
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openDeleteModal(cat)}
-                              className="rounded-full bg-[#FF4B4B] px-3 py-1 text-xs font-semibold text-white hover:bg-[#e03535]"
-                            >
-                              Hapus
-                            </button>
-                          </div>
+                        <div className="flex items-center justify-center gap-2">
+  {/* VIEW – BOLEH UNTUK SEMUA */}
+  <button
+    type="button"
+    onClick={() => openViewModal(cat)}
+    className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
+  >
+    view
+  </button>
+
+  {/* EDIT & HAPUS – KHUSUS NON STAFF */}
+  {!isStaff && (
+    <>
+      <button
+        type="button"
+        onClick={() => openEditModal(cat)}
+        className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
+      >
+        edit
+      </button>
+      <button
+        type="button"
+        onClick={() => openDeleteModal(cat)}
+        className="rounded-full bg-[#FF4B4B] px-3 py-1 text-xs font-semibold text-white hover:bg-[#e03535]"
+      >
+        hapus
+      </button>
+    </>
+  )}
+</div>
+
                         </td>
                       </tr>
                     ))
