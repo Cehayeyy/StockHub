@@ -165,21 +165,56 @@ class StokHarianController extends Controller
     public function updateMenu(Request $request, $id)
     {
         $data = $request->validate([
-            'item_id'   => 'required|exists:items,id',
             'stok_awal' => 'required|numeric|min:0',
         ]);
 
-        $stok = StokHarianMenu::findOrFail($id);
+        DB::transaction(function () use ($data, $id) {
 
-        $stok->update([
-            'item_id'    => $data['item_id'],
-            'stok_awal'  => $data['stok_awal'],
-            'stok_total' => $data['stok_awal'] + $stok->stok_masuk,
-            'stok_akhir' => ($data['stok_awal'] + $stok->stok_masuk) - $stok->stok_keluar,
-        ]);
+            $stokMenu = StokHarianMenu::with('item')->findOrFail($id);
+            $tanggal  = $stokMenu->tanggal;
 
-        return back()->with('success', 'Data stok menu berhasil diperbarui.');
+            // 1️⃣ HITUNG SELISIH
+            $stokAwalLama = $stokMenu->stok_awal;
+            $stokAwalBaru = $data['stok_awal'];
+            $deltaMenu    = $stokAwalBaru - $stokAwalLama;
+
+            // 2️⃣ UPDATE STOK MENU
+            $stokMenu->update([
+                'stok_awal'  => $stokAwalBaru,
+                'stok_akhir' => ($stokAwalBaru + $stokMenu->stok_masuk) - $stokMenu->stok_keluar,
+            ]);
+
+            // 3️⃣ UPDATE STOK MENTAH BERDASARKAN RESEP
+            $recipe = Recipe::where('name', $stokMenu->item->nama)->first();
+
+            if (!$recipe || !is_array($recipe->ingredients)) return;
+
+            foreach ($recipe->ingredients as $ing) {
+
+                $qtyDelta = $deltaMenu * ($ing['amount'] ?? 0);
+
+                $stokMentah = StokHarianMentah::where([
+                    'item_id' => $ing['item_id'],
+                    'tanggal' => $tanggal,
+                ])->first();
+
+                if (!$stokMentah) continue;
+
+                $stokMentah->update([
+                    'stok_awal'  => max(0, $stokMentah->stok_awal + $qtyDelta),
+                    'stok_akhir' => max(
+                        0,
+                        ($stokMentah->stok_awal + $qtyDelta)
+                        + $stokMentah->stok_masuk
+                        - $stokMentah->stok_keluar
+                    ),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Stok menu & bahan mentah berhasil diperbarui.');
     }
+
 
     // =========================================================
     // HAPUS STOK MENU (AUTO HAPUS MENTAH)

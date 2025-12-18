@@ -31,7 +31,7 @@ interface PageProps {
   tanggal: string;
 }
 
-export default function Bar() {
+export default function Dapur() {
   const { items, availableMenus, inputableMenus, tab, tanggal } = usePage<any>().props as PageProps;
 
   const [search, setSearch] = useState("");
@@ -55,16 +55,16 @@ export default function Bar() {
   // --- Handlers ---
   const handleSearch = (e: any) => {
     setSearch(e.target.value);
-    router.get(route("stok-harian.bar"), { tab, tanggal: date, search: e.target.value }, { preserveScroll: true });
+    router.get(route("stok-harian.dapur"), { tab, tanggal: date, search: e.target.value }, { preserveScroll: true });
   };
 
   const handleDateChange = (e: any) => {
     setDate(e.target.value);
-    router.get(route("stok-harian.bar"), { tab, search, tanggal: e.target.value }, { preserveScroll: true });
+    router.get(route("stok-harian.dapur"), { tab, search, tanggal: e.target.value }, { preserveScroll: true });
   };
 
   const handleTabSwitch = (t: any) => {
-    router.get(route("stok-harian.bar"), { tab: t, tanggal: date, search }, { preserveScroll: true });
+    router.get(route("stok-harian.dapur"), { tab: t, tanggal: date, search }, { preserveScroll: true });
   };
 
   const resetForm = () => {
@@ -77,9 +77,10 @@ export default function Bar() {
 
   // --- Actions ---
   const submitCreate = (stokVal: number | "") => {
-    const routeName = tab === 'menu' ? "stok-harian-menu.store" : "stok-harian-mentah.store";
+    const routeName = tab === 'menu' ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
     router.post(route(routeName), {
-        item_id: formItemId,
+        recipe_id: tab === "menu" ? formItemId : undefined, // ✅
+        item_id: tab === "mentah" ? formItemId : undefined,
         tanggal: date,
         stok_awal: stokVal === "" ? 0 : stokVal,
     }, {
@@ -100,7 +101,7 @@ export default function Bar() {
 
   const submitUpdate = () => {
       if(!formRecordId) return;
-      const routeName = tab === 'menu' ? "stok-harian-menu.update" : "stok-harian-mentah.update";
+      const routeName = tab === 'menu' ? "stok-harian-dapur-menu.update" : "stok-harian-dapur-mentah.update";
       router.put(route(routeName, formRecordId), {
           item_id: formItemId,
           stok_awal: formStokAwal
@@ -116,7 +117,7 @@ export default function Bar() {
 
   const submitDelete = () => {
       if(!formRecordId) return;
-      const routeName = tab === 'menu' ? "stok-harian-menu.destroy" : "stok-harian-mentah.destroy";
+      const routeName = tab === 'menu' ? "stok-harian-dapur-menu.destroy" : "stok-harian-dapur-mentah.destroy";
       router.delete(route(routeName, formRecordId), {
           onSuccess: () => { setShowDeleteModal(false); resetForm(); }
       });
@@ -124,7 +125,7 @@ export default function Bar() {
 
   return (
     <AppLayout header={`Stok Harian ${tab === 'menu' ? 'Menu' : 'Bahan Mentah'}`}>
-      <Head title="Stok Harian Bar" />
+      <Head title="Stok Harian Dapur" />
 
       <div className="py-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px]">
@@ -182,7 +183,7 @@ export default function Bar() {
                         <td className="p-3 border border-gray-300 text-center font-bold">{item.tersisa}</td>
                         <td className="p-3 border border-gray-300 text-center">
                         <div className="flex justify-center gap-2">
-                             <button
+                            <button
                             onClick={() => handleEditClick(item)}
                             className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold"
                             >
@@ -235,9 +236,9 @@ export default function Bar() {
                                 if(selected) {
                                     setFormSatuan(selected.satuan || "porsi");
                                     setFormStokAwal(prev =>
-                                    prev === "" || prev === 0
-                                    ? selected.stok_awal ?? ""
-                                    : prev);
+                                prev === "" || prev === 0
+                                ? selected.stok_awal ?? ""
+                                : prev);
                                 }
                             }}
                             className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
@@ -256,6 +257,7 @@ export default function Bar() {
                 </div>
                <div>
                 <label className="block text-sm font-medium mb-1">Stok Awal</label>
+
                 <input
                     type="number"
                     min="0"
@@ -281,7 +283,6 @@ export default function Bar() {
                     "
                 />
                 </div>
-
                 <div className="flex justify-end gap-3 mt-4">
                     <button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button>
                     <button type="submit" disabled={!formItemId} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold">Simpan</button>

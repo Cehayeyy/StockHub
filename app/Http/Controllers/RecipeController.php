@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Recipe;
+use App\Models\Item;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
-use App\Models\Item; // Pastikan model Item di-import
 
 class RecipeController extends Controller
 {
+    /* =========================================================
+     * INDEX
+     * ========================================================= */
     public function index(Request $request)
     {
         $division = $request->input('division', 'bar');
 
+        // ================= RECIPES =================
         $recipes = Recipe::where('division', $division)
             ->latest()
             ->get()
@@ -22,10 +26,10 @@ class RecipeController extends Controller
                 'name'              => $r->name,
                 'ingredients'       => $r->ingredients,
                 'total_ingredients' => $r->total_ingredients,
-                'created_at'        => $r->created_at->format('d/m/Y'),
+                'created_at'        => $r->created_at?->toISOString(),
             ]);
 
-        // Ambil item untuk dropdown bahan
+        // ================= ITEMS DROPDOWN =================
         $items = Item::with('itemCategory')->get()->map(fn ($i) => [
             'id'       => $i->id,
             'name'     => $i->nama,
@@ -41,22 +45,21 @@ class RecipeController extends Controller
         ]);
     }
 
+    /* =========================================================
+     * STORE
+     * ========================================================= */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'division'          => 'required|in:bar,dapur',
-            // Validasi menu_item_id jika perlu, tapi kita hanya butuh nama & ingredients untuk resep
-            'menu_item_id'      => 'nullable|exists:items,id',
-            'ingredients'       => 'required|array|min:1',
-            'ingredients.*.item_id' => 'required|exists:items,id',
-            'ingredients.*.amount'  => 'required|numeric|min:0.01',
-            'ingredients.*.unit'    => 'required|string',
+            'name'                    => 'required|string|max:255',
+            'division'                => 'required|in:bar,dapur',
+            'ingredients'             => 'required|array|min:1',
+            'ingredients.*.item_id'   => 'required|exists:items,id',
+            'ingredients.*.amount'    => 'required|numeric|min:0.01',
+            'ingredients.*.unit'      => 'required|string',
         ]);
 
         DB::transaction(function () use ($validated) {
-            // 1. SIMPAN RESEP SAJA
-            // Tidak ada logika insert ke stok_harian_menu di sini
             Recipe::create([
                 'name'              => $validated['name'],
                 'division'          => $validated['division'],
@@ -65,20 +68,23 @@ class RecipeController extends Controller
             ]);
         });
 
-        return redirect()->route('resep', [
-            'division' => $validated['division'],
-        ])->with('success', 'Resep berhasil dibuat. Silakan input stok awal di menu Stok Harian.');
+        return redirect()
+            ->route('resep', ['division' => $validated['division']])
+            ->with('success', 'Resep berhasil dibuat. Silakan input stok awal di menu Stok Harian.');
     }
 
+    /* =========================================================
+     * UPDATE
+     * ========================================================= */
     public function update(Request $request, Recipe $recipe)
     {
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'division'          => 'required|in:bar,dapur',
-            'ingredients'       => 'required|array|min:1',
-            'ingredients.*.item_id' => 'required|exists:items,id',
-            'ingredients.*.amount'  => 'required|numeric|min:0.01',
-            'ingredients.*.unit'    => 'required|string',
+            'name'                    => 'required|string|max:255',
+            'division'                => 'required|in:bar,dapur',
+            'ingredients'             => 'required|array|min:1',
+            'ingredients.*.item_id'   => 'required|exists:items,id',
+            'ingredients.*.amount'    => 'required|numeric|min:0.01',
+            'ingredients.*.unit'      => 'required|string',
         ]);
 
         $recipe->update([
@@ -88,18 +94,21 @@ class RecipeController extends Controller
             'total_ingredients' => count($validated['ingredients']),
         ]);
 
-        return redirect()->route('resep', [
-            'division' => $validated['division'],
-        ]);
+        return redirect()
+            ->route('resep', ['division' => $validated['division']])
+            ->with('success', 'Resep berhasil diperbarui.');
     }
 
+    /* =========================================================
+     * DELETE
+     * ========================================================= */
     public function destroy(Recipe $recipe)
     {
         $division = $recipe->division;
         $recipe->delete();
 
-        return redirect()->route('resep', [
-            'division' => $division,
-        ]);
+        return redirect()
+            ->route('resep', ['division' => $division])
+            ->with('success', 'Resep berhasil dihapus.');
     }
 }
