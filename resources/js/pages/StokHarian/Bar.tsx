@@ -10,10 +10,12 @@ interface ItemData {
   nama: string;
   satuan?: string;
   stok_awal: number;
+  stok_masuk?: number;
   stok_total: number;
-  pemakaian: number; // stok_keluar
+  pemakaian: number;
   tersisa: number;
 }
+
 
 interface DropdownItem {
     id: number;
@@ -47,6 +49,7 @@ export default function Bar() {
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
   const [formStokAwal, setFormStokAwal] = useState<number | "">("");
+  const [formStokMasuk, setFormStokMasuk] = useState("");
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
 
@@ -67,50 +70,77 @@ export default function Bar() {
     router.get(route("stok-harian.bar"), { tab: t, tanggal: date, search }, { preserveScroll: true });
   };
 
-  const resetForm = () => {
-      setFormRecordId(null);
-      setFormItemId("");
-      setFormItemName("");
-      setFormStokAwal("");
-      setFormPemakaian("");
-      setFormSatuan("porsi");
-  }
+ const resetForm = () => {
+  setFormRecordId(null);
+  setFormItemId("");
+  setFormItemName("");
+  setFormStokAwal("");
+  setFormStokMasuk(""); // ✅ TAMBAHKAN
+  setFormPemakaian("");
+  setFormSatuan("porsi");
+};
+
 
   // --- Actions ---
-  const submitCreate = () => {
-    const routeName = "stok-harian-mentah.store";
-    router.post(route(routeName), {
-        item_id: formItemId,
+const submitCreate = () => {
+    if (formItemId === "") return;
+
+    router.post(route("stok-harian-mentah.store"), {
+        item_id: Number(formItemId),
         tanggal: date,
-        stok_awal: formStokAwal === "" ? 0 : formStokAwal,
-        stok_keluar: formPemakaian === "" ? 0 : formPemakaian,
+        stok_awal: formStokAwal === "" ? 0 : Number(formStokAwal),
+        stok_masuk: formStokMasuk === "" ? 0 : Number(formStokMasuk),
+        stok_keluar: formPemakaian === "" ? 0 : Number(formPemakaian),
     }, {
         onSuccess: () => {
-            setShowInputModal(false); resetForm();
+            setShowInputModal(false);
+            resetForm();
         }
     });
-  };
+};
 
   const handleEditClick = (item: ItemData) => {
-      setFormRecordId(item.id);
-      setFormItemId(item.item_id);
-      setFormItemName(item.nama);
-      setFormStokAwal(item.stok_awal);
-      setFormPemakaian(item.pemakaian);
-      setFormSatuan(item.satuan || "porsi");
-      setShowEditModal(true);
-  }
+  setFormRecordId(item.id);
+  setFormItemId(item.item_id);
+  setFormItemName(item.nama);
+  setFormStokAwal(item.stok_awal);
+  setFormStokMasuk(item.stok_masuk ?? ""); // ✅
+  setFormPemakaian(item.pemakaian);
+  setFormSatuan(item.satuan || "porsi");
+  setShowEditModal(true);
+};
 
-  const submitUpdate = () => {
-      if(!formRecordId) return;
-      const routeName = tab === 'menu' ? "stok-harian-menu.update" : "stok-harian-mentah.update";
-      const payload: any = { item_id: formItemId, stok_awal: formStokAwal };
-      if (tab === 'mentah') { payload.stok_keluar = formPemakaian === "" ? 0 : formPemakaian; }
 
-      router.put(route(routeName, formRecordId), payload, {
-          onSuccess: () => { setShowEditModal(false); resetForm(); }
-      });
-  }
+const submitUpdate = () => {
+    if (!formRecordId) return;
+
+    const routeName =
+        tab === "menu"
+            ? "stok-harian-menu.update"
+            : "stok-harian-mentah.update";
+
+    const payload: any = {
+        item_id: Number(formItemId),
+        stok_awal: formStokAwal === "" ? 0 : Number(formStokAwal),
+    };
+
+  if (tab === "mentah") {
+  payload.stok_masuk =
+    formStokMasuk === "" ? 0 : Number(formStokMasuk);
+
+  payload.stok_keluar =
+    formPemakaian === "" ? 0 : Number(formPemakaian);
+}
+
+
+    router.put(route(routeName, formRecordId), payload, {
+        onSuccess: () => {
+            setShowEditModal(false);
+            resetForm();
+        },
+    });
+};
+
 
   const handleDeleteClick = (id: number) => {
       setFormRecordId(id);
@@ -165,6 +195,9 @@ export default function Bar() {
                   <th className="p-4">Nama</th>
                   <th className="p-4 text-center">Satuan</th>
                   <th className="p-4 text-center">Stok Awal</th>
+                   {tab === "mentah" && (
+                   <th className="p-4 text-center">Stok Masuk</th>
+                      )}
                   <th className="p-4 text-center">Stok Total</th>
                   <th className="p-4 text-center">Pemakaian</th>
                   <th className="p-4 text-center">Tersisa</th>
@@ -178,10 +211,15 @@ export default function Bar() {
                       <td className="p-4 text-center">{i + 1}</td>
                       <td className="p-4 font-medium">{item.nama}</td>
                       <td className="p-4 text-center text-gray-500">{item.satuan}</td>
-                      <td className="p-4 text-center">{item.stok_awal}</td>
-                      <td className="p-4 text-center">{item.stok_total}</td>
-                      <td className="p-4 text-center">{item.pemakaian}</td>
-                      <td className="p-4 text-center font-bold">{item.tersisa}</td>
+                     <td className="p-4 text-center">{item.stok_awal}</td>
+
+                    {tab === "mentah" && (
+                    <td className="p-4 text-center">{item.stok_masuk ?? 0}</td>
+                    )}
+
+                    <td className="p-4 text-center">{item.stok_total}</td>
+                    <td className="p-4 text-center">{item.pemakaian}</td>
+                    <td className="p-4 text-center font-bold">{item.tersisa}</td>
 
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">
@@ -205,33 +243,126 @@ export default function Bar() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
             <h2 className="text-lg font-bold text-center mb-6">Input Stok & Pemakaian</h2>
-            <form onSubmit={(e) => { e.preventDefault(); submitCreate(); }} className="space-y-4">
-                <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Nama Item</label>
-                    <div className="relative">
-                        <select value={formItemId} onChange={(e) => {
-                                const id = Number(e.target.value);
-                                setFormItemId(id);
-                                const source: any[] = inputableMenus;
-                                const selected = source.find(m => m.id === id);
-                                if(selected) {
-                                    setFormSatuan(selected.satuan || "porsi");
-                                    if(selected.stok_awal !== undefined) setFormStokAwal(selected.stok_awal);
-                                    if(selected.pemakaian !== undefined) setFormPemakaian(selected.pemakaian);
-                                }
-                            }} className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]">
-                            <option value="">Pilih Item...</option>
-                            {(inputableMenus as any[]).map((m) => (<option key={m.id} value={m.id}>{m.nama}</option>))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
-                    </div>
-                </div>
-                <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
-                <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
-                <div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
-                <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" disabled={!formItemId} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold">Simpan</button></div>
-            </form>
+            <form
+  onSubmit={(e) => {
+    e.preventDefault();
+    submitCreate();
+  }}
+  className="space-y-4"
+>
+  {/* TANGGAL */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Tanggal</label>
+    <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
+      {new Date(date).toLocaleDateString("id-ID")}
+    </div>
+  </div>
+
+  {/* ITEM */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Nama Item</label>
+    <div className="relative">
+      <select
+        value={formItemId}
+        onChange={(e) => {
+  const id = e.target.value;
+  setFormItemId(id);
+
+  const selected = inputableMenus.find((m) => m.id === Number(id));
+  if (selected) {
+    setFormSatuan(selected.satuan || "porsi");
+    setFormStokAwal(selected.stok_awal ?? 0);
+    setFormPemakaian(selected.pemakaian ?? 0);
+  }
+}}
+
+        className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+      >
+        <option value="">Pilih Item...</option>
+        {inputableMenus.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.nama}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
+    </div>
+  </div>
+
+  {/* SATUAN */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Satuan</label>
+    <input
+      type="text"
+      value={formSatuan}
+      readOnly
+      className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
+    />
+  </div>
+
+  {/* STOK AWAL */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Stok Awal</label>
+    <input
+      type="number"
+      min={0}
+      value={formStokAwal}
+      onChange={(e) => setFormStokAwal(e.target.value)}
+      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+    />
+  </div>
+
+  {/* STOK MASUK */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Stok Masuk</label>
+    <input
+      type="number"
+      min={0}
+      value={formStokMasuk}
+      onChange={(e) => setFormStokMasuk(e.target.value)}
+      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+    />
+  </div>
+
+  {/* PEMAKAIAN */}
+  <div>
+    <label className="block text-sm font-medium mb-1">Pemakaian</label>
+    <input
+      type="number"
+      min={0}
+      value={formPemakaian}
+      onChange={(e) => setFormPemakaian(e.target.value)}
+      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+    />
+  </div>
+
+  {/* ACTION */}
+  <div className="flex justify-end gap-3 pt-4">
+    <button
+      type="button"
+      onClick={() => setShowInputModal(false)}
+      className="px-6 py-2 rounded-full border"
+    >
+      Batal
+    </button>
+
+<button
+  type="submit"
+  disabled={formItemId === ""}
+  className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold
+             disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  Simpan
+</button>
+
+
+  </div>
+</form>
+
           </div>
         </div>
       )}
@@ -246,6 +377,20 @@ export default function Bar() {
                 <div><label className="block text-sm font-medium mb-1">Nama Item</label><input type="text" value={formItemName} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600" /></div>
                 <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
                 <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
+                {tab === "mentah" && (
+  <div>
+    <label className="block text-sm font-medium mb-1">Stok Masuk</label>
+    <input
+      type="number"
+      min={0}
+      value={formStokMasuk}
+      onChange={(e) => setFormStokMasuk(e.target.value)}
+      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+    />
+  </div>
+)}
+
                 {tab === 'mentah' && (<div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
                 <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold">Update</button></div>
             </form>
