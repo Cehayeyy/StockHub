@@ -6,6 +6,8 @@ use App\Models\Recipe;
 use App\Models\Item;
 use App\Models\StokHarianMenu;
 use App\Models\StokHarianMentah;
+use App\Models\StokHarianDapurMentah;
+use App\Models\StokHarianDapurMenu;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +68,7 @@ if ($user->role === 'staff') {
             'ingredients.*.unit'    => 'required|string',
         ]);
 
+
         // 🔒 KUNCI DIVISION
         $division = $user->role === 'staff'
             ? $user->division
@@ -89,12 +92,97 @@ if ($user->role === 'staff') {
                 ->where('division', $division)
                 ->first();
 
-            if ($menuItem) {
-                StokHarianMenu::firstOrCreate(
-                    ['item_id' => $menuItem->id, 'tanggal' => $today],
-                    ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]
-                );
-            }
+       DB::transaction(function () use ($validated) {
+
+    // 1. SIMPAN RESEP
+    $recipe = Recipe::create([
+        'name'              => $validated['name'],
+        'division'          => $validated['division'],
+        'ingredients'       => $validated['ingredients'],
+        'total_ingredients' => count($validated['ingredients']),
+    ]);
+
+    // 2. AMBIL TANGGAL STOK AKTIF
+    $tanggal = session('stok_tanggal') ?? now()->toDateString();
+
+
+    // =========================
+    // A. MENU MASUK STOK HARIAN MENU
+    // =========================
+    if ($validated['division'] === 'dapur') {
+
+    // ================= DAPUR =================
+    StokHarianDapurMenu::firstOrCreate(
+        [
+            'recipe_id' => $recipe->id,
+            'tanggal'   => $tanggal,
+        ],
+        [
+            'stok_awal'   => 0,
+            'stok_masuk'  => 0,
+            'stok_keluar' => 0,
+            'stok_akhir'  => 0,
+            'unit'        => 'porsi',
+        ]
+    );
+
+    foreach ($validated['ingredients'] as $ing) {
+        StokHarianDapurMentah::firstOrCreate(
+            [
+                'item_id' => $ing['item_id'],
+                'tanggal' => $tanggal,
+            ],
+            [
+                'stok_awal'   => 0,
+                'stok_masuk'  => 0,
+                'stok_keluar' => 0,
+                'stok_akhir'  => 0,
+                'unit'        => $ing['unit'],
+            ]
+        );
+    }
+
+} else {
+
+    // ================= BAR =================
+    $menuItem = Item::where('nama', $validated['name'])
+        ->whereHas('itemCategory', fn ($q) => $q->where('name', 'Menu'))
+        ->first();
+
+    if ($menuItem) {
+        StokHarianMenu::firstOrCreate(
+            [
+                'item_id' => $menuItem->id,
+                'tanggal' => $tanggal,
+            ],
+            [
+                'stok_awal'   => 0,
+                'stok_masuk'  => 0,
+                'stok_keluar' => 0,
+                'stok_akhir'  => 0,
+            ]
+        );
+    }
+
+    foreach ($validated['ingredients'] as $ing) {
+        StokHarianMentah::firstOrCreate(
+            [
+                'item_id' => $ing['item_id'],
+                'tanggal' => $tanggal,
+            ],
+            [
+                'stok_awal'   => 0,
+                'stok_masuk'  => 0,
+                'stok_keluar' => 0,
+                'stok_akhir'  => 0,
+                'unit'        => $ing['unit'],
+            ]
+        );
+    }
+}
+    }
+);
+
 
             // B. Masukkan Bahan Mentah ke StokHarianMentah
             if (!empty($validated['ingredients'])) {
@@ -115,6 +203,8 @@ if ($user->role === 'staff') {
                 }
             }
         });
+
+
         return redirect()->route('resep', [
             'division' => $division,
         ])->with('success', 'Resep berhasil dibuat');

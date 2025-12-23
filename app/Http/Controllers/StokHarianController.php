@@ -22,24 +22,71 @@ class StokHarianController extends Controller
         $search  = $request->search;
         $tanggal = $request->tanggal ?? Carbon::now()->toDateString();
 
-        // 1. LOGIKA TABEL
         if ($tab === 'menu') {
             $query = StokHarianMenu::with('item')->whereDate('tanggal', $tanggal);
-            if ($search) $query->whereHas('item', fn($q) => $q->where('nama', 'like', "%{$search}%"));
+            if ($search) {
+                $query->whereHas('item', fn ($q) =>
+                    $q->where('nama', 'like', "%{$search}%")
+                );
+            }
 
-            $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
-                'id'         => $s->id,
-                'item_id'    => $s->item_id,
-                'nama'       => $s->item->nama,
-                'satuan'     => $s->item->satuan ?? 'porsi',
-                'stok_awal'  => $s->stok_awal,
-                'stok_total' => $s->stok_awal, // Total = Awal (Stok Masuk dihapus)
-                'pemakaian'  => $s->stok_keluar,
-                'tersisa'    => $s->stok_akhir,
-            ])->withQueryString();
+            // --- HITUNG DINAMIS BERDASARKAN BAHAN MENTAH ---
+            $items = $query->orderByDesc('id')->paginate(10)->through(function ($s) use ($tanggal) {
+
+                // 1. Ambil Resep
+                $recipe = Recipe::where('name', $s->item->nama)->first();
+
+                // 2. Default: Ambil stok akhir tabel menu
+                $realTimeStock = $s->stok_akhir;
+
+                // 3. Hitung Batasan Bahan Mentah (Limiting Factor)
+                if ($recipe && !empty($recipe->ingredients)) {
+                    $maxPossible = 99999;
+
+                    foreach ($recipe->ingredients as $ing) {
+                        $rawItemId = $ing['item_id'] ?? null;
+                        $amountNeeded = $ing['amount'] ?? 0;
+
+                        if ($rawItemId && $amountNeeded > 0) {
+                            $stokMentah = StokHarianMentah::where('item_id', $rawItemId)
+                                ->where('tanggal', $tanggal)
+                                ->first();
+
+                            $tersedia = $stokMentah ? $stokMentah->stok_akhir : 0;
+                            $bisaDibuat = floor($tersedia / $amountNeeded);
+
+                            if ($bisaDibuat < $maxPossible) {
+                                $maxPossible = $bisaDibuat;
+                            }
+                        }
+                    }
+                    $realTimeStock = ($maxPossible === 99999) ? 0 : $maxPossible;
+                }
+
+                return [
+                    'id'         => $s->id,
+                    'item_id'    => $s->item_id,
+                    'nama'       => $s->item->nama,
+                    'satuan'     => $s->item->satuan ?? 'porsi',
+                    'stok_awal'  => $s->stok_awal,
+
+                    // ✅ STOK MASUK HASIL RUMUS
+                    'stok_masuk' => max(0, ($s->stok_akhir + $s->stok_keluar) - $s->stok_awal),
+
+                    'stok_total' => $s->stok_awal + max(0, ($s->stok_akhir + $s->stok_keluar) - $s->stok_awal),
+                    'pemakaian'  => $s->stok_keluar,
+                    'tersisa'    => $realTimeStock, // Dinamis
+                ];
+            })->withQueryString();
+
         } else {
+            // Logika Tab Mentah
             $query = StokHarianMentah::with('item')->whereDate('tanggal', $tanggal);
-            if ($search) $query->whereHas('item', fn($q) => $q->where('nama', 'like', "%{$search}%"));
+            if ($search) {
+                $query->whereHas('item', fn ($q) =>
+                    $q->where('nama', 'like', "%{$search}%")
+                );
+            }
 
             $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
                 'id'         => $s->id,
@@ -47,13 +94,14 @@ class StokHarianController extends Controller
                 'nama'       => $s->item->nama,
                 'satuan'     => $s->unit ?? $s->item->satuan,
                 'stok_awal'  => $s->stok_awal,
-                'stok_total' => $s->stok_awal, // Total = Awal
+                'stok_masuk' => $s->stok_masuk,
+                'stok_total' => $s->stok_awal + $s->stok_masuk,
                 'pemakaian'  => $s->stok_keluar,
                 'tersisa'    => $s->stok_akhir,
-            ])->withQueryString();
+            ]);
         }
 
-        // 2. DATA DROPDOWN
+        // DROPDOWN
         $availableMenus = [];
         $inputableMenus = [];
 
@@ -70,22 +118,22 @@ class StokHarianController extends Controller
             $inputableMenus = StokHarianMenu::with('item')
                 ->whereDate('tanggal', $tanggal)
                 ->get()
-                ->map(fn($s) => [
+                ->map(fn ($s) => [
                     'id'        => $s->item_id,
                     'nama'      => $s->item->nama,
                     'satuan'    => $s->item->satuan ?? 'porsi',
-                    'stok_awal' => $s->stok_awal
+                    'stok_awal' => $s->stok_awal,
                 ]);
         } else {
             $inputableMenus = StokHarianMentah::with('item')
                 ->whereDate('tanggal', $tanggal)
                 ->get()
-                ->map(fn($s) => [
+                ->map(fn ($s) => [
                     'id'        => $s->item_id,
                     'nama'      => $s->item->nama,
                     'satuan'    => $s->unit ?? $s->item->satuan,
                     'stok_awal' => $s->stok_awal,
-                    'pemakaian' => $s->stok_keluar
+                    'pemakaian' => $s->stok_keluar,
                 ]);
         }
 
@@ -100,108 +148,225 @@ class StokHarianController extends Controller
     }
 
     // =========================================================
-    // STORE MENU (OTOMATIS GENERATE MENTAH)
+    // STORE MENU (HANYA MENU BARU)
     // =========================================================
     public function storeMenu(Request $request)
     {
         $data = $request->validate([
-            'item_id'   => 'required|exists:items,id',
-            'tanggal'   => 'required|date',
-            'stok_awal' => 'required|numeric|min:0',
+            'item_id' => 'required|exists:items,id',
+            'tanggal' => 'required|date',
         ]);
 
-        StokHarianMenu::updateOrCreate(
-            ['item_id' => $data['item_id'], 'tanggal' => $data['tanggal']],
-            [
-                'stok_awal'   => $data['stok_awal'],
+        DB::transaction(function () use ($data) {
+
+            // ❌ cegah duplikat menu per tanggal
+            if (StokHarianMenu::where($data)->exists()) {
+                return;
+            }
+
+            $item   = Item::findOrFail($data['item_id']);
+            $recipe = Recipe::where('name', $item->nama)->first();
+
+            if (!$recipe || !is_array($recipe->ingredients)) {
+                return;
+            }
+
+            // ===============================
+            // 1️⃣ HITUNG STOK AWAL MENU (BOTTLENECK)
+            // ===============================
+            $stokMenuAwal = PHP_INT_MAX;
+
+            foreach ($recipe->ingredients as $ing) {
+
+                $ingredientItemId =
+                    $ing['item_id']
+                    ?? $ing['id']
+                    ?? ($ing['item']['id'] ?? null);
+
+                if (!$ingredientItemId) {
+                    $stokMenuAwal = 0;
+                    break;
+                }
+
+                $stokMentah = StokHarianMentah::where([
+                    'item_id' => $ingredientItemId,
+                    'tanggal' => $data['tanggal'],
+                ])->first();
+
+                if (!$stokMentah) {
+                    $stokMenuAwal = 0;
+                    break;
+                }
+
+                $butuh    = max(1, (int) ($ing['amount'] ?? 1));
+                $possible = intdiv($stokMentah->stok_akhir, $butuh);
+
+                $stokMenuAwal = min($stokMenuAwal, $possible);
+            }
+
+            $stokMenuAwal = max(0, $stokMenuAwal);
+
+            // ===============================
+            // 2️⃣ SIMPAN MENU (TANPA SENTUH STOK MENTAH)
+            // ===============================
+            StokHarianMenu::create([
+                'item_id'     => $data['item_id'],
+                'tanggal'     => $data['tanggal'],
+                'stok_awal'   => $stokMenuAwal,
                 'stok_masuk'  => 0,
-                'stok_keluar' => DB::raw('stok_keluar'),
-                'stok_akhir'  => DB::raw($data['stok_awal'] . " - stok_keluar"),
-            ]
-        );
+                'stok_keluar' => 0,
+                'stok_akhir'  => $stokMenuAwal,
+            ]);
+        });
 
-        $menuItem = Item::find($data['item_id']);
-        if ($menuItem) {
-            $recipe = Recipe::where('name', $menuItem->nama)->first();
-            if ($recipe && !empty($recipe->ingredients)) {
-                foreach ($recipe->ingredients as $ing) {
-                    $rawItemId = $ing['item_id'] ?? null;
-                    $amountPerPortion = isset($ing['amount']) ? (float)$ing['amount'] : 0;
-                    $totalRawRequired = $data['stok_awal'] * $amountPerPortion;
+        return back()->with('success', 'Menu berhasil ditambahkan.');
+    }
 
-                    if ($rawItemId) {
-                        $existingRaw = StokHarianMentah::where('item_id', $rawItemId)
-                            ->where('tanggal', $data['tanggal'])
-                            ->first();
+    // =========================================================
+    // UPDATE STOK MENU (AUTO KURANGI MENTAH & EDIT PRODUKSI)
+    // =========================================================
+    public function updateMenu(Request $request, $id)
+    {
+        // Validasi input bisa stok_awal atau stok_masuk
+        $data = $request->validate([
+            'stok_awal'  => 'nullable|numeric|min:0',
+            'stok_masuk' => 'nullable|numeric|min:0',
+        ]);
 
-                        if ($existingRaw) {
-                            $newStokAwal = $existingRaw->stok_awal + $totalRawRequired;
-                            $existingRaw->update([
-                                'stok_awal'  => $newStokAwal,
-                                'stok_akhir' => $newStokAwal - $existingRaw->stok_keluar
-                            ]);
-                        } else {
-                            StokHarianMentah::create([
-                                'item_id'     => $rawItemId,
-                                'tanggal'     => $data['tanggal'],
-                                'stok_awal'   => $totalRawRequired,
-                                'stok_masuk'  => 0,
-                                'stok_keluar' => 0,
-                                'stok_akhir'  => $totalRawRequired,
-                                'unit'        => $ing['unit'] ?? 'porsi',
+        DB::transaction(function () use ($data, $id) {
+
+            $stokMenu = StokHarianMenu::with('item')->findOrFail($id);
+            $tanggal = $stokMenu->tanggal;
+            $recipe = Recipe::where('name', $stokMenu->item->nama)->first();
+
+            // --- CASE A: UPDATE STOK AWAL (Sepertinya ini yang utama kamu pakai) ---
+            if (isset($data['stok_awal'])) {
+                $stokAwalLama = $stokMenu->stok_awal;
+                $stokAwalBaru = $data['stok_awal'];
+                $deltaMenu = $stokAwalBaru - $stokAwalLama;
+
+                $stokMenu->update([
+                    'stok_awal'  => $stokAwalBaru,
+                    'stok_total' => $stokAwalBaru + $stokMenu->stok_masuk,
+                    'stok_akhir' => ($stokAwalBaru + $stokMenu->stok_masuk) - $stokMenu->stok_keluar,
+                ]);
+
+                if ($recipe && !empty($recipe->ingredients)) {
+                    foreach ($recipe->ingredients as $ing) {
+                        $rawItemId = $ing['item_id'] ?? null;
+                        $amountNeededPerPortion = $ing['amount'] ?? 0;
+
+                        if ($rawItemId) {
+                            $stokMentah = StokHarianMentah::where('item_id', $rawItemId)
+                                ->where('tanggal', $tanggal)
+                                ->first();
+
+                            if ($stokMentah) {
+                                $totalBahanDipakai = $deltaMenu * $amountNeededPerPortion;
+                                $stokMentahBaru = $stokMentah->stok_awal - $totalBahanDipakai;
+                                if ($stokMentahBaru < 0) $stokMentahBaru = 0;
+
+                                $stokMentah->update([
+                                    'stok_awal'  => $stokMentahBaru,
+                                    'stok_total' => $stokMentahBaru + $stokMentah->stok_masuk,
+                                    'stok_akhir' => ($stokMentahBaru + $stokMentah->stok_masuk) - $stokMentah->stok_keluar
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- CASE B: UPDATE STOK MASUK (PRODUKSI) ---
+            if (isset($data['stok_masuk'])) {
+                $delta = $data['stok_masuk'] - $stokMenu->stok_masuk;
+
+                if ($delta != 0) {
+                    $stokMenu->update([
+                        'stok_masuk' => $data['stok_masuk'],
+                        'stok_akhir' => $stokMenu->stok_awal + $data['stok_masuk'] - $stokMenu->stok_keluar,
+                    ]);
+
+                    if ($recipe && is_array($recipe->ingredients)) {
+                        foreach ($recipe->ingredients as $ing) {
+                            $qty = $delta * ($ing['amount'] ?? 0);
+
+                            $mentah = StokHarianMentah::where([
+                                'item_id' => $ing['item_id'],
+                                'tanggal' => $stokMenu->tanggal,
+                            ])->first();
+
+                            if (!$mentah) continue;
+
+                            $newKeluar = max(0, $mentah->stok_keluar + $qty);
+
+                            $mentah->update([
+                                'stok_keluar' => $newKeluar,
+                                'stok_akhir'  => $mentah->stok_awal + $mentah->stok_masuk - $newKeluar,
                             ]);
                         }
                     }
                 }
             }
-        }
+        });
 
-        return back()->with('success', 'Data menu disimpan & stok mentah disesuaikan.');
+        return back()->with('success', 'Stok menu diperbarui & bahan mentah otomatis disesuaikan.');
     }
 
     // =========================================================
-    // UPDATE STOK MENU
-    // =========================================================
-    public function updateMenu(Request $request, $id)
-    {
-        $data = $request->validate([
-            'item_id'   => 'required|exists:items,id',
-            'stok_awal' => 'required|numeric|min:0',
-        ]);
-
-        $stok = StokHarianMenu::findOrFail($id);
-        $stok->update([
-            'item_id'    => $data['item_id'],
-            'stok_awal'  => $data['stok_awal'],
-            'stok_total' => $data['stok_awal'],
-            'stok_akhir' => $data['stok_awal'] - $stok->stok_keluar,
-        ]);
-
-        return back()->with('success', 'Data stok menu berhasil diperbarui.');
-    }
-
-    // =========================================================
-    // HAPUS STOK MENU (AUTO HAPUS MENTAH)
+    // DESTROY MENU
     // =========================================================
     public function destroyMenu($id)
     {
-        $stokMenu = StokHarianMenu::with('item')->findOrFail($id);
-        $recipe = Recipe::where('name', $stokMenu->item->nama)->first();
+        DB::transaction(function () use ($id) {
 
-        if ($recipe && !empty($recipe->ingredients)) {
-            $rawItemIds = collect($recipe->ingredients)->pluck('item_id')->filter();
-            if ($rawItemIds->isNotEmpty()) {
-                StokHarianMentah::whereIn('item_id', $rawItemIds)
-                    ->whereDate('tanggal', $stokMenu->tanggal)
-                    ->delete();
+            $menu = StokHarianMenu::with('item')->findOrFail($id);
+            $tanggal = $menu->tanggal;
+
+            $recipe = Recipe::where('name', $menu->item->nama)->first();
+
+            if ($recipe && is_array($recipe->ingredients)) {
+                foreach ($recipe->ingredients as $ing) {
+
+                    // ✅ HITUNG TOTAL MENU YANG PERNAH DIKURANGKAN
+                    $totalMenu = $menu->stok_awal + $menu->stok_masuk;
+                    $qty = $totalMenu * ($ing['amount'] ?? 0);
+
+                    $stokMentah = StokHarianMentah::where([
+                        'item_id' => $ing['item_id'],
+                        'tanggal' => $tanggal,
+                    ])->first();
+
+                    if (!$stokMentah) continue;
+
+                    $newKeluar = max(0, $stokMentah->stok_keluar - $qty);
+
+                    $stokMentah->update([
+                        'stok_keluar' => $newKeluar,
+                        'stok_akhir'  => $stokMentah->stok_awal
+                            + $stokMentah->stok_masuk
+                            - $newKeluar,
+                    ]);
+
+                    // 🔥 AUTO DELETE JIKA BENAR-BENAR KOSONG
+                    if (
+                        $stokMentah->stok_awal == 0 &&
+                        $stokMentah->stok_masuk == 0 &&
+                        $newKeluar == 0
+                    ) {
+                        $stokMentah->delete();
+                    }
+                }
             }
-        }
-        $stokMenu->delete();
-        return back()->with('success', 'Data menu dan bahan mentah terkait berhasil dihapus.');
+
+            $menu->delete();
+        });
+
+        return back()->with('success', 'Menu dihapus & stok bahan mentah dikembalikan.');
     }
 
     // =========================================================
-    // STORE MENTAH (MANUAL INPUT: STOK AWAL & PEMAKAIAN)
+    // STORE & UPDATE MENTAH
     // =========================================================
     public function storeMentah(Request $request)
     {
@@ -209,56 +374,116 @@ class StokHarianController extends Controller
             'item_id'     => 'required|exists:items,id',
             'tanggal'     => 'required|date',
             'stok_awal'   => 'required|numeric|min:0',
+            'stok_masuk'  => 'nullable|numeric|min:0',
             'stok_keluar' => 'nullable|numeric|min:0',
         ]);
 
-        $stokKeluar = $data['stok_keluar'] ?? 0;
+        $masuk  = $data['stok_masuk']  ?? 0;
+        $keluar = $data['stok_keluar'] ?? 0;
 
         StokHarianMentah::updateOrCreate(
-            ['item_id' => $data['item_id'], 'tanggal' => $data['tanggal']],
+            [
+                'item_id' => $data['item_id'],
+                'tanggal' => $data['tanggal'],
+            ],
             [
                 'stok_awal'   => $data['stok_awal'],
-                'stok_masuk'  => 0,
-                'stok_keluar' => $stokKeluar,
-                'stok_akhir'  => $data['stok_awal'] - $stokKeluar,
+                'stok_masuk'  => $masuk,
+                'stok_keluar' => $keluar,
+                'stok_akhir'  => $data['stok_awal'] + $masuk - $keluar,
             ]
         );
 
-        return back()->with('success', 'Stok bahan mentah berhasil disimpan.');
+        // 🔥 INI KUNCINYA UNTUK SYNC MENU
+        $this->recalculateMenuByDate($data['tanggal']);
+
+        return back()->with('success', 'Stok mentah & menu otomatis diperbarui.');
     }
 
-    // =========================================================
-    // UPDATE STOK MENTAH (EDIT: STOK AWAL & PEMAKAIAN)
-    // =========================================================
     public function updateMentah(Request $request, $id)
     {
         $data = $request->validate([
-            'item_id'     => 'required|exists:items,id',
             'stok_awal'   => 'required|numeric|min:0',
+            'stok_masuk'  => 'nullable|numeric|min:0',
             'stok_keluar' => 'nullable|numeric|min:0',
         ]);
 
         $stok = StokHarianMentah::findOrFail($id);
-        $stokKeluar = $data['stok_keluar'] ?? 0;
+
+        $masuk  = $data['stok_masuk']  ?? $stok->stok_masuk;
+        $keluar = $data['stok_keluar'] ?? $stok->stok_keluar;
 
         $stok->update([
-            'item_id'     => $data['item_id'],
             'stok_awal'   => $data['stok_awal'],
-            'stok_keluar' => $stokKeluar,
-            'stok_total'  => $data['stok_awal'],
-            'stok_akhir'  => $data['stok_awal'] - $stokKeluar,
+            'stok_masuk'  => $masuk,
+            'stok_keluar' => $keluar,
+            'stok_akhir'  => $data['stok_awal'] + $masuk - $keluar,
         ]);
+
+        // 🔥 SYNC MENU JUGA SAAT UPDATE
+        $this->recalculateMenuByDate($stok->tanggal);
 
         return back()->with('success', 'Stok bahan mentah berhasil diperbarui.');
     }
 
-    // =========================================================
-    // HAPUS STOK MENTAH
-    // =========================================================
     public function destroyMentah($id)
     {
         $stok = StokHarianMentah::findOrFail($id);
+        $tanggal = $stok->tanggal;
         $stok->delete();
+
+        // Recalculate menus after deleting an ingredient
+        $this->recalculateMenuByDate($tanggal);
+
         return back()->with('success', 'Stok bahan mentah berhasil dihapus.');
+    }
+
+    // =========================================================
+    // HELPER FUNCTION
+    // =========================================================
+    private function recalculateMenuByDate(string $tanggal)
+    {
+        $menus = StokHarianMenu::with('item')
+            ->whereDate('tanggal', $tanggal)
+            ->get();
+
+        foreach ($menus as $menu) {
+            $recipe = Recipe::where('name', $menu->item->nama)->first();
+            if (!$recipe || !is_array($recipe->ingredients)) continue;
+
+            $stokMenuAwal = PHP_INT_MAX;
+
+            foreach ($recipe->ingredients as $ing) {
+                $ingredientItemId =
+                    $ing['item_id']
+                    ?? $ing['id']
+                    ?? ($ing['item']['id'] ?? null);
+
+                if (!$ingredientItemId) {
+                    $stokMenuAwal = 0;
+                    break;
+                }
+
+                $mentah = StokHarianMentah::where([
+                    'item_id' => $ingredientItemId,
+                    'tanggal' => $tanggal,
+                ])->first();
+
+                if (!$mentah) {
+                    $stokMenuAwal = 0;
+                    break;
+                }
+
+                $butuh = max(1, (int) ($ing['amount'] ?? 1));
+                $stokMenuAwal = min($stokMenuAwal, intdiv($mentah->stok_akhir, $butuh));
+            }
+
+            $stokMenuAwal = max(0, $stokMenuAwal);
+
+            $menu->update([
+                'stok_awal'  => $stokMenuAwal,
+                'stok_akhir' => $stokMenuAwal + $menu->stok_masuk - $menu->stok_keluar,
+            ]);
+        }
     }
 }
