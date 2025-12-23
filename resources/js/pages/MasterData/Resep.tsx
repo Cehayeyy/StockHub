@@ -1,7 +1,10 @@
+
+
 import React, { useState } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
 import { Search, Trash } from "lucide-react";
+
 
 interface Recipe {
   id: number;
@@ -31,17 +34,40 @@ interface Ingredient {
 }
 
 interface PageProps {
-  recipes: Recipe[];
-  bahan_menu: Item[];
-  bahan_mentah: Item[];
-  division: "bar" | "dapur";
-}
+    recipes: Recipe[];
+    bahan_menu: Item[];
+    bahan_mentah: Item[];
+    division: "bar" | "dapur";
+  }
 
-const Resep: React.FC = () => {
-  const { recipes = [], bahan_menu = [], bahan_mentah = [], division } =
-    usePage<PageProps>().props;
 
-  const [selectedDivision, setSelectedDivision] = useState<"bar" | "dapur">(division);
+
+  const Resep: React.FC = () => {
+
+    const page = usePage<any>();
+
+    const {
+      recipes = [],
+      bahan_menu = [],
+      bahan_mentah = [],
+      division,
+    } = page.props;
+
+    const user = page.props.auth.user;
+    const role = user.role?.toLowerCase();
+    const isStaff = role !== "owner" && role !== "supervisor";
+
+
+    const activeDivision: "bar" | "dapur" = isStaff
+      ? user.division
+      : division;
+
+      console.log(user.role);
+
+
+
+
+
   const [search, setSearch] = useState("");
 
   // === TAMBAH ===
@@ -143,7 +169,7 @@ const Resep: React.FC = () => {
 
   const menu = findMenuByName(menuName);
 
-  if (selectedDivision === "bar" && !menu) {
+  if (activeDivision === "bar" && !menu) {
     return alert("Menu jadi wajib dipilih dari daftar");
   }
 
@@ -156,8 +182,8 @@ const Resep: React.FC = () => {
     route("resep.store"),
     {
       name: menuName,
-      division: selectedDivision,
-      menu_item_id: selectedDivision === "bar" ? menu?.id : null, // 🔑 INI KUNCI
+      division: activeDivision,
+      menu_item_id: activeDivision === "bar" ? menu?.id : null, // 🔑 INI KUNCI
       ingredients: ingredients.map((i) => ({
         item_id: i.item_id,
         amount: i.amount,
@@ -239,7 +265,8 @@ const Resep: React.FC = () => {
       route("resep.update", editId),
       {
         name: editName,
-        division: selectedDivision,
+        division: activeDivision,
+
         ingredients: editIngredients.map((ing) => ({ item_id: ing.item_id, amount: ing.amount, unit: ing.unit })),
       },
       { onSuccess: () => setOpenEditModal(false) }
@@ -253,7 +280,12 @@ const Resep: React.FC = () => {
   // UI
   // ==============================
   return (
-    <AppLayout header={`Resep ${selectedDivision === "bar" ? "Bar" : "Dapur"}`}>
+    <AppLayout
+    header={`Resep ${activeDivision === "bar" ? "Bar" : "Dapur"}`}
+
+
+  >
+
       <Head title="Resep" />
 
       <datalist id="menu-datalist">
@@ -265,20 +297,28 @@ const Resep: React.FC = () => {
       </datalist>
 
       {/* SELECT DIVISION */}
+
       <div className={showModal || openViewModal || openEditModal || openDeleteModal ? "blur-sm pointer-events-none" : ""}>
         <div className="p-4">
-          <select
-            value={selectedDivision}
-            onChange={(e) => {
-              const div = e.target.value as "bar" | "dapur";
-              setSelectedDivision(div);
-              router.get(route("resep"), { division: div }, { preserveScroll: true, replace: true });
-            }}
-            className="rounded-full border px-4 py-2 text-sm bg-[#FDF3E4]"
-          >
-            <option value="bar">Bar</option>
-            <option value="dapur">Dapur</option>
-          </select>
+        {!isStaff && (
+  <select
+    value={activeDivision}
+    onChange={(e) => {
+      const div = e.target.value as "bar" | "dapur";
+      router.get(
+        route("resep"),
+        { division: div },
+        { preserveScroll: true, replace: true }
+      );
+    }}
+    className="rounded-full border px-4 py-2 text-sm bg-[#FDF3E4]"
+  >
+    <option value="bar">Bar</option>
+    <option value="dapur">Dapur</option>
+  </select>
+)}
+
+
 
           {/* LIST RECIPES */}
           <div className="mt-4 bg-white p-6 rounded-3xl shadow space-y-6">
@@ -371,13 +411,14 @@ const Resep: React.FC = () => {
               <div>
                 <label className="font-semibold text-sm">Nama Menu Jadi</label>
                 <input
-                  type="text"
-                  list="menu-datalist"
-                  value={menuName}
-                  onChange={(e) => setMenuName(e.target.value)}
-                  className="w-full bg-gray-100 px-4 py-2 rounded"
-                  required
-                />
+  type="text"
+  {...(!isStaff && { list: "menu-datalist" })}
+  value={menuName}
+  onChange={(e) => setMenuName(e.target.value)}
+  className="w-full bg-gray-100 px-4 py-2 rounded"
+  required
+/>
+
               </div>
 
               <div>

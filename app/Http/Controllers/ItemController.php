@@ -13,13 +13,22 @@ class ItemController extends Controller
     /**
      * LIST ITEM (per divisi: bar / kitchen)
      */
+
     public function index(Request $request): Response
 {
-    $division = $request->query('division', 'bar');
+    $user = $request->user();
 
+// kalau staff → kunci divisi
+if (in_array($user->role, ['bar', 'kitchen'])) {
+    $division = $user->role;
+} else {
+    // admin
+    $division = $request->query('division', 'bar');
     if (!in_array($division, ['bar', 'kitchen'])) {
         $division = 'bar';
     }
+}
+
 
     // Mulai query dasar
     $query = Item::with('itemCategory')

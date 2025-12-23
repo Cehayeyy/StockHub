@@ -66,8 +66,18 @@ const sortCategories = (categories: ItemCategory[]) => {
 };
 
 export default function ItemPage() {
-  const { items, division: initialDivision, categories } =
+    const { items, division: initialDivision, categories, auth } =
     usePage<PageProps>().props;
+
+  const role = auth?.user?.role;
+  const isStaff = role === "bar" || role === "kitchen";
+  const userDivision = role === "bar" || role === "kitchen" ? role : null;
+
+
+
+
+
+
 
   // --- FIX: fallback aman untuk semua props ---
   const safeItems: PaginatedItems = {
@@ -77,8 +87,10 @@ export default function ItemPage() {
 
   const safeCategories = categories ?? [];
 
-  const [division, setDivision] = useState<Division>(initialDivision ?? "bar");
-  const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
+  const [division, setDivision] = useState<Division>(
+    isStaff && userDivision ? userDivision : initialDivision ?? "bar"
+  );
+    const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
 
   const [search, setSearch] = useState("");
 
@@ -96,6 +108,7 @@ export default function ItemPage() {
     setDeleteId(id);
     setOpenDeleteModal(true);
   };
+
 
   const confirmDelete = () => {
     if (!deleteId) return;
@@ -143,6 +156,7 @@ export default function ItemPage() {
     setKategoriId(null);
   };
 
+
   const submitItem = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!kategoriId) return;
@@ -179,6 +193,7 @@ export default function ItemPage() {
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
             {/* Division */}
+            {!isStaff && (
             <div className="relative inline-block w-40">
               <button
                 type="button"
@@ -221,9 +236,11 @@ export default function ItemPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Add + Search */}
             <div className="flex flex-col md:flex-row md:items-center gap-3">
+            {!isStaff && (
               <button
                 onClick={() => {
                   setEditId(null);
@@ -235,7 +252,7 @@ export default function ItemPage() {
               >
                 Tambah Item
               </button>
-
+            )}
               <div className="relative">
                 <input
                   type="text"
@@ -268,7 +285,9 @@ export default function ItemPage() {
                   <th className="p-3 border">Nama Item</th>
                   <th className="p-3 border w-40">Kategori</th>
                   <th className="p-3 border w-32">Satuan</th>
-                  <th className="p-3 border text-center w-40">Aksi</th>
+                  {!isStaff && (
+  <th className="p-3 border text-center w-40">Aksi</th>
+)}
                 </tr>
               </thead>
 
@@ -286,8 +305,11 @@ export default function ItemPage() {
                       <td className="p-3 border">
                         {item.satuan ?? "porsi"}
                       </td>
+                      {!isStaff && (
+    <>
                       <td className="p-3 border text-center">
                         <div className="flex justify-center gap-2">
+
                           <button
                             onClick={() => handleEdit(item)}
                             className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold"
@@ -300,13 +322,18 @@ export default function ItemPage() {
                           >
                             Hapus
                           </button>
+
+
                         </div>
                       </td>
+                      </>
+                      )}
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-gray-500">
+                <td colSpan={isStaff ? 4 : 5} className="p-6 text-center text-gray-500">
+
                       Tidak ada data.
                     </td>
                   </tr>
@@ -340,7 +367,7 @@ export default function ItemPage() {
       </div>
 
       {/* MODAL ADD/EDIT */}
-      {openModal && (
+      {openModal && !isStaff && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
             <h2 className="text-2xl font-bold text-center mb-6">
@@ -450,7 +477,7 @@ export default function ItemPage() {
       )}
 
       {/* MODAL DELETE */}
-      {openDeleteModal && (
+      {openDeleteModal && !isStaff && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
             <h2 className="text-2xl font-bold text-center mb-4">

@@ -65,6 +65,8 @@ export default function KategoriPage() {
 
       const role = auth.user.role;
       const isStaff = role === "bar" || role === "kitchen";
+      const staffDivision = isStaff ? role : serverDivision;
+
 
 
 
@@ -133,7 +135,7 @@ export default function KategoriPage() {
 
     router.post(
       route("kategori.store"), // pastikan route ini ada di web.php
-      { name, division: serverDivision },
+      { name, division: staffDivision },
       {
         onSuccess: () => {
           setAddModalOpen(false);
@@ -191,7 +193,7 @@ export default function KategoriPage() {
     });
   };
 
-  const titleDivisionLabel = serverDivision === "bar" ? "Bar" : "Kitchen";
+  const titleDivisionLabel = staffDivision === "bar" ? "Bar" : "Kitchen";
 
   return (
     <AppLayout header={`Kategori ${titleDivisionLabel}`}>
@@ -208,6 +210,7 @@ export default function KategoriPage() {
                 </h2>
 
                 {/* Dropdown Divisi */}
+                {!isStaff && (
                 <div className="relative inline-block w-40">
                   <button
                     type="button"
@@ -251,6 +254,7 @@ export default function KategoriPage() {
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
               {/* Right controls: Tambah + Search */}

@@ -24,6 +24,7 @@ interface PageProps {
       name: string;
       email: string;
       role?: string;
+      division?: 'bar' | 'dapur';
     };
   };
   flash?: {
@@ -116,9 +117,17 @@ function SubMenuLink({
 }
 
 export default function AppLayout({ header, children }: LayoutProps) {
-  const { auth, flash } = usePage<PageProps>().props;
-  const role = auth.user.role;
-  const isStaff = role === 'bar' || role === 'kitchen';
+    const { auth, flash } = usePage<PageProps>().props;
+
+    const rawRole = auth?.user?.role;
+    const role = auth?.user?.role?.toLowerCase();
+const division = auth?.user?.division;
+const isStaff = role !== 'owner' && role !== 'supervisor';
+    console.log('ROLE ASLI:', rawRole);
+    console.log('ROLE NORMALIZED:', role);
+    console.log('IS STAFF:', isStaff);
+
+
 
 
 // AUTO LOGOUT IDLE 10 MENIT + LOGOUT SAAT BROWSER DITUTUP ATAU DEVICE MATI
@@ -228,7 +237,7 @@ useEffect(() => {
             Dasbor
           </SidebarLink>
 
-          {!isStaff && (
+ {!isStaff && (
   <SidebarLink href="manajemen" icon={Users}>
     Manajemen Akun
   </SidebarLink>
@@ -289,15 +298,38 @@ useEffect(() => {
             </button>
 
             {openStokHarian && (
-              <div className="mt-1 space-y-1">
-                <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
-                  Bar
-                </SubMenuLink>
-                <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
-                  Dapur
-                </SubMenuLink>
-              </div>
-            )}
+  <div className="mt-1 space-y-1">
+
+    {/* OWNER / SUPERVISOR */}
+    {!isStaff && (
+      <>
+        <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
+          Bar
+        </SubMenuLink>
+        <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
+          Dapur
+        </SubMenuLink>
+      </>
+    )}
+
+    {/* STAFF BAR */}
+    {isStaff && auth.user.division === "bar" && (
+      <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
+        Bar
+      </SubMenuLink>
+    )}
+
+    {/* STAFF DAPUR */}
+    {isStaff && auth.user.division === "dapur" && (
+      <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
+        Dapur
+      </SubMenuLink>
+    )}
+
+  </div>
+)}
+
+
           </div>
 
           <SidebarLink href="#" icon={ClipboardCheck}>

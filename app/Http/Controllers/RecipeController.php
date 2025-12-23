@@ -15,7 +15,17 @@ class RecipeController extends Controller
 {
     public function index(Request $request)
     {
-        $division = $request->input('division', 'bar');
+        $user = $request->user();
+
+if ($user->role === 'staff') {
+    // 🔒 STAFF DIPAKSA IKUT DIVISION AKUN
+    $division = $user->division;
+} else {
+    // 👑 SUPERVISOR / ADMIN BOLEH PILIH
+    $division = $request->get('division', 'bar');
+}
+
+
 
         $recipes = Recipe::where('division', $division)
             ->latest()
@@ -40,35 +50,43 @@ class RecipeController extends Controller
             'bahan_menu'   => $items->where('category', 'Menu')->values(),
             'bahan_mentah' => $items->where('category', 'Mentah')->values(),
             'division'     => $division,
+            'role' => $user->role,
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
-            'division'              => 'required|in:bar,dapur',
             'ingredients'           => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
         ]);
 
-        DB::transaction(function () use ($validated) {
-            // 1. SIMPAN RESEP
+        // 🔒 KUNCI DIVISION
+        $division = $user->role === 'staff'
+            ? $user->division
+            : $request->get('division', 'bar');
+
+        DB::transaction(function () use ($validated, $division) {
+
             Recipe::create([
                 'name'              => $validated['name'],
-                'division'          => $validated['division'],
+                'division'          => $division,
                 'ingredients'       => $validated['ingredients'],
                 'total_ingredients' => count($validated['ingredients']),
             ]);
+
 
             // 2. AUTOMATION: PUSH KE STOK HARIAN
             $today = Carbon::now()->toDateString();
 
             // A. Masukkan Menu Jadi ke StokHarianMenu
             $menuItem = Item::where('nama', $validated['name'])
-                ->where('division', $validated['division'])
+                ->where('division', $division)
                 ->first();
 
             if ($menuItem) {
@@ -97,22 +115,28 @@ class RecipeController extends Controller
                 }
             }
         });
-
         return redirect()->route('resep', [
-            'division' => $validated['division'],
-        ])->with('success', 'Resep berhasil dibuat & Stok Harian otomatis disiapkan.');
+            'division' => $division,
+        ])->with('success', 'Resep berhasil dibuat');
     }
+
 
     public function update(Request $request, Recipe $recipe)
     {
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
-            'division'              => 'required|in:bar,dapur',
             'ingredients'           => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
         ]);
+
+        $user = $request->user();
+
+$division = $user->role === 'staff'
+    ? $recipe->division
+    : $request->get('division', $recipe->division);
+
 
         DB::transaction(function () use ($validated, $recipe) {
             $today = Carbon::now()->toDateString();
