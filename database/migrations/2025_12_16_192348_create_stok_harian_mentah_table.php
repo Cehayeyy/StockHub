@@ -6,7 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
-    {
+{
+    // Cek dulu apakah tabel sudah ada
+    if (!Schema::hasTable('stok_harian_mentah')) {
         Schema::create('stok_harian_mentah', function (Blueprint $table) {
             $table->id();
             $table->foreignId('item_id')->constrained('items')->cascadeOnDelete();
@@ -21,6 +23,7 @@ return new class extends Migration {
             $table->unique(['item_id', 'tanggal']);
         });
     }
+}
 
     public function down(): void
     {

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Recipe extends Model
 {
@@ -16,13 +16,18 @@ class Recipe extends Model
         'total_ingredients',
     ];
 
+    /**
+     * Casting kolom ingredients agar otomatis jadi Array/JSON
+     */
     protected $casts = [
         'ingredients' => 'array',
     ];
 
-    // ❌ RELASI DAPUR DIHAPUS
-    // public function dailyStocks()
-    // {
-    //     return $this->hasMany(DailyMenuStock::class);
-    // }
+    /**
+     * Relasi ke Stok Harian Dapur (Jika diperlukan)
+     */
+    public function stokHarianDapur()
+    {
+        return $this->hasMany(StokHarianDapurMenu::class, 'recipe_id');
+    }
 }

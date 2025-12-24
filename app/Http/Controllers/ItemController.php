@@ -41,7 +41,7 @@ if (in_array($user->role, ['bar', 'kitchen'])) {
 
     // === PAGINATION FIX ===
     $items = $query->orderBy('nama')
-        ->paginate(8)             // BEBAS kamu mau 5, 10, 20
+        ->paginate(10)             // BEBAS kamu mau 5, 10, 20
         ->withQueryString();      // penting agar search ikut pagination
 
     // Category tetap

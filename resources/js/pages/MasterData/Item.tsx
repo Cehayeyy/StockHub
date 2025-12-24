@@ -29,12 +29,20 @@ type PaginatedItems = {
     label: string;
     active: boolean;
   }[];
+  current_page: number;
+  per_page: number;
 };
 
 type PageProps = {
-  items?: PaginatedItems;   // ← dibuat optional supaya tidak undefined
+  items?: PaginatedItems;
   division: Division;
   categories?: ItemCategory[];
+  auth: {
+    user: {
+      role: string;
+      division: Division;
+    };
+  };
 } & Record<string, any>;
 
 const translateCategoryName = (name: string) => {
@@ -66,31 +74,28 @@ const sortCategories = (categories: ItemCategory[]) => {
 };
 
 export default function ItemPage() {
-    const { items, division: initialDivision, categories, auth } =
+  const { items, division: initialDivision, categories, auth } =
     usePage<PageProps>().props;
 
+  // --- LOGIKA ROLE & DIVISION (MERGED) ---
   const role = auth?.user?.role;
   const isStaff = role === "bar" || role === "kitchen";
-  const userDivision = role === "bar" || role === "kitchen" ? role : null;
+  const userDivision = isStaff ? (role as Division) : null;
 
-
-
-
-
-
-
-  // --- FIX: fallback aman untuk semua props ---
   const safeItems: PaginatedItems = {
     data: items?.data ?? [],
     links: items?.links ?? [],
+    current_page: items?.current_page ?? 1,
+    per_page: items?.per_page ?? 10,
   };
 
   const safeCategories = categories ?? [];
 
+  // State Division: Jika staff, paksa ke divisinya. Jika admin, pakai dari props/default 'bar'
   const [division, setDivision] = useState<Division>(
     isStaff && userDivision ? userDivision : initialDivision ?? "bar"
   );
-    const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
+  const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
 
   const [search, setSearch] = useState("");
 
@@ -108,7 +113,6 @@ export default function ItemPage() {
     setDeleteId(id);
     setOpenDeleteModal(true);
   };
-
 
   const confirmDelete = () => {
     if (!deleteId) return;
@@ -156,7 +160,6 @@ export default function ItemPage() {
     setKategoriId(null);
   };
 
-
   const submitItem = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!kategoriId) return;
@@ -188,71 +191,77 @@ export default function ItemPage() {
       <Head title="Item" />
 
       <div className="py-6">
-        <div className="bg-white p-6 rounded-3xl shadow-inner">
-          {/* FILTER */}
+        <div className="bg-white p-6 rounded-3xl shadow-inner min-h-[600px] flex flex-col">
+
+          {/* --- FILTER & HEADER --- */}
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-            {/* Division */}
-            {!isStaff && (
-            <div className="relative inline-block w-40">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDivisionDropdown((prev) => !prev);
-                  setShowKategoriDropdown(false);
-                }}
-                className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B]"
-              >
-                <span className="capitalize">
-                  {division === "bar" ? "Bar" : "Kitchen"}
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform ${
-                    showDivisionDropdown ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+            {/* Division Dropdown (Hanya muncul jika BUKAN staff biasa) */}
+            {!isStaff ? (
+              <div className="relative inline-block w-40">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDivisionDropdown((prev) => !prev);
+                    setShowKategoriDropdown(false);
+                  }}
+                  className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B]"
+                >
+                  <span className="capitalize">
+                    {division === "bar" ? "Bar" : "Kitchen"}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${
+                      showDivisionDropdown ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-              {showDivisionDropdown && (
-                <div className="absolute left-0 mt-1 w-full rounded-2xl bg-[#E7BE8B] py-1 text-sm z-20">
-                  <button
-                    onClick={() => changeDivision("bar")}
-                    className={`block w-full px-4 py-2 text-left ${
-                      division === "bar" ? "bg-[#F6E1C6] font-semibold" : ""
-                    }`}
-                  >
-                    Bar
-                  </button>
-                  <button
-                    onClick={() => changeDivision("kitchen")}
-                    className={`block w-full px-4 py-2 text-left ${
-                      division === "kitchen"
-                        ? "bg-[#F6E1C6] font-semibold"
-                        : ""
-                    }`}
-                  >
-                    Kitchen
-                  </button>
+                {showDivisionDropdown && (
+                  <div className="absolute left-0 mt-1 w-full rounded-2xl bg-[#E7BE8B] py-1 text-sm z-20 shadow-lg">
+                    <button
+                      onClick={() => changeDivision("bar")}
+                      className={`block w-full px-4 py-2 text-left ${
+                        division === "bar" ? "bg-[#F6E1C6] font-semibold" : ""
+                      }`}
+                    >
+                      Bar
+                    </button>
+                    <button
+                      onClick={() => changeDivision("kitchen")}
+                      className={`block w-full px-4 py-2 text-left ${
+                        division === "kitchen" ? "bg-[#F6E1C6] font-semibold" : ""
+                      }`}
+                    >
+                      Kitchen
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+                // Jika Staff, tampilkan teks biasa tanpa dropdown
+                <div className="px-4 py-2 rounded-full bg-[#F6E1C6] text-sm font-medium text-[#7A4A2B] capitalize w-fit">
+                    {division}
                 </div>
-              )}
-            </div>
             )}
 
-            {/* Add + Search */}
+            {/* Add & Search */}
             <div className="flex flex-col md:flex-row md:items-center gap-3">
-            {!isStaff && (
-              <button
-                onClick={() => {
-                  setEditId(null);
-                  setNama("");
-                  setKategoriId(null);
-                  setOpenModal(true);
-                }}
-                className="rounded-full bg-[#D9A978] px-6 py-2 text-sm text-white font-semibold"
-              >
-                Tambah Item
-              </button>
-            )}
+              {/* Tombol Tambah Item (Biasanya staff tidak boleh tambah master data, tapi sesuaikan logic Anda) */}
+              {!isStaff && (
+                  <button
+                    onClick={() => {
+                      setEditId(null);
+                      setNama("");
+                      setKategoriId(null);
+                      setOpenModal(true);
+                    }}
+                    className="rounded-full bg-[#D9A978] px-6 py-2 text-sm text-white font-semibold shadow hover:bg-[#c4925e] transition"
+                  >
+                    Tambah Item
+                  </button>
+              )}
+
               <div className="relative">
                 <input
                   type="text"
@@ -266,163 +275,168 @@ export default function ItemPage() {
                       { preserveScroll: true, preserveState: true }
                     );
                   }}
-
-                  className="w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm"
-
+                  className="w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:ring-[#D9A978]"
                 />
-
                 <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#C38E5F]" />
               </div>
             </div>
           </div>
 
-          {/* TABLE */}
-          <div className="max-h-[450px] overflow-y-auto rounded-xl border bg-white">
-            <table className="w-full text-sm">
-              <thead className="bg-[#F3F3F3] sticky top-0 font-semibold text-gray-700">
+          {/* --- TABLE (NO SCROLL, RESPONSIVE) --- */}
+          <div className="w-full overflow-x-auto rounded-xl border border-gray-100 bg-white mb-6">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead className="bg-[#F3F3F3] text-gray-700 font-semibold border-b">
                 <tr>
-                  <th className="p-3 border text-center w-16">No</th>
-                  <th className="p-3 border">Nama Item</th>
-                  <th className="p-3 border w-40">Kategori</th>
-                  <th className="p-3 border w-32">Satuan</th>
-                  {!isStaff && (
-  <th className="p-3 border text-center w-40">Aksi</th>
-)}
+                  <th className="p-3 border-r text-center w-16">No</th>
+                  <th className="p-3 border-r">Nama Item</th>
+                  <th className="p-3 border-r w-40">Kategori</th>
+                  <th className="p-3 border-r w-32">Satuan</th>
+                  <th className="p-3 text-center w-40">Aksi</th>
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {filteredItems.length > 0 ? (
                   filteredItems.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-[#FFF7EC]">
-                      <td className="p-3 border text-center">{index + 1}</td>
-                      <td className="p-3 border">{item.nama}</td>
-                      <td className="p-3 border">
+                    <tr key={item.id} className="hover:bg-[#FFF7EC] transition">
+                      <td className="p-3 border-r text-center text-gray-500">
+                          {(safeItems.current_page - 1) * safeItems.per_page + index + 1}
+                      </td>
+                      <td className="p-3 border-r font-medium text-gray-800">{item.nama}</td>
+                      <td className="p-3 border-r text-gray-600">
                         {item.item_category
                           ? translateCategoryName(item.item_category.name)
                           : "-"}
                       </td>
-                      <td className="p-3 border">
+                      <td className="p-3 border-r text-gray-600">
                         {item.satuan ?? "porsi"}
                       </td>
-                      {!isStaff && (
-    <>
-                      <td className="p-3 border text-center">
+                      <td className="p-3 text-center">
                         <div className="flex justify-center gap-2">
-
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => openDeleteConfirm(item.id)}
-                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold"
-                          >
-                            Hapus
-                          </button>
-
-
+                          {/* Hanya Owner/Supervisor yang boleh Edit/Hapus */}
+                          {!isStaff && (
+                              <>
+                                <button
+                                    onClick={() => handleEdit(item)}
+                                    className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] transition"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => openDeleteConfirm(item.id)}
+                                    className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535] transition"
+                                >
+                                    Hapus
+                                </button>
+                              </>
+                          )}
+                          {isStaff && <span className="text-gray-400 text-xs">-</span>}
                         </div>
                       </td>
-                      </>
-                      )}
                     </tr>
                   ))
                 ) : (
                   <tr>
-                <td colSpan={isStaff ? 4 : 5} className="p-6 text-center text-gray-500">
-
-                      Tidak ada data.
+                    <td colSpan={5} className="p-8 text-center text-gray-400">
+                      Tidak ada data ditemukan.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
 
-            {/* PAGINATION */}
-            <div className="flex justify-center mt-4 mb-2">
-              <div className="flex gap-1">
-                {safeItems.links.map((link, i) => (
-                  <button
-                    key={i}
-                    disabled={!link.url}
-                    onClick={() =>
-                      link.url &&
-                      router.get(link.url, {}, { preserveScroll: true })
-                    }
-                    className={`px-3 py-1 border rounded text-sm ${
-                      link.active
-                        ? "bg-[#D9A978] text-white font-semibold"
-                        : "bg-white hover:bg-gray-100"
-                    } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
-                    dangerouslySetInnerHTML={{ __html: link.label }}
-                  />
-                ))}
-              </div>
+          {/* --- PAGINATION (OUTSIDE TABLE) --- */}
+          <div className="mt-auto flex justify-center">
+            <div className="flex gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
+              {safeItems.links.map((link, i) => {
+                 let label = link.label;
+                 if (label.includes('&laquo;')) label = 'Prev';
+                 if (label.includes('&raquo;')) label = 'Next';
+
+                 return (
+                    <button
+                      key={i}
+                      disabled={!link.url}
+                      onClick={() =>
+                        link.url &&
+                        router.get(link.url, {}, { preserveScroll: true })
+                      }
+                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                        link.active
+                          ? "bg-[#D9A978] text-white shadow-md"
+                          : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
+                      } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
+                      dangerouslySetInnerHTML={{ __html: label }}
+                    />
+                 );
+              })}
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* MODAL ADD/EDIT */}
+      {/* --- MODAL ADD/EDIT --- */}
       {openModal && !isStaff && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
-            <h2 className="text-2xl font-bold text-center mb-6">
+          <div className="bg-white w-[460px] rounded-3xl shadow-xl p-8 transform transition-all scale-100">
+            <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
               {editId ? "Edit Item" : "Tambah Item"}
             </h2>
 
             <form onSubmit={submitItem} className="space-y-5">
               <div>
-                <label className="block mb-1 text-sm font-medium">
+                <label className="block mb-1 text-sm font-bold text-gray-700">
                   Nama Item
                 </label>
                 <input
                   type="text"
                   value={nama}
                   onChange={(e) => setNama(e.target.value)}
-                  className="w-full bg-[#EDEDED] rounded-xl p-3 border"
+                  className="w-full bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] focus:border-transparent outline-none"
+                  placeholder="Masukkan nama item..."
                   required
                 />
               </div>
 
               <div>
-                <label className="block mb-1 text-sm font-medium">Divisi</label>
+                <label className="block mb-1 text-sm font-bold text-gray-700">Divisi</label>
                 <input
                   type="text"
                   readOnly
                   value={division === "bar" ? "Bar" : "Kitchen"}
-                  className="w-full bg-[#EDEDED] rounded-xl p-3 border text-gray-600"
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed"
                 />
               </div>
 
               <div className="relative">
-                <label className="block mb-1 text-sm font-medium">
+                <label className="block mb-1 text-sm font-bold text-gray-700">
                   Kategori Item
                 </label>
 
                 <button
                   type="button"
                   onClick={() => setShowKategoriDropdown((prev) => !prev)}
-                  className="w-full bg-[#EDEDED] rounded-xl p-3 flex justify-between items-center"
+                  className="w-full bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 flex justify-between items-center focus:ring-2 focus:ring-[#D9A978]"
                 >
-                  {selectedCategory
-                    ? translateCategoryName(selectedCategory.name)
-                    : "Pilih"}
+                  <span className={selectedCategory ? "text-gray-800" : "text-gray-400"}>
+                    {selectedCategory
+                      ? translateCategoryName(selectedCategory.name)
+                      : "Pilih Kategori"}
+                  </span>
 
                   <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
+                    className={`h-4 w-4 text-gray-500 transition-transform ${
                       showKategoriDropdown ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
                 {showKategoriDropdown && (
-                  <div className="absolute w-full bg-white rounded-xl shadow border mt-1 z-50 max-h-60 overflow-y-auto">
+                  <div className="absolute w-full bg-white rounded-xl shadow-lg border border-gray-100 mt-2 z-50 max-h-60 overflow-y-auto">
                     {sortedCategories.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-gray-500">
+                      <div className="px-4 py-3 text-sm text-gray-500 text-center">
                         Belum ada kategori.
                       </div>
                     ) : (
@@ -434,7 +448,7 @@ export default function ItemPage() {
                             setKategoriId(cat.id);
                             setShowKategoriDropdown(false);
                           }}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-100"
+                          className="w-full text-left px-4 py-3 hover:bg-[#FFF9F0] text-sm text-gray-700 transition-colors border-b last:border-0"
                         >
                           {translateCategoryName(cat.name)}
                         </button>
@@ -445,30 +459,30 @@ export default function ItemPage() {
               </div>
 
               <div>
-                <label className="block mb-1 text-sm font-medium">
+                <label className="block mb-1 text-sm font-bold text-gray-700">
                   Satuan
                 </label>
                 <input
                   type="text"
                   value="porsi"
                   readOnly
-                  className="w-full bg-[#EDEDED] rounded-xl p-3 border opacity-70"
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed"
                 />
               </div>
 
-              <div className="flex justify-between pt-4">
+              <div className="flex justify-between pt-6">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-6 py-2 bg-gray-200 rounded-xl"
+                  className="px-6 py-2.5 bg-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-300 transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-green-500 text-white rounded-xl font-semibold"
+                  className="px-6 py-2.5 bg-[#D9A978] text-white rounded-xl font-bold shadow-md hover:bg-[#c4925e] transition"
                 >
-                  {editId ? "Update" : "Simpan"}
+                  {editId ? "Simpan Perubahan" : "Simpan"}
                 </button>
               </div>
             </form>
@@ -476,32 +490,28 @@ export default function ItemPage() {
         </div>
       )}
 
-      {/* MODAL DELETE */}
-      {openDeleteModal && !isStaff && (
+      {/* --- MODAL DELETE --- */}
+      {openDeleteModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[460px] rounded-3xl shadow-xl p-6">
-            <h2 className="text-2xl font-bold text-center mb-4">
-              Hapus item..? ⚠️
+          <div className="bg-white w-[400px] rounded-3xl shadow-xl p-8 text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Hapus Item?
             </h2>
 
-            <p className="text-center text-gray-700 mb-2">
-              Menghapus item ini dapat berdampak pada data terkait.
+            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+              Tindakan ini akan menghapus data item secara permanen dan mungkin mempengaruhi stok terkait.
             </p>
 
-            <p className="text-center text-gray-900 font-medium mb-6">
-              Yakin ingin menghapus item ini?
-            </p>
-
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-center gap-4">
               <button
-                className="px-6 py-2 bg-gray-300 rounded-xl"
+                className="px-6 py-2.5 bg-gray-100 rounded-xl text-gray-700 font-semibold hover:bg-gray-200 transition min-w-[100px]"
                 onClick={() => setOpenDeleteModal(false)}
               >
                 Batal
               </button>
 
               <button
-                className="px-6 py-2 bg-red-500 text-white rounded-xl font-semibold"
+                className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-semibold shadow-md hover:bg-red-600 transition min-w-[100px]"
                 onClick={confirmDelete}
               >
                 Hapus
