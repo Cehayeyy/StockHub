@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import { Download, Calendar, Search } from 'lucide-react';
@@ -83,8 +83,8 @@ export default function LaporanAktivitas() {
       <Head title="Laporan Aktivitas" />
 
       <div className="py-6">
-        {/* Container Utama: Hapus fixed height agar mengikuti konten */}
-        <div className="rounded-3xl bg-white p-6 md:p-8 shadow-sm border border-gray-100 h-full">
+        {/* Container Utama: Flex col agar pagination bisa didorong ke bawah (mt-auto) */}
+        <div className="rounded-3xl bg-white p-6 md:p-8 shadow-sm border border-gray-100 min-h-[600px] flex flex-col">
 
           {/* --- HEADER & FILTERS --- */}
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
@@ -144,18 +144,16 @@ export default function LaporanAktivitas() {
           </div>
 
           {/* --- TABEL DATA --- */}
-          {/* overflow-x-auto: Scroll horizontal jika layar kecil */}
-          {/* TIDAK ADA max-h atau overflow-y: Tabel akan memanjang ke bawah */}
-          <div className="w-full rounded-xl border border-gray-100 bg-white overflow-hidden">
+          <div className="w-full rounded-xl border border-gray-100 bg-white overflow-hidden mb-6">
             <div className="w-full overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead className="bg-gray-50 text-xs font-bold uppercase text-gray-500 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-4 w-16 text-center whitespace-nowrap">No</th>
-                    <th className="px-6 py-4 w-48 whitespace-nowrap">Waktu</th>
-                    <th className="px-6 py-4 w-48 whitespace-nowrap">Pengguna</th>
-                    <th className="px-6 py-4 w-32 text-center whitespace-nowrap">Aktifitas</th>
-                    <th className="px-6 py-4 min-w-[300px]">Keterangan</th> {/* Min-wdith agar teks keterangan tidak terlalu sempit */}
+                    <th className="px-6 py-4 w-16 text-center">No</th>
+                    <th className="px-6 py-4 w-48">Waktu</th>
+                    <th className="px-6 py-4 w-48">Pengguna</th>
+                    <th className="px-6 py-4 w-32 text-center">Aktifitas</th>
+                    <th className="px-6 py-4 min-w-[300px]">Keterangan</th>
                   </tr>
                 </thead>
 
@@ -172,7 +170,7 @@ export default function LaporanAktivitas() {
                         <td className="px-6 py-4 text-center align-top text-gray-400">
                           {(logs.current_page - 1) * logs.per_page + index + 1}
                         </td>
-                        <td className="px-6 py-4 align-top whitespace-nowrap">
+                        <td className="px-6 py-4 align-top">
                           <div className="flex flex-col">
                             <span className="font-semibold text-gray-700">
                               {new Date(log.created_at).toLocaleDateString('id-ID', {
@@ -186,7 +184,7 @@ export default function LaporanAktivitas() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 align-top whitespace-nowrap">
+                        <td className="px-6 py-4 align-top">
                           <div className="font-medium text-gray-800">
                             {log.name || log.username || '-'}
                           </div>
@@ -194,7 +192,7 @@ export default function LaporanAktivitas() {
                             <div className="text-xs text-gray-400">@{log.username}</div>
                           )}
                         </td>
-                        <td className="px-6 py-4 align-top text-center whitespace-nowrap">
+                        <td className="px-6 py-4 align-top text-center">
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border
                               ${
                                 log.activity.toLowerCase().includes('delete') || log.activity.toLowerCase().includes('hapus')
@@ -210,7 +208,6 @@ export default function LaporanAktivitas() {
                           </span>
                         </td>
                         <td className="px-6 py-4 align-top text-gray-600">
-                          {/* Membiarkan deskripsi wrap ke bawah (multiline) agar tabel tidak terlalu lebar */}
                           <div className="whitespace-normal leading-relaxed">
                             {log.description || '-'}
                           </div>
@@ -223,39 +220,32 @@ export default function LaporanAktivitas() {
             </div>
           </div>
 
-          {/* --- PAGINATION (UPDATED STYLE LIKE ITEM PAGE) --- */}
+          {/* --- PAGINATION (STYLE SAMA DENGAN ITEM.TSX) --- */}
           {logs.links && logs.links.length > 3 && (
-            <div className="mt-8 flex justify-center md:justify-end">
-              <div className="inline-flex rounded-md shadow-sm -space-x-px bg-white">
+            <div className="mt-auto flex justify-center pt-4">
+              <div className="flex gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
                 {logs.links.map((link, i) => {
-                    // Logic label untuk mengganti &laquo; dengan teks 'Prev'
-                    let label = link.label;
-                    if (label.includes('&laquo;')) label = 'Prev';
-                    if (label.includes('&raquo;')) label = 'Next';
+                  let label = link.label;
+                  if (label.includes('&laquo;')) label = 'Prev';
+                  if (label.includes('&raquo;')) label = 'Next';
 
-                    return (
-                      <button
-                        key={i}
-                        disabled={!link.url}
-                        onClick={() => {
-                          if (link.url) {
-                            router.get(link.url, { date: selectedDate, search }, { preserveScroll: true, preserveState: true });
-                          }
-                        }}
-                        className={`
-                          relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors
-                          ${i === 0 ? 'rounded-l-md' : ''}
-                          ${i === logs.links.length - 1 ? 'rounded-r-md' : ''}
-                          ${
-                            link.active
-                              ? 'z-10 bg-[#D9A978] border-[#D9A978] text-white hover:bg-[#c4925e]'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }
-                          ${!link.url ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}
-                        `}
-                        dangerouslySetInnerHTML={{ __html: label }}
-                      />
-                    );
+                  return (
+                    <button
+                      key={i}
+                      disabled={!link.url}
+                      onClick={() => {
+                        if (link.url) {
+                          router.get(link.url, { date: selectedDate, search }, { preserveScroll: true, preserveState: true });
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                        link.active
+                          ? "bg-[#D9A978] text-white shadow-md"
+                          : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
+                      } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
+                      dangerouslySetInnerHTML={{ __html: label }}
+                    />
+                  );
                 })}
               </div>
             </div>
