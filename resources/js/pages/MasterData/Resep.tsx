@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, Trash, ChevronDown } from "lucide-react";
+import { Search, Trash, ChevronDown, Plus } from "lucide-react"; // Tambahkan Plus
 
 interface Recipe {
   id: number;
@@ -322,10 +322,12 @@ const Resep: React.FC = () => {
             {/* Right Controls */}
             <div className="flex gap-3 items-center">
               {!isStaff && (
+                // 🔥 UPDATE STYLE TOMBOL DISINI 🔥
                 <button
                   onClick={() => setShowModal(true)}
-                  className="rounded-full bg-[#D9A978] px-5 py-2 text-sm font-bold text-white shadow-md hover:bg-[#c4925e]"
+                  className="flex items-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a]"
                 >
+                  <Plus className="h-4 w-4" />
                   Tambah Resep
                 </button>
               )}

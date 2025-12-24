@@ -103,7 +103,7 @@ class RecipeController extends Controller
             if ($validated['division'] === 'dapur') {
                 // --- LOGIKA DAPUR ---
 
-                // Stok Menu Jadi (Dapur)
+                // Stok Menu Jadi (Dapur) - Pakai recipe_id
                 StokHarianDapurMenu::firstOrCreate(
                     ['recipe_id' => $recipe->id, 'tanggal' => $tanggal],
                     ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => 'porsi']
@@ -125,6 +125,7 @@ class RecipeController extends Controller
                     ->whereHas('itemCategory', fn ($q) => $q->where('name', 'Menu'))
                     ->first();
 
+                // Stok Menu Jadi (Bar) - Pakai item_id
                 if ($menuItem) {
                     StokHarianMenu::firstOrCreate(
                         ['item_id' => $menuItem->id, 'tanggal' => $tanggal],
@@ -132,6 +133,7 @@ class RecipeController extends Controller
                     );
                 }
 
+                // Stok Bahan Mentah (Bar)
                 foreach ($validated['ingredients'] as $ing) {
                     StokHarianMentah::firstOrCreate(
                         ['item_id' => $ing['item_id'], 'tanggal' => $tanggal],
@@ -166,26 +168,113 @@ class RecipeController extends Controller
         }
 
         DB::transaction(function () use ($validated, $recipe) {
+            // 1. Update Data Resep Master
             $recipe->update([
                 'name'              => $validated['name'],
                 'division'          => $validated['division'],
                 'ingredients'       => $validated['ingredients'],
                 'total_ingredients' => count($validated['ingredients']),
             ]);
+
+            // ============================================================
+            // 🔥 LOGIKA BARU: SINKRONISASI KE STOK HARIAN HARI INI
+            // ============================================================
+            // Tujuannya agar saat bahan baru ditambahkan ke resep,
+            // bahan tersebut langsung muncul di list stok harian mentah untuk diinput.
+
+            $tanggal = session('stok_tanggal') ?? now()->toDateString();
+
+            foreach ($validated['ingredients'] as $ing) {
+                // Tentukan tabel stok berdasarkan divisi
+                if ($validated['division'] === 'dapur') {
+                    // Cek di Stok Dapur, jika belum ada buat baru (stok 0)
+                    StokHarianDapurMentah::firstOrCreate(
+                        ['item_id' => $ing['item_id'], 'tanggal' => $tanggal],
+                        ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => $ing['unit']]
+                    );
+                } else {
+                    // Cek di Stok Bar, jika belum ada buat baru (stok 0)
+                    StokHarianMentah::firstOrCreate(
+                        ['item_id' => $ing['item_id'], 'tanggal' => $tanggal],
+                        ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => $ing['unit']]
+                    );
+                }
+            }
         });
 
         return redirect()->route('resep', [
             'division' => $validated['division'],
-        ])->with('success', 'Resep berhasil diperbarui.');
+        ])->with('success', 'Resep diperbarui dan bahan baru telah ditambahkan ke stok harian.');
     }
 
     public function destroy(Recipe $recipe)
     {
         $division = $recipe->division;
-        $recipe->delete();
+        // Ambil tanggal stok yang sedang aktif (atau hari ini)
+        $tanggal  = session('stok_tanggal') ?? now()->toDateString();
+
+        DB::transaction(function () use ($recipe, $division, $tanggal) {
+
+            // =========================================================
+            // 1. HAPUS STOK MENU JADI (Output)
+            // =========================================================
+            if ($division === 'dapur') {
+                // Dapur menggunakan Relasi recipe_id
+                StokHarianDapurMenu::where('recipe_id', $recipe->id)
+                    ->where('tanggal', $tanggal)
+                    ->delete();
+            } else {
+                // Bar menggunakan Item ID untuk menu
+                $menuItem = Item::where('nama', $recipe->name)
+                    ->whereHas('itemCategory', fn ($q) => $q->where('name', 'Menu'))
+                    ->first();
+
+                if ($menuItem) {
+                    StokHarianMenu::where('item_id', $menuItem->id)
+                        ->where('tanggal', $tanggal)
+                        ->delete();
+                }
+            }
+
+            // =========================================================
+            // 2. HAPUS STOK BAHAN MENTAH (Ingredients) - DENGAN CEK
+            // =========================================================
+            $ingredients = $recipe->ingredients; // Array bahan dari resep yg mau dihapus
+
+            if (!empty($ingredients)) {
+                foreach ($ingredients as $ing) {
+                    $itemId = $ing['item_id'];
+
+                    // ⚠️ LOGIKA PENTING:
+                    // Cek apakah bahan ini dipakai di resep LAIN dalam divisi yang sama?
+                    $isUsedElsewhere = Recipe::where('id', '!=', $recipe->id)
+                        ->where('division', $division)
+                        ->whereJsonContains('ingredients', [['item_id' => $itemId]])
+                        ->exists();
+
+                    // Jika TIDAK dipakai resep lain, baru boleh dihapus dari stok harian
+                    if (!$isUsedElsewhere) {
+                        if ($division === 'dapur') {
+                            StokHarianDapurMentah::where('item_id', $itemId)
+                                ->where('tanggal', $tanggal)
+                                ->delete();
+                        } else {
+                            StokHarianMentah::where('item_id', $itemId)
+                                ->where('tanggal', $tanggal)
+                                ->delete();
+                        }
+                    }
+                }
+            }
+
+            // =========================================================
+            // 3. HAPUS RESEP UTAMA
+            // =========================================================
+            $recipe->delete();
+        });
 
         return redirect()->route('resep', [
             'division' => $division,
-        ])->with('success', 'Resep berhasil dihapus.');
+        ])->with('success', 'Resep dan stok harian terkait berhasil dihapus.');
     }
 }

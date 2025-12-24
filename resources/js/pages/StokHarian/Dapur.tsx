@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Trash2 } from "lucide-react";
+import { Search, ChevronDown, Trash2, Plus } from "lucide-react"; // Tambah Plus
 
 // --- Types ---
 interface ItemData {
   id: number;
-  item_id: number;
+  item_id: number; // atau recipe_id untuk menu
   nama: string;
   satuan?: string;
   stok_awal: number;
@@ -16,13 +16,13 @@ interface ItemData {
   tersisa: number;
 }
 
-
 interface DropdownItem {
-    id: number;
-    nama: string;
-    satuan?: string;
-    stok_awal?: number;
-    pemakaian?: number;
+  id: number;
+  nama: string;
+  satuan?: string;
+  stok_awal?: number;
+  pemakaian?: number;
+  stok_masuk?: number;
 }
 
 interface PageProps {
@@ -49,140 +49,222 @@ export default function Dapur() {
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
   const [formStokAwal, setFormStokAwal] = useState<number | "">("");
-  const [formStokMasuk, setFormStokMasuk] = useState("");
+  const [formStokMasuk, setFormStokMasuk] = useState<number | "">("");
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
 
-  useEffect(() => { setDate(tanggal); }, [tanggal]);
+  useEffect(() => {
+    setDate(tanggal);
+  }, [tanggal]);
 
   // --- Handlers ---
   const handleSearch = (e: any) => {
     setSearch(e.target.value);
-    router.get(route("stok-harian.dapur"), { tab, tanggal: date, search: e.target.value }, { preserveScroll: true });
+    router.get(
+      route("stok-harian.dapur"),
+      { tab, tanggal: date, search: e.target.value },
+      { preserveScroll: true }
+    );
   };
 
   const handleDateChange = (e: any) => {
     setDate(e.target.value);
-    router.get(route("stok-harian.dapur"), { tab, search, tanggal: e.target.value }, { preserveScroll: true });
+    router.get(
+      route("stok-harian.dapur"),
+      { tab, search, tanggal: e.target.value },
+      { preserveScroll: true }
+    );
   };
 
   const handleTabSwitch = (t: any) => {
-    router.get(route("stok-harian.dapur"), { tab: t, tanggal: date, search }, { preserveScroll: true });
+    router.get(
+      route("stok-harian.dapur"),
+      { tab: t, tanggal: date, search },
+      { preserveScroll: true }
+    );
   };
 
- const resetForm = () => {
-  setFormRecordId(null);
-  setFormItemId("");
-  setFormItemName("");
-  setFormStokAwal("");
-  setFormStokMasuk(""); // ✅ TAMBAHKAN
-  setFormPemakaian("");
-  setFormSatuan("porsi");
-};
-
+  const resetForm = () => {
+    setFormRecordId(null);
+    setFormItemId("");
+    setFormItemName("");
+    setFormStokAwal("");
+    setFormStokMasuk("");
+    setFormPemakaian("");
+    setFormSatuan("porsi");
+  };
 
   // --- Actions ---
-const submitCreate = () => {
-  if (formItemId === "") return;
 
-  const routeName =
-    tab === "menu"
-      ? "stok-harian-dapur-menu.store"
-      : "stok-harian-dapur-mentah.store";
+  // 1. Simpan Baru
+  const submitCreate = () => {
+    if (formItemId === "") return;
 
-  router.post(route(routeName), {
-    ...(tab === "menu"
-      ? { recipe_id: Number(formItemId) }
-      : { item_id: Number(formItemId) }),
+    const routeName =
+      tab === "menu"
+        ? "stok-harian-dapur-menu.store"
+        : "stok-harian-dapur-mentah.store";
 
-    tanggal: date,
-    stok_awal: Number(formStokAwal),
-    stok_masuk: Number(formStokMasuk) || 0,
-    stok_keluar: Number(formPemakaian),
-  }, {
-    onSuccess: () => {
-      setShowInputModal(false);
-      resetForm();
-    }
-  });
-};
+    router.post(
+      route(routeName),
+      {
+        ...(tab === "menu"
+          ? { recipe_id: Number(formItemId) }
+          : { item_id: Number(formItemId) }),
 
+        tanggal: date,
+        stok_awal: Number(formStokAwal),
+        stok_masuk: Number(formStokMasuk) || 0,
+        stok_keluar: Number(formPemakaian) || 0,
+      },
+      {
+        onSuccess: () => {
+          setShowInputModal(false);
+          resetForm();
+        },
+      }
+    );
+  };
 
-
+  // 2. Klik Edit
   const handleEditClick = (item: ItemData) => {
-  setFormRecordId(item.id);
-  setFormItemId(item.item_id);
-  setFormItemName(item.nama);
-  setFormStokAwal(item.stok_awal);
-  setFormStokMasuk(item.stok_masuk ?? ""); // ✅
-  setFormPemakaian(item.pemakaian);
-  setFormSatuan(item.satuan || "porsi");
-  setShowEditModal(true);
-};
+    setFormRecordId(item.id);
+    setFormItemId(item.item_id);
+    setFormItemName(item.nama);
+    setFormStokAwal(item.stok_awal);
+    setFormStokMasuk(item.stok_masuk ?? "");
+    setFormPemakaian(item.pemakaian);
+    setFormSatuan(item.satuan || "porsi");
+    setShowEditModal(true);
+  };
 
+  // 3. Submit Update (DENGAN VALIDASI)
+  const submitUpdate = () => {
+    if (!formRecordId) return;
 
-const submitUpdate = () => {
-  if (!formRecordId) return;
+    const routeName =
+      tab === "menu"
+        ? "stok-harian-dapur-menu.update"
+        : "stok-harian-dapur-mentah.update";
 
-  const routeName =
-    tab === "menu"
-      ? "stok-harian-dapur-menu.update"
-      : "stok-harian-dapur-mentah.update";
+    const payload: any = {
+      stok_awal: formStokAwal === "" ? 0 : Number(formStokAwal),
+    };
 
-  router.put(route(routeName, formRecordId), {
-    stok_awal: Number(formStokAwal),
-    stok_keluar: Number(formPemakaian),
-  }, {
-    onSuccess: () => {
-      setShowEditModal(false);
-      resetForm();
-    },
-  });
-};
+    const valAwal = payload.stok_awal;
+    const valMasuk = formStokMasuk === "" ? 0 : Number(formStokMasuk);
+    const valTotal = valAwal + valMasuk;
 
+    if (tab === "mentah") {
+        payload.stok_masuk = valMasuk;
+    }
 
+    if (tab === "menu") {
+        const valKeluar = formPemakaian === "" ? 0 : Number(formPemakaian);
 
+        // --- 🔥 VALIDASI FRONTEND 🔥 ---
+        if (valKeluar > valTotal) {
+            alert(`Error: Pemakaian (${valKeluar}) tidak boleh melebihi Stok Total (${valTotal})!`);
+            return;
+        }
+        if (valKeluar < 0) {
+            alert("Error: Pemakaian tidak boleh kurang dari 0");
+            return;
+        }
+
+        payload.stok_keluar = valKeluar;
+    }
+
+    router.put(route(routeName, formRecordId), payload, {
+      onSuccess: () => {
+        setShowEditModal(false);
+        resetForm();
+      },
+      onError: (err) => {
+          console.error(err);
+      }
+    });
+  };
+
+  // 4. Delete
   const handleDeleteClick = (id: number) => {
-      setFormRecordId(id);
-      setShowDeleteModal(true);
-  }
+    setFormRecordId(id);
+    setShowDeleteModal(true);
+  };
 
   const submitDelete = () => {
-      if(!formRecordId) return;
-      const routeName = tab === 'menu' ? "stok-harian-dapur-menu.destroy" : "stok-harian-dapur-mentah.destroy";
-      router.delete(route(routeName, formRecordId), {
-          onSuccess: () => { setShowDeleteModal(false); resetForm(); }
-      });
-  }
+    if (!formRecordId) return;
+    const routeName =
+      tab === "menu"
+        ? "stok-harian-dapur-menu.destroy"
+        : "stok-harian-dapur-mentah.destroy";
+    router.delete(route(routeName, formRecordId), {
+      onSuccess: () => {
+        setShowDeleteModal(false);
+        resetForm();
+      },
+    });
+  };
 
   return (
-    <AppLayout header={`Stok Harian ${tab === 'menu' ? 'Menu' : 'Bahan Mentah'}`}>
+    <AppLayout
+      header={`Stok Harian ${tab === "menu" ? "Menu" : "Bahan Mentah"}`}
+    >
       <Head title="Stok Harian Dapur" />
 
       <div className="py-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px]">
-
           {/* HEADER */}
           <div className="flex flex-col items-end gap-4 mb-6">
             <div className="flex gap-3">
-              {tab === 'mentah' && (
-                  <button onClick={() => setShowInputModal(true)} className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-semibold shadow-sm">
-                      Input Data
-                  </button>
+              {tab === "mentah" && (
+                // 🔥 STYLE TOMBOL INPUT DATA 🔥
+                <button
+                  onClick={() => setShowInputModal(true)}
+                  className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  Input Data
+                </button>
               )}
             </div>
 
             <div className="flex items-center gap-3">
-               <input type="date" value={date} onChange={handleDateChange} className="bg-[#FDF3E4] border-none rounded-full px-4 py-2 text-sm w-40" />
-               <div className="relative">
-                 <input type="text" placeholder="Search..." value={search} onChange={handleSearch} className="bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm w-64" />
-                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
-               </div>
+              <input
+                type="date"
+                value={date}
+                onChange={handleDateChange}
+                className="bg-[#FDF3E4] border-none rounded-full px-4 py-2 text-sm w-40"
+              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={search}
+                  onChange={handleSearch}
+                  className="bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm w-64"
+                />
+                <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
+              </div>
             </div>
 
             <div className="flex bg-[#FDF3E4] rounded-full p-1 mt-2">
-                <button onClick={() => handleTabSwitch("menu")} className={`px-6 py-1 rounded-full text-sm font-medium transition ${tab === "menu" ? "bg-[#D9A978] text-white" : "text-gray-500"}`}>Menu</button>
-                <button onClick={() => handleTabSwitch("mentah")} className={`px-6 py-1 rounded-full text-sm font-medium transition ${tab === "mentah" ? "bg-[#D9A978] text-white" : "text-gray-500"}`}>Mentah</button>
+              <button
+                onClick={() => handleTabSwitch("menu")}
+                className={`px-6 py-1 rounded-full text-sm font-medium transition ${
+                  tab === "menu" ? "bg-[#D9A978] text-white" : "text-gray-500"
+                }`}
+              >
+                Menu
+              </button>
+              <button
+                onClick={() => handleTabSwitch("mentah")}
+                className={`px-6 py-1 rounded-full text-sm font-medium transition ${
+                  tab === "mentah" ? "bg-[#D9A978] text-white" : "text-gray-500"
+                }`}
+              >
+                Mentah
+              </button>
             </div>
           </div>
 
@@ -195,9 +277,9 @@ const submitUpdate = () => {
                   <th className="p-4">Nama</th>
                   <th className="p-4 text-center">Satuan</th>
                   <th className="p-4 text-center">Stok Awal</th>
-                   {tab === "mentah" && (
-                   <th className="p-4 text-center">Stok Masuk</th>
-                      )}
+                  {tab === "mentah" && (
+                    <th className="p-4 text-center">Stok Masuk</th>
+                  )}
                   <th className="p-4 text-center">Stok Total</th>
                   <th className="p-4 text-center">Pemakaian</th>
                   <th className="p-4 text-center">Tersisa</th>
@@ -207,30 +289,56 @@ const submitUpdate = () => {
               <tbody className="divide-y divide-gray-100">
                 {items.data.length > 0 ? (
                   items.data.map((item, i) => (
-                    <tr key={item.id} className="hover:bg-[#FFF9F0] transition">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-[#FFF9F0] transition"
+                    >
                       <td className="p-4 text-center">{i + 1}</td>
                       <td className="p-4 font-medium">{item.nama}</td>
-                      <td className="p-4 text-center text-gray-500">{item.satuan}</td>
-                     <td className="p-4 text-center">{item.stok_awal}</td>
+                      <td className="p-4 text-center text-gray-500">
+                        {item.satuan}
+                      </td>
+                      <td className="p-4 text-center">{item.stok_awal}</td>
 
-                    {tab === "mentah" && (
-                    <td className="p-4 text-center">{item.stok_masuk ?? 0}</td>
-                    )}
+                      {tab === "mentah" && (
+                        <td className="p-4 text-center">
+                          {item.stok_masuk ?? 0}
+                        </td>
+                      )}
 
-                    <td className="p-4 text-center">{item.stok_total}</td>
-                    <td className="p-4 text-center">{item.pemakaian}</td>
-                    <td className="p-4 text-center font-bold">{item.tersisa}</td>
+                      <td className="p-4 text-center">{item.stok_total}</td>
+                      <td className="p-4 text-center">{item.pemakaian}</td>
+                      <td className={`p-4 text-center font-bold ${item.tersisa < 0 ? 'text-red-500' : ''}`}>
+                        {item.tersisa}
+                      </td>
 
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">
-                            <button onClick={() => handleEditClick(item)} className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] transition">Edit</button>
-                            <button onClick={() => handleDeleteClick(item.id)} className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535] transition">Hapus</button>
+                          <button
+                            onClick={() => handleEditClick(item)}
+                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(item.id)}
+                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535] transition"
+                          >
+                            Hapus
+                          </button>
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan={8} className="p-8 text-center text-gray-400">Belum ada data stok.</td></tr>
+                  <tr>
+                    <td
+                      colSpan={tab === "mentah" ? 9 : 8}
+                      className="p-8 text-center text-gray-400"
+                    >
+                      Belum ada data stok.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -242,140 +350,147 @@ const submitUpdate = () => {
       {showInputModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
-            <h2 className="text-lg font-bold text-center mb-6">Input Stok & Pemakaian</h2>
+            <h2 className="text-lg font-bold text-center mb-6">
+              Input Stok & Pemakaian
+            </h2>
             <form
-  onSubmit={(e) => {
-    e.preventDefault();
-    submitCreate();
-  }}
-  className="space-y-4"
->
-  {/* TANGGAL */}
-  <div>
-    <label className="block text-sm font-medium mb-1">Tanggal</label>
-    <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
-      {new Date(date).toLocaleDateString("id-ID")}
-    </div>
-  </div>
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitCreate();
+              }}
+              className="space-y-4"
+            >
+              {/* TANGGAL */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tanggal
+                </label>
+                <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
+                  {new Date(date).toLocaleDateString("id-ID")}
+                </div>
+              </div>
 
-  {/* ITEM */}
- {/* ITEM */}
-<div>
-  <label className="block text-sm font-medium mb-1">
-    {tab === "menu" ? "Nama Menu" : "Nama Item"}
-  </label>
+              {/* ITEM */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {tab === "menu" ? "Nama Menu" : "Nama Item"}
+                </label>
 
-  <div className="relative">
-    <select
-      value={formItemId}
-      onChange={(e) => {
-        const id = e.target.value;
-        setFormItemId(id);
+                <div className="relative">
+                  <select
+                    value={formItemId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setFormItemId(id === "" ? "" : Number(id));
 
-        const source =
-          tab === "menu" ? availableMenus : inputableMenus;
+                      const source =
+                        tab === "menu" ? availableMenus : inputableMenus;
 
-        const selected = source.find(
-          (m) => m.id === Number(id)
-        );
+                      const selected = source.find(
+                        (m) => m.id === Number(id)
+                      );
 
-        if (selected) {
-          setFormSatuan(selected.satuan || "porsi");
-          setFormStokAwal(selected.stok_awal ?? 0);
-          setFormPemakaian(selected.pemakaian ?? 0);
-        }
-      }}
-      className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-    >
-      <option value="">Pilih...</option>
+                      if (selected) {
+                        setFormSatuan(selected.satuan || "porsi");
+                        setFormStokAwal(selected.stok_awal ?? 0);
+                        setFormStokMasuk(selected.stok_masuk ?? "");
+                        setFormPemakaian(selected.pemakaian ?? 0);
+                      }
+                    }}
+                    className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  >
+                    <option value="">Pilih...</option>
 
-      {(tab === "menu" ? availableMenus : inputableMenus).map(
-        (m) => (
-          <option key={m.id} value={m.id}>
-            {m.nama}
-          </option>
-        )
-      )}
-    </select>
+                    {(tab === "menu" ? availableMenus : inputableMenus).map(
+                      (m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.nama}
+                        </option>
+                      )
+                    )}
+                  </select>
 
-    <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
-  </div>
-</div>
+                  <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
 
-  {/* SATUAN */}
-  <div>
-    <label className="block text-sm font-medium mb-1">Satuan</label>
-    <input
-      type="text"
-      value={formSatuan}
-      readOnly
-      className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
-    />
-  </div>
+              {/* SATUAN */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Satuan</label>
+                <input
+                  type="text"
+                  value={formSatuan}
+                  readOnly
+                  className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
+                />
+              </div>
 
-  {/* STOK AWAL */}
-  <div>
-    <label className="block text-sm font-medium mb-1">Stok Awal</label>
-    <input
-      type="number"
-      min={0}
-      value={formStokAwal}
-      onChange={(e) => setFormStokAwal(e.target.value)}
-      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-    />
-  </div>
+              {/* STOK AWAL */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Stok Awal
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={formStokAwal}
+                  onChange={(e) => setFormStokAwal(Number(e.target.value))}
+                  className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                />
+              </div>
 
-  {/* STOK MASUK */}
-  <div>
-    <label className="block text-sm font-medium mb-1">Stok Masuk</label>
-    <input
-      type="number"
-      min={0}
-      value={formStokMasuk}
-      onChange={(e) => setFormStokMasuk(e.target.value)}
-      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-    />
-  </div>
+              {/* STOK MASUK */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Stok Masuk
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={formStokMasuk}
+                  onChange={(e) => setFormStokMasuk(Number(e.target.value))}
+                  className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                />
+              </div>
 
-  {/* PEMAKAIAN */}
-  <div>
-    <label className="block text-sm font-medium mb-1">Pemakaian</label>
-    <input
-      type="number"
-      min={0}
-      value={formPemakaian}
-      onChange={(e) => setFormPemakaian(e.target.value)}
-      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-    />
-  </div>
+              {/* PEMAKAIAN */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Pemakaian
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={formPemakaian}
+                  onChange={(e) => setFormPemakaian(Number(e.target.value))}
+                  className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                />
+              </div>
 
-  {/* ACTION */}
-  <div className="flex justify-end gap-3 pt-4">
-    <button
-      type="button"
-      onClick={() => setShowInputModal(false)}
-      className="px-6 py-2 rounded-full border"
-    >
-      Batal
-    </button>
+              {/* ACTION */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowInputModal(false)}
+                  className="px-6 py-2 rounded-full border"
+                >
+                  Batal
+                </button>
 
-<button
-  type="submit"
-  disabled={formItemId === ""}
-  className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold
-             disabled:opacity-50 disabled:cursor-not-allowed"
->
-  Simpan
-</button>
-
-
-  </div>
-</form>
-
+                <button
+                  type="submit"
+                  disabled={formItemId === ""}
+                  className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Simpan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -384,28 +499,106 @@ const submitUpdate = () => {
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
-            <h2 className="text-lg font-bold text-center mb-6">Edit Stok {tab === 'menu' ? 'Menu' : 'Bahan'}</h2>
-            <form onSubmit={(e) => { e.preventDefault(); submitUpdate(); }} className="space-y-4">
-                <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
-                <div><label className="block text-sm font-medium mb-1">Nama Item</label><input type="text" value={formItemName} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600" /></div>
-                <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
-                <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
-                {tab === "mentah" && (
-  <div>
-    <label className="block text-sm font-medium mb-1">Stok Masuk</label>
-    <input
-      type="number"
-      min={0}
-      value={formStokMasuk}
-      onChange={(e) => setFormStokMasuk(e.target.value)}
-      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-    />
-  </div>
-)}
+            <h2 className="text-lg font-bold text-center mb-6">
+              Edit Stok {tab === "menu" ? "Menu" : "Bahan"}
+            </h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitUpdate();
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tanggal
+                </label>
+                <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
+                  {new Date(date).toLocaleDateString("id-ID")}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Nama Item
+                </label>
+                <input
+                  type="text"
+                  value={formItemName}
+                  readOnly
+                  className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Satuan</label>
+                <input
+                  type="text"
+                  value={formSatuan}
+                  readOnly
+                  className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Stok Awal
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formStokAwal}
+                  onChange={(e) => setFormStokAwal(Number(e.target.value))}
+                  className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                />
+              </div>
 
-                {tab === 'mentah' && (<div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
-                <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold">Update</button></div>
+              {tab === "mentah" && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Stok Masuk
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formStokMasuk}
+                    onChange={(e) => setFormStokMasuk(Number(e.target.value))}
+                    className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  />
+                </div>
+              )}
+
+              {tab === "menu" && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Pemakaian (Terjual)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formPemakaian}
+                    onChange={(e) => setFormPemakaian(Number(e.target.value))}
+                    className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    resetForm();
+                  }}
+                  className="px-6 py-2 rounded-full border"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold"
+                >
+                  Update
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -415,10 +608,29 @@ const submitUpdate = () => {
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[350px] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 text-center">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 className="text-red-500 w-6 h-6" /></div>
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Hapus Data?</h2>
-            <p className="text-sm text-gray-500 mb-6">Data yang dihapus tidak dapat dikembalikan.</p>
-            <div className="flex justify-center gap-3"><button onClick={() => setShowDeleteModal(false)} className="px-5 py-2 rounded-full border text-sm font-semibold">Batal</button><button onClick={submitDelete} className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Hapus</button></div>
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="text-red-500 w-6 h-6" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800 mb-2">
+              Hapus Data?
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Data yang dihapus tidak dapat dikembalikan.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-5 py-2 rounded-full border text-sm font-semibold"
+              >
+                Batal
+              </button>
+              <button
+                onClick={submitDelete}
+                className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, Plus } from "lucide-react"; // Tambahkan import 'Plus'
 
 type Division = "bar" | "kitchen";
 
@@ -249,6 +249,7 @@ export default function ItemPage() {
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               {/* Tombol Tambah Item (Biasanya staff tidak boleh tambah master data, tapi sesuaikan logic Anda) */}
               {!isStaff && (
+                  // 🔥 UPDATE STYLE TOMBOL DISINI 🔥
                   <button
                     onClick={() => {
                       setEditId(null);
@@ -256,8 +257,9 @@ export default function ItemPage() {
                       setKategoriId(null);
                       setOpenModal(true);
                     }}
-                    className="rounded-full bg-[#D9A978] px-6 py-2 text-sm text-white font-semibold shadow hover:bg-[#c4925e] transition"
+                    className="flex items-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a]"
                   >
+                    <Plus className="h-4 w-4" />
                     Tambah Item
                   </button>
               )}

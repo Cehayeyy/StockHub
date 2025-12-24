@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, X } from "lucide-react";
+import { Search, ChevronDown, X, Plus } from "lucide-react"; // Tambahkan import 'Plus'
 
 type Division = "bar" | "kitchen";
 
@@ -57,18 +57,15 @@ const sortCategories = (categories: Category[]) => {
 };
 
 export default function KategoriPage() {
-    const {
-        division: serverDivision = "bar",
-        categories: serverCategories = [],
-        auth,
-      } = usePage<PageProps & { auth: any }>().props;
+  const {
+    division: serverDivision = "bar",
+    categories: serverCategories = [],
+    auth,
+  } = usePage<PageProps & { auth: any }>().props;
 
-      const role = auth.user.role;
-      const isStaff = role === "bar" || role === "kitchen";
-      const staffDivision = isStaff ? role : serverDivision;
-
-
-
+  const role = auth.user.role;
+  const isStaff = role === "bar" || role === "kitchen";
+  const staffDivision = isStaff ? role : serverDivision;
 
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
   const [search, setSearch] = useState("");
@@ -145,11 +142,11 @@ export default function KategoriPage() {
   };
 
   // =========================
-  // EDIT (opsional – masih hanya UI, atau bisa sambung ke backend)
+  // EDIT (panggil backend)
   // =========================
   const openEditModal = (cat: Category) => {
     setSelectedCategory(cat);
-    setEditCategoryName(translateCategoryName(cat.name));
+    setEditCategoryName(cat.name);
     setEditModalOpen(true);
   };
 
@@ -159,7 +156,6 @@ export default function KategoriPage() {
     const name = editCategoryName.trim();
     if (!name) return;
 
-    // contoh: sambung ke backend kalau sudah ada route-nya
     router.put(
       route("kategori.update", selectedCategory.id),
       { name },
@@ -211,71 +207,72 @@ export default function KategoriPage() {
 
                 {/* Dropdown Divisi */}
                 {!isStaff && (
-                <div className="relative inline-block w-40">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowDivisionDropdown((prev) => !prev)
-                    }
-                    className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm"
-                  >
-                    <span className="capitalize">{titleDivisionLabel}</span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        showDivisionDropdown ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
+                  <div className="relative inline-block w-40">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowDivisionDropdown((prev) => !prev)
+                      }
+                      className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B] shadow-sm"
+                    >
+                      <span className="capitalize">{titleDivisionLabel}</span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${
+                          showDivisionDropdown ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
 
-                  {showDivisionDropdown && (
-                    <div className="absolute left-0 mt-1 w-full rounded-2xl bg-[#E7BE8B] py-1 text-sm shadow-lg z-20">
-                      <button
-                        type="button"
-                        onClick={() => changeDivision("bar")}
-                        className={`block w-full rounded-t-2xl px-4 py-2 text-left ${
-                          serverDivision === "bar"
-                            ? "bg-[#F6E1C6] font-semibold"
-                            : ""
-                        }`}
-                      >
-                        Bar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => changeDivision("kitchen")}
-                        className={`block w-full rounded-b-2xl px-4 py-2 text-left ${
-                          serverDivision === "kitchen"
-                            ? "bg-[#F6E1C6] font-semibold"
-                            : ""
-                        }`}
-                      >
-                        Kitchen
-                      </button>
-                    </div>
-                  )}
-                </div>
+                    {showDivisionDropdown && (
+                      <div className="absolute left-0 z-20 mt-1 w-full rounded-2xl bg-[#E7BE8B] py-1 text-sm shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => changeDivision("bar")}
+                          className={`block w-full rounded-t-2xl px-4 py-2 text-left ${
+                            serverDivision === "bar"
+                              ? "bg-[#F6E1C6] font-semibold"
+                              : ""
+                          }`}
+                        >
+                          Bar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => changeDivision("kitchen")}
+                          className={`block w-full rounded-b-2xl px-4 py-2 text-left ${
+                            serverDivision === "kitchen"
+                              ? "bg-[#F6E1C6] font-semibold"
+                              : ""
+                          }`}
+                        >
+                          Kitchen
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
               {/* Right controls: Tambah + Search */}
               <div className="flex flex-col gap-3 md:flex-row md:items-center">
-
-              {!isStaff && (
-                <button
-                  type="button"
-                  onClick={openAddModal}
-                  className="inline-flex items-center justify-center rounded-full bg-[#F3CFA2] px-6 py-2 text-sm font-semibold text-[#7A4A2B] shadow-sm hover:bg-[#e3bd8b]"
-                >
-                  Tambah Kategori
-                </button>
-              )}
+                {!isStaff && (
+                  // 🔥 UPDATE STYLE TOMBOL DISINI 🔥
+                  <button
+                    type="button"
+                    onClick={openAddModal}
+                    className="flex items-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Kategori
+                  </button>
+                )}
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="Search...."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-56 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
+                    className="w-56 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
                   />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#C38E5F]">
                     <Search className="h-4 w-4" />
@@ -289,10 +286,10 @@ export default function KategoriPage() {
               <table className="min-w-full table-auto text-left text-sm">
                 <thead className="border-b bg-gray-100 text-xs font-semibold uppercase text-gray-700">
                   <tr>
-                    <th className="px-4 py-3 w-16">No</th>
+                    <th className="w-16 px-4 py-3">No</th>
                     <th className="px-4 py-3">Nama Kategori</th>
-                    <th className="px-4 py-3 w-40">Jumlah item</th>
-                    <th className="px-4 py-3 w-48 text-center">Aksi</th>
+                    <th className="w-40 px-4 py-3">Jumlah item</th>
+                    <th className="w-48 px-4 py-3 text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -319,44 +316,42 @@ export default function KategoriPage() {
                           {cat.total_items} Bahan
                         </td>
                         <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-2">
-  {/* VIEW – BOLEH UNTUK SEMUA */}
-  <button
-    type="button"
-    onClick={() => openViewModal(cat)}
-    className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
-  >
-    view
-  </button>
+                          <div className="flex items-center justify-center gap-2">
+                            {/* VIEW – BOLEH UNTUK SEMUA */}
+                            <button
+                              type="button"
+                              onClick={() => openViewModal(cat)}
+                              className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
+                            >
+                              view
+                            </button>
 
-  {/* EDIT & HAPUS – KHUSUS NON STAFF */}
-  {!isStaff && (
-    <>
-      <button
-        type="button"
-        onClick={() => openEditModal(cat)}
-        className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
-      >
-        edit
-      </button>
-      <button
-        type="button"
-        onClick={() => openDeleteModal(cat)}
-        className="rounded-full bg-[#FF4B4B] px-3 py-1 text-xs font-semibold text-white hover:bg-[#e03535]"
-      >
-        hapus
-      </button>
-    </>
-  )}
-</div>
-
+                            {/* EDIT & HAPUS – KHUSUS NON STAFF */}
+                            {!isStaff && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => openEditModal(cat)}
+                                  className="rounded-full bg-[#1D8CFF] px-3 py-1 text-xs font-semibold text-white hover:bg-[#0f6fd1]"
+                                >
+                                  edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openDeleteModal(cat)}
+                                  className="rounded-full bg-[#FF4B4B] px-3 py-1 text-xs font-semibold text-white hover:bg-[#e03535]"
+                                >
+                                  hapus
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
-
             </div>
           </div>
         </div>
@@ -404,13 +399,56 @@ export default function KategoriPage() {
         </Modal>
       )}
 
-      {/* MODAL: VIEW – tampilkan daftar item */}
+      {/* MODAL: EDIT */}
+      {editModalOpen && selectedCategory && (
+        <Modal onClose={() => setEditModalOpen(false)}>
+          <form
+            onSubmit={handleUpdateCategory}
+            className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-xl"
+          >
+            <h3 className="mb-6 text-center text-2xl font-semibold text-gray-800">
+              Edit Kategori
+            </h3>
+
+            <div className="mb-6">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Nama kategori
+              </label>
+              <input
+                type="text"
+                value={editCategoryName}
+                onChange={(e) => setEditCategoryName(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 bg-[#F1F1F1] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#DABA93]"
+              />
+            </div>
+
+            <div className="flex justify-between gap-4">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="flex-1 rounded-xl bg-[#E5E5E5] py-2 text-sm font-semibold text-gray-700 hover:bg-[#d5d5d5]"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                className="flex-1 rounded-xl bg-[#1D8CFF] py-2 text-sm font-semibold text-white hover:bg-[#0f6fd1]"
+              >
+                Simpan
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* MODAL: VIEW */}
       {viewModalOpen && selectedCategory && (
         <Modal onClose={() => setViewModalOpen(false)}>
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-xl font-semibold text-gray-800">
-                Detail Kategori {translateCategoryName(selectedCategory.name)}
+                Detail Kategori{" "}
+                {translateCategoryName(selectedCategory.name)}
               </h3>
               <button
                 type="button"
@@ -425,7 +463,7 @@ export default function KategoriPage() {
               <table className="min-w-full table-auto text-sm">
                 <thead className="bg-gray-100 text-xs font-semibold uppercase text-gray-700">
                   <tr>
-                    <th className="px-4 py-3 w-16">No</th>
+                    <th className="w-16 px-4 py-3">No</th>
                     <th className="px-4 py-3">Nama item</th>
                   </tr>
                 </thead>

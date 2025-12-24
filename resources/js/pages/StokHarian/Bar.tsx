@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Trash2 } from "lucide-react";
+import { Search, ChevronDown, Trash2, Plus } from "lucide-react"; // Tambah import Plus
 
 // --- Types ---
 interface ItemData {
@@ -10,7 +10,7 @@ interface ItemData {
   nama: string;
   satuan?: string;
   stok_awal: number;
-  stok_masuk?: number; // Optional karena hanya ada di mentah
+  stok_masuk?: number;
   stok_total: number;
   pemakaian: number;
   tersisa: number;
@@ -22,6 +22,7 @@ interface DropdownItem {
   satuan?: string;
   stok_awal?: number;
   pemakaian?: number;
+  stok_masuk?: number;
 }
 
 interface PageProps {
@@ -43,7 +44,7 @@ export default function Bar() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Form State (Gunakan String untuk input agar tidak error tipe data)
+  // Form State
   const [formRecordId, setFormRecordId] = useState<number | null>(null);
   const [formItemId, setFormItemId] = useState<string>("");
   const [formItemName, setFormItemName] = useState("");
@@ -95,7 +96,7 @@ export default function Bar() {
 
   // --- Actions ---
 
-  // 1. Simpan Baru (Input Data Mentah)
+  // 1. Simpan Baru
   const submitCreate = () => {
     if (formItemId === "") return;
 
@@ -106,7 +107,6 @@ export default function Bar() {
         tanggal: date,
         stok_awal: formStokAwal === "" ? 0 : Number(formStokAwal),
         stok_masuk: formStokMasuk === "" ? 0 : Number(formStokMasuk),
-        // ✅ Pemakaian dihilangkan dari input manual mentah (default 0)
         stok_keluar: 0,
       },
       {
@@ -118,19 +118,19 @@ export default function Bar() {
     );
   };
 
-  // 2. Klik Edit (Populate Form)
+  // 2. Klik Edit
   const handleEditClick = (item: ItemData) => {
     setFormRecordId(item.id);
-    setFormItemId(String(item.item_id)); // Convert number to string
+    setFormItemId(String(item.item_id));
     setFormItemName(item.nama);
-    setFormStokAwal(String(item.stok_awal)); // Convert number to string
+    setFormStokAwal(String(item.stok_awal));
     setFormStokMasuk(item.stok_masuk !== undefined ? String(item.stok_masuk) : "");
-    setFormPemakaian(String(item.pemakaian)); // Convert number to string
+    setFormPemakaian(String(item.pemakaian));
     setFormSatuan(item.satuan || "porsi");
     setShowEditModal(true);
   };
 
-  // 3. Submit Update
+  // 3. Submit Update (DENGAN VALIDASI)
   const submitUpdate = () => {
     if (!formRecordId) return;
 
@@ -142,15 +142,28 @@ export default function Bar() {
       stok_awal: formStokAwal === "" ? 0 : Number(formStokAwal),
     };
 
+    const valAwal = payload.stok_awal;
+    const valMasuk = formStokMasuk === "" ? 0 : Number(formStokMasuk);
+    const valTotal = valAwal + valMasuk;
+
     if (tab === "mentah") {
-      payload.stok_masuk = formStokMasuk === "" ? 0 : Number(formStokMasuk);
-      // ✅ Mentah tidak update pemakaian manual di sini (karena auto by recipe)
-      payload.stok_keluar = 0;
+      payload.stok_masuk = valMasuk;
     }
 
     if (tab === "menu") {
-        // ✅ Menu sekarang kirim stok_keluar (Pemakaian)
-        payload.stok_keluar = formPemakaian === "" ? 0 : Number(formPemakaian);
+        const valKeluar = formPemakaian === "" ? 0 : Number(formPemakaian);
+
+        // --- 🔥 VALIDASI FRONTEND 🔥 ---
+        if (valKeluar > valTotal) {
+            alert(`Error: Pemakaian (${valKeluar}) tidak boleh melebihi Stok Total (${valTotal})!`);
+            return;
+        }
+        if (valKeluar < 0) {
+            alert("Error: Pemakaian tidak boleh kurang dari 0");
+            return;
+        }
+
+        payload.stok_keluar = valKeluar;
     }
 
     router.put(route(routeName, formRecordId), payload, {
@@ -158,6 +171,9 @@ export default function Bar() {
         setShowEditModal(false);
         resetForm();
       },
+      onError: (err) => {
+          console.error(err);
+      }
     });
   };
 
@@ -196,10 +212,12 @@ export default function Bar() {
           <div className="flex flex-col items-end gap-4 mb-6">
             <div className="flex gap-3">
               {tab === "mentah" && (
+                // 🔥 STYLE TOMBOL DIUPDATE DISINI 🔥
                 <button
                   onClick={() => setShowInputModal(true)}
-                  className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-semibold shadow-sm"
+                  className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
                 >
+                  <Plus className="w-4 h-4" />
                   Input Data
                 </button>
               )}
@@ -284,7 +302,7 @@ export default function Bar() {
 
                       <td className="p-4 text-center">{item.stok_total}</td>
                       <td className="p-4 text-center">{item.pemakaian}</td>
-                      <td className="p-4 text-center font-bold">
+                      <td className={`p-4 text-center font-bold ${item.tersisa < 0 ? 'text-red-500' : ''}`}>
                         {item.tersisa}
                       </td>
 
@@ -368,7 +386,6 @@ export default function Bar() {
                             ? String(selected.stok_awal)
                             : ""
                         );
-                        // Default pemakaian 0 saat input baru
                         setFormPemakaian("0");
                       }
                     }}
@@ -420,8 +437,6 @@ export default function Bar() {
                   className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
               </div>
-
-              {/* ✅ Field Pemakaian DIHILANGKAN dari Input Mentah */}
 
               <div className="flex justify-end gap-3 mt-4">
                 <button
@@ -519,7 +534,6 @@ export default function Bar() {
                 </div>
               )}
 
-              {/* ✅ Field Pemakaian HANYA muncul di MENU */}
               {tab === "menu" && (
                 <div>
                   <label className="block text-sm font-medium mb-1">
