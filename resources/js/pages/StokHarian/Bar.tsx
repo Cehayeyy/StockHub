@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Trash2, Plus } from "lucide-react"; // Tambah import Plus
+import { Search, ChevronDown, Trash2, Plus, AlertTriangle } from "lucide-react";
 
 // --- Types ---
 interface ItemData {
@@ -25,16 +25,23 @@ interface DropdownItem {
   stok_masuk?: number;
 }
 
+interface LowStockItem {
+  nama: string;
+  tersisa: number;
+  kategori: string;
+}
+
 interface PageProps {
   items: { data: ItemData[]; links: any[] };
   availableMenus: DropdownItem[];
   inputableMenus: DropdownItem[];
   tab: "menu" | "mentah";
   tanggal: string;
+  lowStockItems: LowStockItem[];
 }
 
 export default function Bar() {
-  const { items, inputableMenus, tab, tanggal } = usePage<any>().props as PageProps;
+  const { items, inputableMenus, tab, tanggal, lowStockItems } = usePage<any>().props as PageProps;
 
   const [search, setSearch] = useState("");
   const [date, setDate] = useState(tanggal);
@@ -44,13 +51,13 @@ export default function Bar() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Form State
+  // Form State (Type: number or empty string)
   const [formRecordId, setFormRecordId] = useState<number | null>(null);
-  const [formItemId, setFormItemId] = useState<string>("");
+  const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
-  const [formStokAwal, setFormStokAwal] = useState<string>("");
-  const [formStokMasuk, setFormStokMasuk] = useState<string>("");
-  const [formPemakaian, setFormPemakaian] = useState<string>("");
+  const [formStokAwal, setFormStokAwal] = useState<number | "">("");
+  const [formStokMasuk, setFormStokMasuk] = useState<number | "">("");
+  const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
 
   useEffect(() => {
@@ -58,7 +65,7 @@ export default function Bar() {
   }, [tanggal]);
 
   // --- Handlers ---
-  const handleSearch = (e: any) => {
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
     router.get(
       route("stok-harian.bar"),
@@ -67,7 +74,7 @@ export default function Bar() {
     );
   };
 
-  const handleDateChange = (e: any) => {
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDate(e.target.value);
     router.get(
       route("stok-harian.bar"),
@@ -76,7 +83,7 @@ export default function Bar() {
     );
   };
 
-  const handleTabSwitch = (t: any) => {
+  const handleTabSwitch = (t: "menu" | "mentah") => {
     router.get(
       route("stok-harian.bar"),
       { tab: t, tanggal: date, search },
@@ -96,64 +103,68 @@ export default function Bar() {
 
   // --- Actions ---
 
-  // 1. Simpan Baru
   const submitCreate = () => {
     if (formItemId === "") return;
 
-    router.post(
-      route("stok-harian-mentah.store"),
-      {
+    // Bar biasanya hanya input mentah manual
+    const routeName = "stok-harian-mentah.store";
+
+    const payload: any = {
         item_id: Number(formItemId),
         tanggal: date,
-        stok_awal: formStokAwal === "" ? 0 : Number(formStokAwal),
+        stok_awal: Number(formStokAwal),
+        // Fix: Kirim 0 jika kosong
         stok_masuk: formStokMasuk === "" ? 0 : Number(formStokMasuk),
         stok_keluar: 0,
+    };
+
+    router.post(route(routeName), payload, {
+      onSuccess: () => {
+        setShowInputModal(false);
+        resetForm();
       },
-      {
-        onSuccess: () => {
-          setShowInputModal(false);
-          resetForm();
-        },
-      }
-    );
+    });
   };
 
-  // 2. Klik Edit
   const handleEditClick = (item: ItemData) => {
     setFormRecordId(item.id);
-    setFormItemId(String(item.item_id));
+    setFormItemId(item.item_id);
     setFormItemName(item.nama);
-    setFormStokAwal(String(item.stok_awal));
-    setFormStokMasuk(item.stok_masuk !== undefined ? String(item.stok_masuk) : "");
-    setFormPemakaian(String(item.pemakaian));
+    // Fix: Assign number langsung ke state
+    setFormStokAwal(item.stok_awal);
+    setFormStokMasuk(item.stok_masuk ?? "");
+    setFormPemakaian(item.pemakaian);
     setFormSatuan(item.satuan || "porsi");
     setShowEditModal(true);
   };
 
-  // 3. Submit Update (DENGAN VALIDASI)
   const submitUpdate = () => {
     if (!formRecordId) return;
 
     const routeName =
-      tab === "menu" ? "stok-harian-menu.update" : "stok-harian-mentah.update";
+      tab === "menu"
+        ? "stok-harian-menu.update"
+        : "stok-harian-mentah.update";
 
     const payload: any = {
       item_id: Number(formItemId),
-      stok_awal: formStokAwal === "" ? 0 : Number(formStokAwal),
+      stok_awal: Number(formStokAwal),
     };
 
-    const valAwal = payload.stok_awal;
-    const valMasuk = formStokMasuk === "" ? 0 : Number(formStokMasuk);
-    const valTotal = valAwal + valMasuk;
+    const valAwal = Number(formStokAwal);
+    let valMasuk = 0;
 
     if (tab === "mentah") {
-      payload.stok_masuk = valMasuk;
+        valMasuk = Number(formStokMasuk);
+        payload.stok_masuk = valMasuk;
     }
 
     if (tab === "menu") {
-        const valKeluar = formPemakaian === "" ? 0 : Number(formPemakaian);
+        const valKeluar = Number(formPemakaian);
+        payload.stok_masuk = Number(formStokMasuk);
 
-        // --- 🔥 VALIDASI FRONTEND 🔥 ---
+        const valTotal = valAwal + (Number(formStokMasuk) || 0);
+
         if (valKeluar > valTotal) {
             alert(`Error: Pemakaian (${valKeluar}) tidak boleh melebihi Stok Total (${valTotal})!`);
             return;
@@ -166,24 +177,23 @@ export default function Bar() {
         payload.stok_keluar = valKeluar;
     }
 
+    // Fix: Syntax router.put yang benar
     router.put(route(routeName, formRecordId), payload, {
       onSuccess: () => {
         setShowEditModal(false);
         resetForm();
       },
-      onError: (err) => {
-          console.error(err);
+      onError: (err: any) => {
+          console.error("Error updating:", err);
       }
     });
   };
 
-  // 4. Klik Delete
   const handleDeleteClick = (id: number) => {
     setFormRecordId(id);
     setShowDeleteModal(true);
   };
 
-  // 5. Submit Delete
   const submitDelete = () => {
     if (!formRecordId) return;
 
@@ -200,19 +210,36 @@ export default function Bar() {
     });
   };
 
+  // --- Render ---
   return (
     <AppLayout
       header={`Stok Harian ${tab === "menu" ? "Menu" : "Bahan Mentah"}`}
     >
       <Head title="Stok Harian Bar" />
 
-      <div className="py-6">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px]">
-          {/* HEADER */}
+      <div className="py-6 space-y-6">
+
+        {/* SECTION 1: ALERT STOK MENIPIS */}
+        {lowStockItems && lowStockItems.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+            <div className="p-2 bg-red-100 rounded-full text-red-600">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-red-800 font-bold">Peringatan: Stok Menipis!</h3>
+              <p className="text-red-600 text-sm mt-1">
+                Terdapat {lowStockItems.length} item dengan stok di bawah 7. Harap segera lakukan restock.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 2: TABEL UTAMA */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
+
           <div className="flex flex-col items-end gap-4 mb-6">
             <div className="flex gap-3">
               {tab === "mentah" && (
-                // 🔥 STYLE TOMBOL DIUPDATE DISINI 🔥
                 <button
                   onClick={() => setShowInputModal(true)}
                   className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
@@ -243,26 +270,11 @@ export default function Bar() {
             </div>
 
             <div className="flex bg-[#FDF3E4] rounded-full p-1 mt-2">
-              <button
-                onClick={() => handleTabSwitch("menu")}
-                className={`px-6 py-1 rounded-full text-sm font-medium transition ${
-                  tab === "menu" ? "bg-[#D9A978] text-white" : "text-gray-500"
-                }`}
-              >
-                Menu
-              </button>
-              <button
-                onClick={() => handleTabSwitch("mentah")}
-                className={`px-6 py-1 rounded-full text-sm font-medium transition ${
-                  tab === "mentah" ? "bg-[#D9A978] text-white" : "text-gray-500"
-                }`}
-              >
-                Mentah
-              </button>
+              <button onClick={() => handleTabSwitch("menu")} className={`px-6 py-1 rounded-full text-sm font-medium transition ${tab === "menu" ? "bg-[#D9A978] text-white" : "text-gray-500"}`}>Menu</button>
+              <button onClick={() => handleTabSwitch("mentah")} className={`px-6 py-1 rounded-full text-sm font-medium transition ${tab === "mentah" ? "bg-[#D9A978] text-white" : "text-gray-500"}`}>Mentah</button>
             </div>
           </div>
 
-          {/* TABLE */}
           <div className="overflow-x-auto rounded-xl border border-gray-100">
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-700 font-semibold border-b">
@@ -271,9 +283,7 @@ export default function Bar() {
                   <th className="p-4">Nama</th>
                   <th className="p-4 text-center">Satuan</th>
                   <th className="p-4 text-center">Stok Awal</th>
-                  {tab === "mentah" && (
-                    <th className="p-4 text-center">Stok Masuk</th>
-                  )}
+                  {tab === "mentah" && <th className="p-4 text-center">Stok Masuk</th>}
                   <th className="p-4 text-center">Stok Total</th>
                   <th className="p-4 text-center">Pemakaian</th>
                   <th className="p-4 text-center">Tersisa</th>
@@ -283,110 +293,90 @@ export default function Bar() {
               <tbody className="divide-y divide-gray-100">
                 {items.data.length > 0 ? (
                   items.data.map((item, i) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-[#FFF9F0] transition"
-                    >
+                    <tr key={item.id} className="hover:bg-[#FFF9F0] transition">
                       <td className="p-4 text-center">{i + 1}</td>
                       <td className="p-4 font-medium">{item.nama}</td>
-                      <td className="p-4 text-center text-gray-500">
-                        {item.satuan}
-                      </td>
+                      <td className="p-4 text-center text-gray-500">{item.satuan}</td>
                       <td className="p-4 text-center">{item.stok_awal}</td>
-
-                      {tab === "mentah" && (
-                        <td className="p-4 text-center">
-                          {item.stok_masuk ?? 0}
-                        </td>
-                      )}
-
+                      {tab === "mentah" && <td className="p-4 text-center">{item.stok_masuk ?? 0}</td>}
                       <td className="p-4 text-center">{item.stok_total}</td>
                       <td className="p-4 text-center">{item.pemakaian}</td>
-                      <td className={`p-4 text-center font-bold ${item.tersisa < 0 ? 'text-red-500' : ''}`}>
-                        {item.tersisa}
-                      </td>
-
+                      <td className={`p-4 text-center font-bold ${item.tersisa < 7 ? 'text-red-600' : 'text-gray-900'}`}>{item.tersisa}</td>
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => handleEditClick(item)}
-                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] transition"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(item.id)}
-                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535] transition"
-                          >
-                            Hapus
-                          </button>
+                          <button onClick={() => handleEditClick(item)} className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] transition">Edit</button>
+                          <button onClick={() => handleDeleteClick(item.id)} className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535] transition">Hapus</button>
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr>
-                    <td
-                      colSpan={tab === "mentah" ? 9 : 8}
-                      className="p-8 text-center text-gray-400"
-                    >
-                      Belum ada data stok.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={tab === "mentah" ? 9 : 8} className="p-8 text-center text-gray-400">Belum ada data stok.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* SECTION 3: CHART */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span className="w-2 h-6 bg-red-500 rounded-full inline-block"></span>
+            Grafik Stok Hampir Habis ({"<"} 7)
+          </h3>
+
+          {lowStockItems.length > 0 ? (
+            <div className="space-y-4">
+              {lowStockItems.map((item, idx) => (
+                <div key={idx} className="flex flex-col gap-1">
+                  <div className="flex justify-between text-xs font-semibold text-gray-600">
+                    <span>{item.nama} <span className="text-gray-400 font-normal">({item.kategori})</span></span>
+                    <span className="text-red-500">{item.tersisa} Tersisa</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-red-500 to-red-400 h-full rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${Math.min((item.tersisa / 7) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-400 text-sm">
+              Semua stok aman! Tidak ada item yang hampir habis.
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* =======================================================
-          MODAL 1: INPUT DATA (KHUSUS MENTAH)
-      ======================================================= */}
+      {/* MODAL 1: INPUT DATA */}
       {showInputModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
             <h2 className="text-lg font-bold text-center mb-6">
               Input Stok Mentah
             </h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitCreate();
-              }}
-              className="space-y-4"
-            >
+            <form onSubmit={(e) => { e.preventDefault(); submitCreate(); }} className="space-y-4">
+              <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tanggal
-                </label>
-                <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
-                  {new Date(date).toLocaleDateString("id-ID")}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nama Item
-                </label>
+                <label className="block text-sm font-medium mb-1">Nama Item</label>
                 <div className="relative">
                   <select
                     value={formItemId}
                     onChange={(e) => {
                       const id = e.target.value;
-                      setFormItemId(id);
+                      // FIX 1: Konversi string ke number, jika kosong biarkan string kosong
+                      setFormItemId(id === "" ? "" : Number(id));
 
-                      const selected = inputableMenus.find(
-                        (m) => m.id === Number(id)
-                      );
+                      const selected = inputableMenus.find((m) => m.id === Number(id));
                       if (selected) {
                         setFormSatuan(selected.satuan || "porsi");
-                        setFormStokAwal(
-                          selected.stok_awal !== undefined
-                            ? String(selected.stok_awal)
-                            : ""
-                        );
-                        setFormPemakaian("0");
+                        // FIX 2: Set nilai number (jika ada) ke state number | ""
+                        setFormStokAwal(selected.stok_awal ?? 0);
+                        setFormStokMasuk(selected.stok_masuk ?? "");
+                        // FIX 3: Set nilai number 0 (bukan string "0")
+                        setFormPemakaian(0);
                       }
                     }}
                     className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
@@ -401,205 +391,112 @@ export default function Bar() {
                   <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
                 </div>
               </div>
+              <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm" /></div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Satuan</label>
-                <input
-                  type="text"
-                  value={formSatuan}
-                  readOnly
-                  className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Stok Awal
-                </label>
+                <label className="block text-sm font-medium mb-1">Stok Awal</label>
                 <input
                   type="number"
                   min="0"
                   value={formStokAwal}
-                  onChange={(e) => setFormStokAwal(e.target.value)}
+                  // FIX 4: Convert input string to number safely
+                  onChange={(e) => setFormStokAwal(e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Stok Masuk
-                </label>
+                <label className="block text-sm font-medium mb-1">Stok Masuk</label>
                 <input
                   type="number"
                   min="0"
                   value={formStokMasuk}
-                  onChange={(e) => setFormStokMasuk(e.target.value)}
+                  onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
               </div>
 
               <div className="flex justify-end gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowInputModal(false)}
-                  className="px-6 py-2 rounded-full border"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={formItemId === ""}
-                  className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Simpan
-                </button>
+                <button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button>
+                <button type="submit" disabled={formItemId === ""} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed">Simpan</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* =======================================================
-          MODAL 3: EDIT DATA
-      ======================================================= */}
+      {/* MODAL 3: EDIT DATA */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
             <h2 className="text-lg font-bold text-center mb-6">
               Edit Stok {tab === "menu" ? "Menu" : "Bahan"}
             </h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitUpdate();
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Tanggal
-                </label>
-                <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
-                  {new Date(date).toLocaleDateString("id-ID")}
-                </div>
-              </div>
+            <form onSubmit={(e) => { e.preventDefault(); submitUpdate(); }} className="space-y-4">
+              <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
+              <div><label className="block text-sm font-medium mb-1">Nama Item</label><input type="text" value={formItemName} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600" /></div>
+              <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nama Item
-                </label>
-                <input
-                  type="text"
-                  value={formItemName}
-                  readOnly
-                  className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Satuan</label>
-                <input
-                  type="text"
-                  value={formSatuan}
-                  readOnly
-                  className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Stok Awal
-                </label>
+                <label className="block text-sm font-medium mb-1">Stok Awal</label>
                 <input
                   type="number"
                   min="0"
                   value={formStokAwal}
-                  onChange={(e) => setFormStokAwal(e.target.value)}
+                  onChange={(e) => setFormStokAwal(e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
               </div>
 
+              {/* Stok Masuk hanya untuk Mentah */}
               {tab === "mentah" && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Stok Masuk
-                  </label>
+                  <label className="block text-sm font-medium mb-1">Stok Masuk</label>
                   <input
                     type="number"
                     min="0"
                     value={formStokMasuk}
-                    onChange={(e) => setFormStokMasuk(e.target.value)}
+                    onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                   />
                 </div>
               )}
 
+              {/* Pemakaian hanya untuk Menu */}
               {tab === "menu" && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Pemakaian (Terjual)
-                  </label>
+                  <label className="block text-sm font-medium mb-1">Pemakaian (Terjual)</label>
                   <input
                     type="number"
                     min="0"
                     value={formPemakaian}
-                    onChange={(e) => setFormPemakaian(e.target.value)}
+                    onChange={(e) => setFormPemakaian(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                   />
                 </div>
               )}
 
               <div className="flex justify-end gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    resetForm();
-                  }}
-                  className="px-6 py-2 rounded-full border"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold"
-                >
-                  Update
-                </button>
+                <button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button>
+                <button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold">Update</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* =======================================================
-          MODAL 4: HAPUS DATA
-      ======================================================= */}
+      {/* MODAL 4: HAPUS DATA */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[350px] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trash2 className="text-red-500 w-6 h-6" />
             </div>
-            <h2 className="text-lg font-bold text-gray-800 mb-2">
-              Hapus Data?
-            </h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Data yang dihapus tidak dapat dikembalikan.
-            </p>
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Hapus Data?</h2>
+            <p className="text-sm text-gray-500 mb-6">Data yang dihapus tidak dapat dikembalikan.</p>
             <div className="flex justify-center gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-5 py-2 rounded-full border text-sm font-semibold"
-              >
-                Batal
-              </button>
-              <button
-                onClick={submitDelete}
-                className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600"
-              >
-                Hapus
-              </button>
+              <button onClick={() => setShowDeleteModal(false)} className="px-5 py-2 rounded-full border text-sm font-semibold">Batal</button>
+              <button onClick={submitDelete} className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Hapus</button>
             </div>
           </div>
         </div>

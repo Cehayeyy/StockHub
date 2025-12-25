@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\ActivityLog; // Import
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
     public function index()
     {
-        // TIDAK perlu kirim password ke frontend
         $users = User::select('id', 'username', 'name', 'email', 'role', 'created_at')->get();
 
         return Inertia::render('manajemen', [
@@ -19,30 +20,22 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Generate username berikutnya berdasarkan role.
-     * contoh: bar1, bar2, kitchen1, supervisor1, dst.
-     */
     private function generateNextUsername(string $role): string
     {
         $role = strtolower($role);
-
-        // prefix username
         $prefix = match ($role) {
             'bar' => 'bar',
             'kitchen' => 'kitchen',
             'supervisor' => 'supervisor',
-            default => $role,
+            'default' => $role,
         };
 
-        // cari username terakhir dengan prefix yang sama
         $lastUser = User::where('role', $role)
             ->where('username', 'like', $prefix . '%')
             ->orderBy('id', 'desc')
             ->first();
 
         $nextNumber = 1;
-
         if ($lastUser && preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/i', $lastUser->username, $m)) {
             $nextNumber = ((int) $m[1]) + 1;
         }
@@ -60,17 +53,21 @@ class UserController extends Controller
         ]);
 
         $role = strtolower($request->role);
-
-        // Jika username tidak dikirim dari frontend, generate di backend
         $username = $request->username ?: $this->generateNextUsername($role);
 
-        User::create([
+        $user = User::create([
             'username' => $username,
             'name'     => $request->name,
-            // email dummy supaya unik, kalau login pakai username tidak masalah
             'email'    => $username . '@example.com',
             'role'     => $role,
             'password' => bcrypt($request->password),
+        ]);
+
+        // LOG AKTIVITAS
+        ActivityLog::create([
+            'user_id'     => Auth::id(),
+            'activity'    => 'Tambah Akun',
+            'description' => "Membuat akun baru: {$username} (Role: {$role})."
         ]);
 
         return redirect()->route('manajemen')->with('success', 'Akun berhasil dibuat.');
@@ -87,17 +84,25 @@ class UserController extends Controller
             'password' => 'nullable|min:4',
         ]);
 
+        $oldUsername = $user->username;
+
         $user->role     = strtolower($request->role);
         $user->username = $request->username;
         $user->name     = $request->name;
         $user->email    = $request->username . '@example.com';
 
-        // ganti password hanya kalau diisi
         if ($request->filled('password')) {
             $user->password = bcrypt($request->password);
         }
 
         $user->save();
+
+        // LOG AKTIVITAS
+        ActivityLog::create([
+            'user_id'     => Auth::id(),
+            'activity'    => 'Update Akun',
+            'description' => "Mengupdate data akun '{$oldUsername}'."
+        ]);
 
         return redirect()->route('manajemen')->with('success', 'Akun berhasil diperbarui.');
     }
@@ -105,7 +110,16 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+        $username = $user->username;
+
         $user->delete();
+
+        // LOG AKTIVITAS
+        ActivityLog::create([
+            'user_id'     => Auth::id(),
+            'activity'    => 'Hapus Akun',
+            'description' => "Menghapus akun '{$username}'."
+        ]);
 
         return redirect()->route('manajemen')->with('success', 'Akun berhasil dihapus.');
     }
