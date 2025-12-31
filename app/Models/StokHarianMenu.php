@@ -15,6 +15,7 @@ class StokHarianMenu extends Model
         'stok_masuk',
         'stok_keluar',
         'stok_akhir',
+        'pemakaian',
     ];
 
     protected $casts = [

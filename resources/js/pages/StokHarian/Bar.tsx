@@ -43,6 +43,10 @@ interface PageProps {
 export default function Bar() {
   const { items, inputableMenus, tab, tanggal, lowStockItems } = usePage<any>().props as PageProps;
 
+  const { auth } = usePage<any>().props;
+  const role = auth?.user?.role;
+
+
   const [search, setSearch] = useState("");
   const [date, setDate] = useState(tanggal);
 
@@ -50,6 +54,9 @@ export default function Bar() {
   const [showInputModal, setShowInputModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [menuId, setMenuId] = useState<number | null>(null);
+const [pemakaian, setPemakaian] = useState("");
+
 
   // Form State (Type: number or empty string)
   const [formRecordId, setFormRecordId] = useState<number | null>(null);
@@ -106,25 +113,47 @@ export default function Bar() {
   const submitCreate = () => {
     if (formItemId === "") return;
 
-    // Bar biasanya hanya input mentah manual
-    const routeName = "stok-harian-mentah.store";
+    // =============================
+    // JIKA TAB MENU → INPUT PEMAKAIAN
+    // =============================
+    if (tab === "menu") {
+      router.post(
+        route("stok-harian-menu.store"),
+        {
+          item_id: Number(formItemId),
+          tanggal: date,
+          stok_keluar: Number(formPemakaian), // ⬅️ INI PEMAKAIAN
+        },
+        {
+          onSuccess: () => {
+            setShowInputModal(false);
+            resetForm();
+          },
+        }
+      );
+      return;
+    }
 
-    const payload: any = {
+    // =============================
+    // JIKA TAB MENTAH → STOK MASUK
+    // =============================
+    router.post(
+      route("stok-harian-mentah.store"),
+      {
         item_id: Number(formItemId),
         tanggal: date,
         stok_awal: Number(formStokAwal),
-        // Fix: Kirim 0 jika kosong
-        stok_masuk: formStokMasuk === "" ? 0 : Number(formStokMasuk),
-        stok_keluar: 0,
-    };
-
-    router.post(route(routeName), payload, {
-      onSuccess: () => {
-        setShowInputModal(false);
-        resetForm();
+        stok_masuk: Number(formStokMasuk),
       },
-    });
+      {
+        onSuccess: () => {
+          setShowInputModal(false);
+          resetForm();
+        },
+      }
+    );
   };
+
 
   const handleEditClick = (item: ItemData) => {
     setFormRecordId(item.id);
@@ -238,17 +267,29 @@ export default function Bar() {
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
 
           <div className="flex flex-col items-end gap-4 mb-6">
-            <div className="flex gap-3">
-              {tab === "mentah" && (
-                <button
-                  onClick={() => setShowInputModal(true)}
-                  className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Input Data
-                </button>
-              )}
-            </div>
+          <div className="flex gap-3">
+  {/* INPUT MENTAH → SEMUA ROLE */}
+  {tab === "mentah" && (
+    <button
+      onClick={() => setShowInputModal(true)}
+      className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2"
+    >
+      <Plus className="w-4 h-4" />
+      Input Data
+    </button>
+  )}
+
+  {/* INPUT MENU → KHUSUS STAFF (BAR / DAPUR) */}
+  {tab === "menu" && (role === "bar" || role === "dapur") && (
+    <button
+      onClick={() => setShowInputModal(true)}
+      className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2"
+    >
+      <Plus className="w-4 h-4" />
+      Input Data
+    </button>
+  )}
+</div>
 
             <div className="flex items-center gap-3">
               <input
@@ -350,80 +391,160 @@ export default function Bar() {
         </div>
       </div>
 
-      {/* MODAL 1: INPUT DATA */}
       {showInputModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
-            <h2 className="text-lg font-bold text-center mb-6">
-              Input Stok Mentah
-            </h2>
-            <form onSubmit={(e) => { e.preventDefault(); submitCreate(); }} className="space-y-4">
-              <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Nama Item</label>
-                <div className="relative">
-                  <select
-                    value={formItemId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      // FIX 1: Konversi string ke number, jika kosong biarkan string kosong
-                      setFormItemId(id === "" ? "" : Number(id));
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
 
-                      const selected = inputableMenus.find((m) => m.id === Number(id));
-                      if (selected) {
-                        setFormSatuan(selected.satuan || "porsi");
-                        // FIX 2: Set nilai number (jika ada) ke state number | ""
-                        setFormStokAwal(selected.stok_awal ?? 0);
-                        setFormStokMasuk(selected.stok_masuk ?? "");
-                        // FIX 3: Set nilai number 0 (bukan string "0")
-                        setFormPemakaian(0);
-                      }
-                    }}
-                    className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-                  >
-                    <option value="">Pilih Item...</option>
-                    {inputableMenus.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nama}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-              <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm" /></div>
+      {/* JUDUL */}
+      <h2 className="text-lg font-bold text-center mb-6">
+        Input Data {tab === "menu" ? "Pemakaian Menu" : "Stok Bahan Mentah"}
+      </h2>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Stok Awal</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formStokAwal}
-                  // FIX 4: Convert input string to number safely
-                  onChange={(e) => setFormStokAwal(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Stok Masuk</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formStokMasuk}
-                  onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button>
-                <button type="submit" disabled={formItemId === ""} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed">Simpan</button>
-              </div>
-            </form>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitCreate();
+        }}
+        className="space-y-4"
+      >
+        {/* TANGGAL */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Tanggal</label>
+          <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
+            {new Date(date).toLocaleDateString("id-ID")}
           </div>
         </div>
-      )}
+
+        {/* NAMA ITEM */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Nama Item</label>
+          <div className="relative">
+            <select
+              value={formItemId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setFormItemId(id === "" ? "" : Number(id));
+
+                const selected = inputableMenus.find(
+                  (m) => m.id === Number(id)
+                );
+
+                if (selected) {
+                  setFormSatuan(selected.satuan || "porsi");
+                  setFormStokAwal(selected.stok_awal ?? 0);
+                  setFormStokMasuk("");
+                  setFormPemakaian("");
+                }
+              }}
+              className="w-full appearance-none bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+            >
+              <option value="">Pilih Item...</option>
+              {inputableMenus.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nama}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* SATUAN */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Satuan</label>
+          <input
+            type="text"
+            value={formSatuan}
+            readOnly
+            className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
+          />
+        </div>
+
+        {/* ===== MENTAH ===== */}
+        {tab === "mentah" && (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Stok Awal
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formStokAwal}
+                onChange={(e) =>
+                  setFormStokAwal(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
+                }
+                className="w-full border rounded-xl px-4 py-2.5 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Stok Masuk
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formStokMasuk}
+                onChange={(e) =>
+                  setFormStokMasuk(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
+                }
+                className="w-full border rounded-xl px-4 py-2.5 text-sm"
+              />
+            </div>
+          </>
+        )}
+
+        {/* ===== MENU ===== */}
+        {tab === "menu" && (
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Pemakaian
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formPemakaian}
+              onChange={(e) =>
+                setFormPemakaian(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+              className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+              required
+            />
+          </div>
+        )}
+
+        {/* ACTION */}
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="button"
+            onClick={() => {
+              setShowInputModal(false);
+              resetForm();
+            }}
+            className="px-6 py-2 rounded-full border"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={formItemId === ""}
+            className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
 
       {/* MODAL 3: EDIT DATA */}
       {showEditModal && (
@@ -449,18 +570,25 @@ export default function Bar() {
               </div>
 
               {/* Stok Masuk hanya untuk Mentah */}
-              {tab === "mentah" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Stok Masuk</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formStokMasuk}
-                    onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
-                    className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-                  />
-                </div>
-              )}
+              {tab === "menu" && (
+  <div>
+    <label className="block text-sm font-medium mb-1">
+      Pemakaian (Terjual)
+    </label>
+    <input
+      type="number"
+      min="0"
+      value={formPemakaian}
+      onChange={(e) =>
+        setFormPemakaian(
+          e.target.value === "" ? "" : Number(e.target.value)
+        )
+      }
+      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+    />
+  </div>
+)}
+
 
               {/* Pemakaian hanya untuk Menu */}
               {tab === "menu" && (

@@ -112,6 +112,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/stok-harian/menu', [StokHarianController::class, 'storeMenu'])
             ->name('stok-harian-menu.store');
+            
 
         Route::put('/stok-harian/menu/{id}', [StokHarianController::class, 'updateMenu'])
             ->name('stok-harian-menu.update');

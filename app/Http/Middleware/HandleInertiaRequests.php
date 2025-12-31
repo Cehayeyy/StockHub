@@ -28,20 +28,23 @@ class HandleInertiaRequests extends Middleware
      * @return array<string, mixed>
      */
     public function share(Request $request): array
-    {
-        return [parent::share($request),
-            'auth' => [
-                'user' => $request->user(),
-                'role' => $request->user()?->role,
-                'division' => $request->user()?->division,
+{
+    return array_merge(parent::share($request), [
+        'auth' => [
+            'user' => $request->user()
+                ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'role' => $request->user()->role,
+                    'division' => $request->user()->division,
+                ]
+                : null,
+        ],
+        'flash' => [
+            'login_success' => fn () => $request->session()->get('login_success'),
+        ],
+    ]);
+}
 
-            ],
-            // --- INI ADALAH TAMBAHAN BARU ---
-            // Ambil pesan 'flash' dari sesi dan kirimkan ke prop 'flash'
-            'flash' => [
-                'login_success' => fn () => $request->session()->get('login_success')
-            ],
-            // --- BATAS TAMBAHAN ---
-        ];
-    }
 }

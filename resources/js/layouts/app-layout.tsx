@@ -121,11 +121,21 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
     const rawRole = auth?.user?.role;
     const role = auth?.user?.role?.toLowerCase();
-const division = auth?.user?.division;
+    const divisionRaw =
+  auth?.user?.division?.toLowerCase() ??
+  auth?.user?.role?.toLowerCase();
+
+const division =
+  divisionRaw === 'kitchen' ? 'dapur' : divisionRaw;
+
 const isStaff = role !== 'owner' && role !== 'supervisor';
     console.log('ROLE ASLI:', rawRole);
     console.log('ROLE NORMALIZED:', role);
     console.log('IS STAFF:', isStaff);
+    console.log("ROLE:", role);
+    console.log("IS STAFF:", isStaff);
+    console.log("DIVISION RAW:", auth.user.division);
+    console.log("DIVISION FIXED:", division);
 
 
 
@@ -313,14 +323,14 @@ useEffect(() => {
     )}
 
     {/* STAFF BAR */}
-    {isStaff && auth.user.division === "bar" && (
+    {isStaff && division === "bar" && (
       <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
         Bar
       </SubMenuLink>
     )}
 
     {/* STAFF DAPUR */}
-    {isStaff && auth.user.division === "dapur" && (
+    {isStaff && division === "dapur" && (
       <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
         Dapur
       </SubMenuLink>
@@ -328,6 +338,8 @@ useEffect(() => {
 
   </div>
 )}
+
+
 
 
           </div>

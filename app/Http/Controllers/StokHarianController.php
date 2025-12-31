@@ -356,4 +356,68 @@ class StokHarianController extends Controller
 
         return back()->with('success', 'Data stok mentah dihapus.');
     }
+    public function storeMenu(Request $request)
+{
+    $request->validate([
+        'item_id'   => 'required|exists:items,id',
+        'pemakaian' => 'required|numeric|min:0',
+        'tanggal'   => 'required|date',
+    ]);
+
+    $menu = StokHarianMenu::with('item')
+        ->where('item_id', $request->item_id)
+        ->whereDate('tanggal', $request->tanggal)
+        ->firstOrFail();
+
+    DB::transaction(function () use ($menu, $request) {
+
+        $oldUsage = $menu->stok_keluar;
+        $newUsage = $oldUsage + $request->pemakaian;
+
+        // ❗ validasi stok
+        $totalStok = $menu->stok_awal + $menu->stok_masuk;
+        if ($newUsage > $totalStok) {
+            abort(422, 'Pemakaian melebihi stok tersedia');
+        }
+
+        // 1️⃣ UPDATE MENU
+        $menu->update([
+            'stok_keluar' => $newUsage,
+            'stok_akhir'  => $totalStok - $newUsage,
+        ]);
+
+        // 2️⃣ SINKRON KE STOK MENTAH
+        $recipe = Recipe::where('name', $menu->item->nama)->first();
+
+        if ($recipe && is_array($recipe->ingredients)) {
+            foreach ($recipe->ingredients as $ing) {
+                $qty = $request->pemakaian * ($ing['amount'] ?? 0);
+                if ($qty == 0) continue;
+
+                $mentah = StokHarianMentah::where([
+                    'item_id' => $ing['item_id'],
+                    'tanggal' => $menu->tanggal,
+                ])->first();
+
+                if (!$mentah) continue;
+
+                $newKeluar = $mentah->stok_keluar + $qty;
+
+                $mentah->update([
+                    'stok_keluar' => $newKeluar,
+                    'stok_akhir'  => max(0, $mentah->stok_awal + $mentah->stok_masuk - $newKeluar),
+                ]);
+            }
+        }
+
+        ActivityLog::create([
+            'user_id'     => Auth::id(),
+            'activity'    => 'Input Pemakaian Menu',
+            'description' => "Pemakaian menu '{$menu->item->nama}' sebanyak {$request->pemakaian}",
+        ]);
+    });
+
+    return back()->with('success', 'Pemakaian menu berhasil disimpan');
+}
+
 }
