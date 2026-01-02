@@ -10,7 +10,7 @@ use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\StokHarianController;
 use App\Http\Controllers\StokHarianDapurController;
-
+use App\Http\Controllers\VerifikasiStokController; // 🔥 Import Controller Baru
 
 Route::get('/', function () {
     return Inertia::render('LandingPage');
@@ -29,8 +29,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware(['auth'])
         ->name('dashboard');
-
-
 
     // ===========================
     // MANAJEMEN AKUN
@@ -102,7 +100,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/resep/{recipe}', [RecipeController::class, 'destroy'])
         ->name('resep.destroy');
 
-     // =========================================================
+    // =========================================================
     // STOK HARIAN - BAR
     // =========================================================
     Route::get('/stok-harian/bar', [StokHarianController::class, 'bar'])
@@ -112,7 +110,6 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/stok-harian/menu', [StokHarianController::class, 'storeMenu'])
             ->name('stok-harian-menu.store');
-            
 
         Route::put('/stok-harian/menu/{id}', [StokHarianController::class, 'updateMenu'])
             ->name('stok-harian-menu.update');
@@ -157,6 +154,11 @@ Route::middleware(['auth'])->group(function () {
             ->name('stok-harian-dapur-mentah.destroy');
     });
 
+    // ===========================
+    // 🔥 VERIFIKASI STOK (BARU)
+    // ===========================
+    Route::get('/verifikasi-stok', [VerifikasiStokController::class, 'index'])
+        ->name('verifikasi-stok.index');
 
     // ===========================
     // LAPORAN AKTIVITAS

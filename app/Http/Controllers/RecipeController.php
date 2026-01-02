@@ -8,7 +8,7 @@ use App\Models\StokHarianMenu;
 use App\Models\StokHarianMentah;
 use App\Models\StokHarianDapurMentah;
 use App\Models\StokHarianDapurMenu;
-use App\Models\ActivityLog; // Import
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -162,6 +162,7 @@ class RecipeController extends Controller
 
             $tanggal = session('stok_tanggal') ?? now()->toDateString();
 
+            // 1. Pastikan BAHAN MENTAH ada di stok harian
             foreach ($validated['ingredients'] as $ing) {
                 if ($validated['division'] === 'dapur') {
                     StokHarianDapurMentah::firstOrCreate(
@@ -176,6 +177,13 @@ class RecipeController extends Controller
                 }
             }
 
+            // 🔥 2. LOGIKA BARU: RE-INSERT MENU KE STOK HARIAN (Jika Hilang)
+            if ($validated['division'] === 'bar') {
+                $this->syncToStokHarianBar($recipe, $tanggal);
+            } else {
+                $this->syncToStokHarianDapur($recipe, $tanggal);
+            }
+
             // LOG AKTIVITAS
             ActivityLog::create([
                 'user_id'     => $user->id,
@@ -186,7 +194,7 @@ class RecipeController extends Controller
 
         return redirect()->route('resep', [
             'division' => $validated['division'],
-        ])->with('success', 'Resep diperbarui.');
+        ])->with('success', 'Resep diperbarui & Stok Harian disinkronkan.');
     }
 
     public function destroy(Recipe $recipe)
@@ -251,5 +259,88 @@ class RecipeController extends Controller
         return redirect()->route('resep', [
             'division' => $division,
         ])->with('success', 'Resep berhasil dihapus.');
+    }
+
+    // --- HELPERS UNTUK SINKRONISASI STOK MENU ---
+
+    private function syncToStokHarianBar($recipe, $tanggal)
+    {
+        // Cari Item ID berdasarkan nama resep (karena Bar pakai Item ID)
+        $menuItem = Item::where('nama', $recipe->name)->first();
+
+        if ($menuItem) {
+            $stokMenu = StokHarianMenu::where('item_id', $menuItem->id)
+                                      ->whereDate('tanggal', $tanggal)
+                                      ->first();
+
+            // Hitung kapasitas
+            $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'bar', $tanggal);
+
+            if (!$stokMenu) {
+                // 🔥 Buat ulang jika tidak ada
+                StokHarianMenu::create([
+                    'item_id'     => $menuItem->id,
+                    'tanggal'     => $tanggal,
+                    'stok_awal'   => $stokAwalBaru,
+                    'stok_masuk'  => 0,
+                    'stok_keluar' => 0,
+                    'stok_akhir'  => $stokAwalBaru,
+                    'unit'        => 'porsi' // Default unit
+                ]);
+            }
+        }
+    }
+
+    private function syncToStokHarianDapur($recipe, $tanggal)
+    {
+        $stokMenu = StokHarianDapurMenu::where('recipe_id', $recipe->id)
+                                       ->whereDate('tanggal', $tanggal)
+                                       ->first();
+
+        // Hitung kapasitas
+        $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'dapur', $tanggal);
+
+        if (!$stokMenu) {
+             // 🔥 Buat ulang jika tidak ada
+            StokHarianDapurMenu::create([
+                'recipe_id'   => $recipe->id,
+                'tanggal'     => $tanggal,
+                'stok_awal'   => $stokAwalBaru,
+                'stok_masuk'  => 0,
+                'stok_keluar' => 0,
+                'stok_akhir'  => $stokAwalBaru,
+                'unit'        => 'porsi'
+            ]);
+        }
+    }
+
+    private function calculateCapacity($ingredients, $division, $tanggal)
+    {
+        $minCapacity = 999999;
+
+        foreach ($ingredients as $ing) {
+            $itemId = $ing['item_id'] ?? null;
+            $amount = $ing['amount'] ?? 0;
+
+            if (!$itemId || $amount <= 0) continue;
+
+            $mentah = null;
+            if ($division === 'bar') {
+                $mentah = StokHarianMentah::where('item_id', $itemId)->whereDate('tanggal', $tanggal)->first();
+            } else {
+                $mentah = StokHarianDapurMentah::where('item_id', $itemId)->whereDate('tanggal', $tanggal)->first();
+            }
+
+            if ($mentah) {
+                $capacity = intval($mentah->stok_akhir / $amount);
+                if ($capacity < $minCapacity) {
+                    $minCapacity = $capacity;
+                }
+            } else {
+                return 0; // Bahan tidak ada, kapasitas 0
+            }
+        }
+
+        return ($minCapacity === 999999) ? 0 : $minCapacity;
     }
 }

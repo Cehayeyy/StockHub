@@ -55,19 +55,24 @@ function SidebarLink({
   let url = '#';
 
   try {
+    // Cek apakah href adalah nama route yang valid
     if (href && route().has(href)) {
       isActive = route().current(href);
       url = route(href);
     }
+    // Jika bukan route name, anggap URL biasa (fallback)
+    else if (href) {
+        url = href;
+    }
   } catch (e) {
-    console.warn(`Route ${href} tidak ditemukan.`);
+    console.warn(`Route ${href} tidak ditemukan atau error.`);
   }
 
   const activeClasses = isActive ? 'bg-black/20' : 'hover:bg-black/10';
 
   return (
     <Link
-      href={href ? url : ''}
+      href={url}
       onClick={onClick}
       preserveScroll
       className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeClasses}`}
@@ -117,56 +122,52 @@ function SubMenuLink({
 }
 
 export default function AppLayout({ header, children }: LayoutProps) {
-    const { auth, flash } = usePage<PageProps>().props;
+  const { auth, flash } = usePage<PageProps>().props;
 
-    const rawRole = auth?.user?.role;
-    const role = auth?.user?.role?.toLowerCase();
-    const divisionRaw =
-  auth?.user?.division?.toLowerCase() ??
-  auth?.user?.role?.toLowerCase();
+  const rawRole = auth?.user?.role;
+  const role = auth?.user?.role?.toLowerCase();
+  const divisionRaw =
+    auth?.user?.division?.toLowerCase() ??
+    auth?.user?.role?.toLowerCase();
 
-const division =
-  divisionRaw === 'kitchen' ? 'dapur' : divisionRaw;
+  const division =
+    divisionRaw === 'kitchen' ? 'dapur' : divisionRaw;
 
-const isStaff = role !== 'owner' && role !== 'supervisor';
-    console.log('ROLE ASLI:', rawRole);
-    console.log('ROLE NORMALIZED:', role);
-    console.log('IS STAFF:', isStaff);
-    console.log("ROLE:", role);
-    console.log("IS STAFF:", isStaff);
-    console.log("DIVISION RAW:", auth.user.division);
-    console.log("DIVISION FIXED:", division);
+  const isStaff = role !== 'owner' && role !== 'supervisor';
 
+  // Debug logs (bisa dihapus nanti)
+  console.log('ROLE ASLI:', rawRole);
+  console.log('ROLE NORMALIZED:', role);
+  console.log('IS STAFF:', isStaff);
+  console.log("DIVISION FIXED:", division);
 
+  // AUTO LOGOUT IDLE 10 MENIT + LOGOUT SAAT BROWSER DITUTUP ATAU DEVICE MATI
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        router.post(route("logout"));
+      }, 10 * 60 * 1000); // 10 menit
+    };
 
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+    window.addEventListener("click", resetTimer);
 
-// AUTO LOGOUT IDLE 10 MENIT + LOGOUT SAAT BROWSER DITUTUP ATAU DEVICE MATI
-useEffect(() => {
- let timer: ReturnType<typeof setTimeout>;
-  const resetTimer = () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      router.post(route("logout"));
-    }, 10 * 60 * 1000); // 10 menit
-  };
+    window.addEventListener("beforeunload", () => {
+      navigator.sendBeacon(route("logout"));
+    });
 
-  window.addEventListener("mousemove", resetTimer);
-  window.addEventListener("keydown", resetTimer);
-  window.addEventListener("click", resetTimer);
+    resetTimer();
 
-  window.addEventListener("beforeunload", () => {
-    navigator.sendBeacon(route("logout"));
-  });
-
-  resetTimer();
-
-  return () => {
-    clearTimeout(timer);
-    window.removeEventListener("mousemove", resetTimer);
-    window.removeEventListener("keydown", resetTimer);
-    window.removeEventListener("click", resetTimer);
-  };
-}, []);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("click", resetTimer);
+    };
+  }, []);
 
 
   const [showModal, setShowModal] = useState(false);
@@ -247,11 +248,11 @@ useEffect(() => {
             Dasbor
           </SidebarLink>
 
- {!isStaff && (
-  <SidebarLink href="manajemen" icon={Users}>
-    Manajemen Akun
-  </SidebarLink>
-)}
+          {!isStaff && (
+            <SidebarLink href="manajemen" icon={Users}>
+              Manajemen Akun
+            </SidebarLink>
+          )}
 
 
           {/* DATA INDUK + SUB: Kategori, Item, Resep */}
@@ -308,52 +309,49 @@ useEffect(() => {
             </button>
 
             {openStokHarian && (
-  <div className="mt-1 space-y-1">
+              <div className="mt-1 space-y-1">
 
-    {/* OWNER / SUPERVISOR */}
-    {!isStaff && (
-      <>
-        <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
-          Bar
-        </SubMenuLink>
-        <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
-          Dapur
-        </SubMenuLink>
-      </>
-    )}
+                {/* OWNER / SUPERVISOR */}
+                {!isStaff && (
+                  <>
+                    <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
+                      Bar
+                    </SubMenuLink>
+                    <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
+                      Dapur
+                    </SubMenuLink>
+                  </>
+                )}
 
-    {/* STAFF BAR */}
-    {isStaff && division === "bar" && (
-      <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
-        Bar
-      </SubMenuLink>
-    )}
+                {/* STAFF BAR */}
+                {isStaff && division === "bar" && (
+                  <SubMenuLink href="stok-harian.bar" icon={CupSoda}>
+                    Bar
+                  </SubMenuLink>
+                )}
 
-    {/* STAFF DAPUR */}
-    {isStaff && division === "dapur" && (
-      <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
-        Dapur
-      </SubMenuLink>
-    )}
+                {/* STAFF DAPUR */}
+                {isStaff && division === "dapur" && (
+                  <SubMenuLink href="stok-harian.dapur" icon={CookingPot}>
+                    Dapur
+                  </SubMenuLink>
+                )}
 
-  </div>
-)}
-
-
-
-
+              </div>
+            )}
           </div>
 
-          <SidebarLink href="#" icon={ClipboardCheck}>
+          {/* 🔥 UPDATE: VERIFIKASI STOK - GUNAKAN ROUTE NAME YANG BENAR */}
+          <SidebarLink href="verifikasi-stok.index" icon={ClipboardCheck}>
             Verifikasi Stok
           </SidebarLink>
 
-          {/* Laporan Aktivitas mengarah ke route "laporan-aktivitas" */}
+          {/* Laporan Aktivitas */}
           {!isStaff && (
-  <SidebarLink href="laporan-aktivitas" icon={FileText}>
-    Laporan Aktifitas
-  </SidebarLink>
-)}
+            <SidebarLink href="laporan-aktivitas" icon={FileText}>
+              Laporan Aktifitas
+            </SidebarLink>
+          )}
 
         </nav>
 
