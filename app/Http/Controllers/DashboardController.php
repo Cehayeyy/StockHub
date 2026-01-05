@@ -2,27 +2,103 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 use App\Models\Item;
 use App\Models\Recipe;
 use App\Models\ItemCategory;
 use App\Models\User;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('dashboard', [
-            // TOTAL DATA
+        $user = $request->user();
+
+        // ================= TAMBAHAN STOK HARIAN =================
+        $today = Carbon::today();
+
+        // BAR
+        $barMenu = DB::table('stok_harian_menu')
+        ->whereDate('tanggal', $today)
+        ->count();
+
+    $barMenuHabis = DB::table('stok_harian_menu')
+        ->whereDate('tanggal', $today)
+        ->where('stok_akhir', '>', 0)
+        ->where('stok_akhir', '<=', 5)
+        ->count();
+
+
+        $barMentah = DB::table('stok_harian_mentah')
+        ->whereDate('tanggal', $today)
+        ->count();
+
+    $barMentahHabis = DB::table('stok_harian_mentah')
+        ->whereDate('tanggal', $today)
+        ->where('stok_akhir', '>', 0)
+        ->where('stok_akhir', '<=', 5)
+        ->count();
+
+
+        // DAPUR
+        $dapurMenu = DB::table('stok_harian_dapur_menu')
+        ->whereDate('tanggal', $today)
+        ->count();
+
+    $dapurMenuHabis = DB::table('stok_harian_dapur_menu')
+        ->whereDate('tanggal', $today)
+        ->where('stok_akhir', '>', 0)
+        ->where('stok_akhir', '<=', 5)
+        ->count();
+
+
+        $dapurMentah = DB::table('stok_harian_dapur_mentah')
+        ->whereDate('tanggal', $today)
+        ->count();
+
+    $dapurMentahHabis = DB::table('stok_harian_dapur_mentah')
+        ->whereDate('tanggal', $today)
+        ->where('stok_akhir', '>', 0)
+        ->where('stok_akhir', '<=', 5)
+        ->count();
+
+
+        $totalStokHarian =
+            $barMenu + $barMentah + $dapurMenu + $dapurMentah;
+
+        $stokHampirHabis =
+            $barMenuHabis + $barMentahHabis + $dapurMenuHabis + $dapurMentahHabis;
+        // ================= END TAMBAHAN =================
+
+
+        $data = [
             'totalItem'     => Item::count(),
             'totalResep'    => Recipe::count(),
             'totalKategori' => ItemCategory::count(),
             'totalUser'     => User::count(),
 
-            // 'stokHampirHabis' => Item::where('stok', '<=', 5)->count(),
-        ]);
+            // 🔥 DATA BARU (DITAMBAHKAN)
+            'totalStokHarian' => $totalStokHarian,
+            'stokHampirHabis' => $stokHampirHabis,
+        ];
+
+        // ================= SUPERVISOR / OWNER =================
+        if (in_array($user->role, ['owner', 'supervisor'])) {
+            return Inertia::render('Dashboard', array_merge($data, [
+                'totalUser' => User::count(),
+            ]));
+        }
+
+        // ================= STAFF (BAR / DAPUR) =================
+        if (in_array($user->role, ['bar', 'dapur', 'kitchen', 'staff_kitchen'])) {
+            return Inertia::render('DashboardStaff', $data);
+        }
 
 
+        // ================= FALLBACK =================
+        abort(403, 'Role tidak dikenali');
     }
-
 }

@@ -416,4 +416,39 @@ class StokHarianController extends Controller
 
         return back()->with('success', 'Data stok mentah dihapus.');
     }
+    public function storeMenu(Request $request)
+{
+    $request->validate([
+        'item_id' => 'required|integer',
+        'tanggal' => 'required|date',
+        'stok_keluar' => 'required|integer|min:0',
+    ]);
+
+    $stok = StokHarianMenu::where('item_id', $request->item_id)
+        ->whereDate('tanggal', $request->tanggal)
+        ->first();
+
+    // kalau belum ada data stok hariannya
+    if (!$stok) {
+        return back()->withErrors([
+            'message' => 'Data stok menu untuk tanggal ini belum tersedia'
+        ]);
+    }
+
+    // validasi pemakaian
+    if ($request->stok_keluar > $stok->stok_total) {
+        return back()->withErrors([
+            'message' => 'Pemakaian melebihi stok total'
+        ]);
+    }
+
+    // UPDATE DATA
+    $stok->pemakaian = $request->stok_keluar;
+    $stok->tersisa   = $stok->stok_total - $request->stok_keluar;
+    $stok->save();
+
+    return redirect()->back();
+}
+
+
 }

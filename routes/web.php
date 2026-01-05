@@ -5,6 +5,7 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ItemController;
@@ -29,6 +30,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware(['auth'])
         ->name('dashboard');
+
+        Route::post('/izin-revisi', function () {
+            // sementara dummy (nanti bisa ke DB)
+            return back()->with('success', 'Permintaan izin revisi dikirim');
+        });
+
+ Route::get('/items', [ItemController::class, 'index'])->name('items.index');
+Route::get('/recipes', [RecipeController::class, 'index'])->name('recipes.index');
+Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+Route::get('/users', [UserController::class, 'index'])->name('users.index'); // supervisor only
+
+
 
     // ===========================
     // MANAJEMEN AKUN

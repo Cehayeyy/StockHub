@@ -25,20 +25,26 @@ const COLORS = ["#8B5E3C", "#A97458", "#B9886C", "#6F4E37"];
 
 // Card dengan animasi
 const InfoCard = ({
-  title,
-  value,
-  icon: Icon,
-  bgColor,
-}: {
-  title: string;
-  value: number;
-  icon: React.ElementType;
-  bgColor: string;
-}) => (
-  <motion.div
-    whileHover={{ scale: 1.05, boxShadow: "0px 10px 20px rgba(0,0,0,0.2)" }}
-    className="bg-[#F5F0EB] p-6 rounded-xl shadow-lg flex items-center gap-4 transition-transform"
-  >
+    title,
+    value,
+    icon: Icon,
+    bgColor,
+    onClick,
+  }: {
+    title: string;
+    value: number;
+    icon: React.ElementType;
+    bgColor: string;
+    onClick?: () => void;
+  }) => (
+    <motion.div
+      onClick={onClick}
+      whileHover={{ scale: 1.05, boxShadow: "0px 10px 20px rgba(0,0,0,0.2)" }}
+      className={`bg-[#F5F0EB] p-6 rounded-xl shadow-lg flex items-center gap-4 transition-transform ${
+        onClick ? "cursor-pointer hover:bg-[#EFE8E1]" : ""
+      }`}
+    >
+
     <div className={`w-12 h-12 ${bgColor} rounded-lg flex items-center justify-center text-white`}>
       <Icon />
     </div>
@@ -60,11 +66,16 @@ export default function Dashboard() {
     totalUser,
   } = usePage<any>().props;
 
-  const [stokHabis, setStokHabis] = useState(15);
+
+
+  const { totalStokHarian, stokHampirHabis } = usePage<any>().props;
+
+  const [showPilihStok, setShowPilihStok] = useState(false);
+
 
   const pieData = [
-    { name: "Hampir Habis", value: stokHabis },
-    { name: "Aman", value: totalItem - stokHabis },
+    { name: "Hampir Habis", value: stokHampirHabis },
+    { name: "Aman", value: totalItem - stokHampirHabis },
   ];
 
   // Akses revisi
@@ -110,8 +121,11 @@ export default function Dashboard() {
   };
 
   const handlePieClick = () => {
-    router.get("/item?filter=almost-empty");
+    setShowPilihStok(true);
   };
+
+
+
 
   return (
     <AppLayout header={<h2 className="text-2xl font-bold">Dashboard</h2>}>
@@ -120,11 +134,38 @@ export default function Dashboard() {
 
         {/* Grid card */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <InfoCard title="Total Item" value={totalItem} icon={Layers} bgColor="bg-[#8B5E3C]" />
-          <InfoCard title="Total Resep" value={totalResep} icon={BookOpen} bgColor="bg-[#A97458]" />
-          <InfoCard title="Total Kategori" value={totalKategori} icon={Box} bgColor="bg-[#B9886C]" />
-          <InfoCard title="Total User" value={totalUser} icon={Users} bgColor="bg-[#6F4E37]" />
-        </div>
+  <InfoCard
+    title="Total Item"
+    value={totalItem}
+    icon={Layers}
+    bgColor="bg-[#8B5E3C]"
+    onClick={() => router.visit("/item")}
+  />
+
+  <InfoCard
+    title="Total Resep"
+    value={totalResep}
+    icon={BookOpen}
+    bgColor="bg-[#A97458]"
+    onClick={() => router.visit("/resep")}
+  />
+
+  <InfoCard
+    title="Total Kategori"
+    value={totalKategori}
+    icon={Box}
+    bgColor="bg-[#B9886C]"
+    onClick={() => router.visit("/kategori")}
+  />
+
+  <InfoCard
+    title="Total User"
+    value={totalUser}
+    icon={Users}
+    bgColor="bg-[#6F4E37]"
+    onClick={() => router.visit("/manajemen-akun")}
+  />
+</div>
 
         {/* Pie chart */}
         <div
@@ -187,6 +228,51 @@ export default function Dashboard() {
   </motion.div>
 </div>
       </div>
+
+      {showPilihStok && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <motion.div
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className="bg-[#F5F0EB] rounded-xl p-6 w-[320px] shadow-xl"
+    >
+      <h3 className="text-lg font-bold mb-2 text-center">
+        Stok Hampir Habis
+      </h3>
+      <p className="text-sm text-gray-600 mb-4 text-center">
+        Kamu mau cek stok di mana?
+      </p>
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => router.visit("/stok-harian/bar")}
+          className="flex-1 py-2 rounded-lg bg-[#8B5E3C] text-white hover:bg-[#6F4E37]"
+        >
+          🍸 Bar
+        </button>
+
+        <button
+          onClick={() => router.visit("/stok-harian/dapur")}
+          className="flex-1 py-2 rounded-lg bg-[#8B5E3C] text-white hover:bg-[#6F4E37]"
+        >
+          🍳 Dapur
+        </button>
+      </div>
+
+      <button
+        onClick={() => setShowPilihStok(false)}
+        className="mt-4 text-xs text-gray-500 hover:underline block mx-auto"
+      >
+        Batal
+      </button>
+    </motion.div>
+  </div>
+)}
+
+
+
     </AppLayout>
+
+
   );
 }
