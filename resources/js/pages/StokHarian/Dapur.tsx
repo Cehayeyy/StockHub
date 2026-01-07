@@ -94,36 +94,38 @@ export default function Dapur() {
 
   // --- Actions ---
 
-  const submitCreate = () => {
-    if (formItemId === "") return;
+const submitCreate = () => {
+  if (formItemId === "") return;
 
-    const routeName =
-      tab === "menu"
-        ? "stok-harian-dapur-menu.store"
-        : "stok-harian-dapur-mentah.store";
+  const routeName =
+    tab === "menu"
+      ? "stok-harian-dapur-menu.store"
+      : "stok-harian-dapur-mentah.store";
 
-    const payload: any = {
-        tanggal: date,
-        stok_awal: Number(formStokAwal),
-        stok_masuk: formStokMasuk === "" ? 0 : Number(formStokMasuk),
-    };
+  const payload: any = { tanggal: date };
 
-    if (tab === 'menu') {
-        payload.recipe_id = Number(formItemId);
-        payload.pemakaian = Number(formPemakaian) || 0; // send as pemakaian for controller
-    } else {
-        payload.item_id = Number(formItemId);
-    }
+  if (tab === "menu") {
+    payload.recipe_id = Number(formItemId);
+    payload.pemakaian = Number(formPemakaian) || 0;
+  }
 
-    router.post(route(routeName), payload, {
-      onSuccess: () => {
-        setShowInputModal(false);
-        resetForm();
-        // Refresh stok-harian dapur page so 'tersisa' recalculates
-        router.visit(route('stok-harian.dapur'), { data: { tab, tanggal: date } });
-      }
-    });
-  };
+  if (tab === "mentah") {
+    payload.item_id = Number(formItemId);
+    payload.stok_awal = Number(formStokAwal);
+    payload.stok_masuk = Number(formStokMasuk || 0);
+  }
+
+  router.post(route(routeName), payload, {
+    onSuccess: () => {
+      setShowInputModal(false);
+      resetForm();
+      router.visit(route("stok-harian.dapur"), {
+        data: { tab, tanggal: date },
+      });
+    },
+  });
+};
+
 
   const handleEditClick = (item: ItemData) => {
     setFormRecordId(item.id);
@@ -137,75 +139,68 @@ export default function Dapur() {
     setShowEditModal(true);
   };
 
-  const submitUpdate = () => {
-    if (!formRecordId) return;
+ const submitUpdate = () => {
+  if (!formRecordId) return;
 
-    const routeName =
-      tab === "menu"
-        ? "stok-harian-dapur-menu.update"
-        : "stok-harian-dapur-mentah.update";
+  const routeName =
+    tab === "menu"
+      ? "stok-harian-dapur-menu.update"
+      : "stok-harian-dapur-mentah.update";
 
-    const payload: any = {
-      stok_awal: Number(formStokAwal),
-    };
+  const payload: any = {};
 
-    const valAwal = Number(formStokAwal);
-    let valMasuk = 0;
+  if (tab === "menu") {
+    const valKeluar = Number(formPemakaian);
 
-    if (tab === "mentah") {
-        valMasuk = Number(formStokMasuk);
-        payload.stok_masuk = valMasuk;
+    if (valKeluar < 0) {
+      alert("Pemakaian tidak boleh kurang dari 0");
+      return;
     }
 
-    if (tab === "menu") {
-        const valKeluar = Number(formPemakaian);
-        payload.stok_masuk = valMasuk;
+    payload.pemakaian = valKeluar;
+  }
 
-        const valTotal = valAwal + valMasuk;
+  if (tab === "mentah") {
+    payload.stok_awal = Number(formStokAwal);
+    payload.stok_masuk = Number(formStokMasuk || 0);
+  }
 
-        if (valKeluar > valTotal) {
-            alert(`Error: Pemakaian (${valKeluar}) tidak boleh melebihi Stok Total (${valTotal})!`);
-            return;
-        }
-        if (valKeluar < 0) {
-            alert("Error: Pemakaian tidak boleh kurang dari 0");
-            return;
-        }
-        payload.pemakaian = valKeluar;
-    }
+  router.put(route(routeName, formRecordId), payload, {
+    onSuccess: () => {
+      setShowEditModal(false);
+      resetForm();
+      router.visit(route("stok-harian.dapur"), {
+        data: { tab, tanggal: date },
+      });
+    },
+  });
+};
 
-    // Fix: Syntax router.put yang benar
-    router.put(route(routeName, formRecordId), payload, {
-      onSuccess: () => {
-        setShowEditModal(false);
-        resetForm();
-        router.visit(route('stok-harian.dapur'), { data: { tab, tanggal: date } });
-      },
-      onError: (err: any) => {
-          console.error(err);
-      }
-    });
-  };
 
   const handleDeleteClick = (id: number) => {
     setFormRecordId(id);
     setShowDeleteModal(true);
   };
 
-  const submitDelete = () => {
-    if (!formRecordId) return;
-    const routeName =
-      tab === "menu"
-        ? "stok-harian-dapur-menu.destroy"
-        : "stok-harian-dapur-mentah.destroy";
-    router.delete(route(routeName, formRecordId), {
-      onSuccess: () => {
-        setShowDeleteModal(false);
-        resetForm();
-        router.visit(route('stok-harian.dapur'), { data: { tab, tanggal: date } });
-      },
-    });
-  };
+ const submitDelete = () => {
+  if (!formRecordId) return;
+
+  const routeName =
+    tab === "menu"
+      ? "stok-harian-dapur-menu.destroy"
+      : "stok-harian-dapur-mentah.destroy";
+
+  router.delete(route(routeName, formRecordId), {
+    preserveScroll: true,
+    onSuccess: () => {
+      setShowDeleteModal(false);
+      resetForm();
+      router.visit(route("stok-harian.dapur"), {
+        data: { tab, tanggal: date },
+      });
+    },
+  });
+};
 
   return (
     <AppLayout header={`Stok Harian ${tab === 'menu' ? 'Menu' : 'Bahan Mentah'}`}>
@@ -412,32 +407,135 @@ export default function Dapur() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
             <h2 className="text-lg font-bold text-center mb-6">Edit Stok {tab === 'menu' ? 'Menu' : 'Bahan'}</h2>
-            <form onSubmit={(e) => { e.preventDefault(); submitUpdate(); }} className="space-y-4">
-              <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
-              <div><label className="block text-sm font-medium mb-1">Nama Item</label><input type="text" value={formItemName} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600" /></div>
-              <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
-              <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
+       <form onSubmit={(e) => { e.preventDefault(); submitUpdate(); }} className="space-y-4">
 
-              {tab === "mentah" && (<div><label className="block text-sm font-medium mb-1">Stok Masuk</label><input type="number" min="0" value={formStokMasuk} onChange={(e) => setFormStokMasuk(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
-              {tab === "menu" && (<div><label className="block text-sm font-medium mb-1">Pemakaian (Terjual)</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
+  <div>
+    <label className="block text-sm font-medium mb-1">Tanggal</label>
+    <div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">
+      {new Date(date).toLocaleDateString("id-ID")}
+    </div>
+  </div>
 
-              <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold">Update</button></div>
-            </form>
+  <div>
+    <label className="block text-sm font-medium mb-1">Nama Item</label>
+    <input
+      type="text"
+      value={formItemName}
+      readOnly
+      className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-medium mb-1">Satuan</label>
+    <input
+      type="text"
+      value={formSatuan}
+      readOnly
+      className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
+    />
+  </div>
+
+  {/* KHUSUS MENTAH */}
+  {tab === "mentah" && (
+    <>
+      <div>
+        <label className="block text-sm font-medium mb-1">Stok Awal</label>
+        <input
+          type="number"
+          min="0"
+          value={formStokAwal}
+          onChange={(e) => setFormStokAwal(Number(e.target.value))}
+          className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Stok Masuk</label>
+        <input
+          type="number"
+          min="0"
+          value={formStokMasuk}
+          onChange={(e) => setFormStokMasuk(Number(e.target.value))}
+          className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm"
+        />
+      </div>
+    </>
+  )}
+
+  {/* KHUSUS MENU */}
+  {tab === "menu" && (
+    <div>
+      <label className="block text-sm font-medium mb-1">Pemakaian</label>
+      <input
+        type="number"
+        min="0"
+        value={formPemakaian}
+        onChange={(e) => setFormPemakaian(Number(e.target.value))}
+        className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm"
+      />
+    </div>
+  )}
+
+  <div className="flex justify-end gap-3 pt-4">
+    <button
+      type="button"
+      onClick={() => { setShowEditModal(false); resetForm(); }}
+      className="px-6 py-2 rounded-full border"
+    >
+      Batal
+    </button>
+
+    <button
+      type="submit"
+      className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold"
+    >
+      Update
+    </button>
+  </div>
+
+</form>
+
           </div>
         </div>
       )}
 
       {/* MODAL 4: HAPUS DATA */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-[350px] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 text-center">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 className="text-red-500 w-6 h-6" /></div>
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Hapus Data?</h2>
-            <p className="text-sm text-gray-500 mb-6">Data yang dihapus tidak dapat dikembalikan.</p>
-            <div className="flex justify-center gap-3"><button onClick={() => setShowDeleteModal(false)} className="px-5 py-2 rounded-full border text-sm font-semibold">Batal</button><button onClick={submitDelete} className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Hapus</button></div>
-          </div>
-        </div>
-      )}
+{showDeleteModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="bg-white w-[350px] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 text-center">
+      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Trash2 className="text-red-500 w-6 h-6" />
+      </div>
+
+      <h2 className="text-lg font-bold text-gray-800 mb-2">
+        Hapus Data?
+      </h2>
+
+      <p className="text-sm text-gray-500 mb-6">
+        Data yang dihapus tidak dapat dikembalikan.
+      </p>
+
+      <div className="flex justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => setShowDeleteModal(false)}
+          className="px-5 py-2 rounded-full border text-sm font-semibold"
+        >
+          Batal
+        </button>
+
+        <button
+          type="button"
+          onClick={submitDelete}
+          className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600"
+        >
+          Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </AppLayout>
   );
 }
