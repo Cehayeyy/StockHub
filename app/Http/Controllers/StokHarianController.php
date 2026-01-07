@@ -12,6 +12,7 @@ use App\Models\ActivityLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class StokHarianController extends Controller
 {
