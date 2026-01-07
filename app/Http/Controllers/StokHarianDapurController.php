@@ -233,33 +233,64 @@ class StokHarianDapurController extends Controller
         $data = $request->validate([
             'recipe_id' => 'required|exists:recipes,id',
             'tanggal'   => 'required|date',
+            'pemakaian' => 'nullable|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($data) {
-            if (StokHarianDapurMenu::where($data)->exists()) return;
+            if (StokHarianDapurMenu::where(['recipe_id' => $data['recipe_id'], 'tanggal' => $data['tanggal']])->exists()) return;
 
             $recipe = Recipe::findOrFail($data['recipe_id']);
             if (!is_array($recipe->ingredients)) return;
 
+            // Agregasi bahan dan hitung kapasitas awal
+            $grouped = collect($recipe->ingredients)->groupBy('item_id')->map(fn($g) => (int) collect($g)->sum('amount'))->toArray();
+
             $stokMenuAwal = PHP_INT_MAX;
-            foreach ($recipe->ingredients as $ing) {
-                $itemId = $ing['item_id'] ?? null;
-                if (!$itemId) { $stokMenuAwal = 0; break; }
+            foreach ($grouped as $itemId => $butuh) {
+                if (!$itemId || $butuh <= 0) { $stokMenuAwal = 0; break; }
                 $mentah = StokHarianDapurMentah::where(['item_id' => $itemId, 'tanggal' => $data['tanggal']])->first();
                 if (!$mentah) { $stokMenuAwal = 0; break; }
-                $butuh = max(1, (int) ($ing['amount'] ?? 1));
-                $stokMenuAwal = min($stokMenuAwal, intdiv($mentah->stok_akhir, $butuh));
+                $kapasitas = floor($mentah->stok_akhir / $butuh);
+                $stokMenuAwal = min($stokMenuAwal, $kapasitas);
             }
             $stokMenuAwal = max(0, $stokMenuAwal);
 
-            StokHarianDapurMenu::create([
+            $initialPemakaian = $data['pemakaian'] ?? 0;
+
+            // Simpan menu dengan nilai pemakaian (jika ada)
+            $menu = StokHarianDapurMenu::create([
                 'recipe_id'   => $data['recipe_id'], 'tanggal' => $data['tanggal'],
-                'stok_awal'   => $stokMenuAwal, 'stok_masuk'  => 0, 'stok_keluar' => 0,
-                'stok_akhir'  => $stokMenuAwal, 'unit' => 'porsi',
+                'stok_awal'   => $stokMenuAwal, 'stok_masuk'  => 0, 'stok_keluar' => $initialPemakaian,
+                'stok_akhir'  => max(0, $stokMenuAwal - $initialPemakaian), 'unit' => 'porsi',
             ]);
 
+            // Jika ada pemakaian, lakukan sinkronisasi bahan mentah (delta)
+            $delta = $initialPemakaian; // oldUsage = 0
+            if ($delta != 0) {
+                foreach ($grouped as $itemId => $amountPerPorsi) {
+                    $qty = $delta * ($amountPerPorsi ?? 0);
+                    if ($qty == 0) continue;
+
+                    $mentah = StokHarianDapurMentah::where(['item_id' => $itemId, 'tanggal' => $data['tanggal']])->lockForUpdate()->first();
+                    if (!$mentah) {
+                        \Log::warning('storeMenu (dapur): mentah row not found', ['item_id' => $itemId, 'tanggal' => $data['tanggal']]);
+                        continue;
+                    }
+
+                    $oldRawKeluar = $mentah->stok_keluar;
+                    $newRawKeluar = max(0, $oldRawKeluar + $qty);
+
+                    $mentah->update([
+                        'stok_keluar' => $newRawKeluar,
+                        'stok_akhir'  => max(0, $mentah->stok_awal + $mentah->stok_masuk - $newRawKeluar),
+                    ]);
+
+                    \Log::info('storeMenu (dapur): updated mentah', ['item_id' => $mentah->item_id, 'tanggal' => $mentah->tanggal, 'old_stok_keluar' => $oldRawKeluar, 'new_stok_keluar' => $newRawKeluar, 'qty' => $qty]);
+                }
+            }
+
             ActivityLog::create([
-                'user_id' => Auth::id(), 'activity' => 'Tambah Menu Dapur', 'description' => "Menambahkan menu '{$recipe->name}'."
+                'user_id' => Auth::id(), 'activity' => 'Tambah Menu Dapur', 'description' => "Menambahkan menu '{$recipe->name}'. Pemakaian: {$initialPemakaian}."
             ]);
         });
 

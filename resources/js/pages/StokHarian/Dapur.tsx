@@ -41,7 +41,10 @@ interface PageProps {
 }
 
 export default function Dapur() {
-  const { items, availableMenus, inputableMenus, tab, tanggal, lowStockItems } = usePage<any>().props as PageProps;
+  const page = usePage<any>();
+  const { items, availableMenus, inputableMenus, tab, tanggal, lowStockItems } = page.props as PageProps;
+  const { auth } = page.props;
+  const role = auth?.user?.role;
 
   const [search, setSearch] = useState("");
   const [date, setDate] = useState(tanggal);
@@ -107,7 +110,7 @@ export default function Dapur() {
 
     if (tab === 'menu') {
         payload.recipe_id = Number(formItemId);
-        payload.stok_keluar = Number(formPemakaian) || 0;
+        payload.pemakaian = Number(formPemakaian) || 0; // send as pemakaian for controller
     } else {
         payload.item_id = Number(formItemId);
     }
@@ -116,7 +119,8 @@ export default function Dapur() {
       onSuccess: () => {
         setShowInputModal(false);
         resetForm();
-        router.visit("/dashboard");
+        // Refresh stok-harian dapur page so 'tersisa' recalculates
+        router.visit(route('stok-harian.dapur'), { data: { tab, tanggal: date } });
       }
     });
   };
@@ -175,7 +179,7 @@ export default function Dapur() {
       onSuccess: () => {
         setShowEditModal(false);
         resetForm();
-        router.visit("/dashboard");
+        router.visit(route('stok-harian.dapur'), { data: { tab, tanggal: date } });
       },
       onError: (err: any) => {
           console.error(err);
@@ -198,7 +202,7 @@ export default function Dapur() {
       onSuccess: () => {
         setShowDeleteModal(false);
         resetForm();
-        router.visit("/dashboard");
+        router.visit(route('stok-harian.dapur'), { data: { tab, tanggal: date } });
       },
     });
   };
@@ -229,7 +233,19 @@ export default function Dapur() {
 
           <div className="flex flex-col items-end gap-4 mb-6">
             <div className="flex gap-3">
+              {/* INPUT MENTAH → SEMUA ROLE YANG DIIZINKAN */}
               {tab === 'mentah' && (
+                <button
+                  onClick={() => setShowInputModal(true)}
+                  className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  Input Data
+                </button>
+              )}
+
+              {/* INPUT MENU → KHUSUS STAFF DAPUR */}
+              {tab === 'menu' && (role === 'dapur' || role === 'kitchen' || role === 'staff_kitchen') && (
                 <button
                   onClick={() => setShowInputModal(true)}
                   className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
@@ -369,13 +385,21 @@ export default function Dapur() {
                 </div>
               </div>
               <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm" /></div>
-              <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
+              {tab === "mentah" ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Stok Awal</label>
+                  <input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" />
+                </div>
+              ) : (
+                // For Menu input we only need Pemakaian
+                <div>
+                  <label className="block text-sm font-medium mb-1">Pemakaian</label>
+                  <input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" />
+                </div>
+              )}
 
               {tab === "mentah" && (
                 <div><label className="block text-sm font-medium mb-1">Stok Masuk</label><input type="number" min="0" value={formStokMasuk} onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
-              )}
-              {tab === "menu" && (
-                <div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
               )}
               <div className="flex justify-end gap-3 pt-4"><button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" disabled={formItemId === ""} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed">Simpan</button></div>
             </form>
