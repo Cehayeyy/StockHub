@@ -18,6 +18,7 @@ class StokHarianMenu extends Model
         'stok_akhir',
         'pemakaian',
         'is_submitted',
+        'unit',
     ];
 
     protected $casts = [

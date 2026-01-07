@@ -178,8 +178,17 @@ Route::get('/users', [UserController::class, 'index'])->name('users.index'); // 
     // ===========================
     // 🔥 VERIFIKASI STOK (BARU)
     // ===========================
-    Route::get('/verifikasi-stok', [VerifikasiStokController::class, 'index'])
-        ->name('verifikasi-stok.index');
+    // ===========================
+// 🔥 VERIFIKASI STOK
+// ===========================
+Route::get('/verifikasi-stok', [VerifikasiStokController::class, 'index'])
+    ->name('verifikasi-stok.index');
+
+Route::get('/verifikasi-stok/export', [VerifikasiStokController::class, 'export'])
+    ->name('verifikasi-stok.export');
+
+
+
 
     // ===========================
     // LAPORAN AKTIVITAS

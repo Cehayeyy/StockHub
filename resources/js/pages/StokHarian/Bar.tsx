@@ -122,52 +122,89 @@ const [pemakaian, setPemakaian] = useState("");
 
   // --- Actions ---
 
-  const submitCreate = () => {
-    if (formItemId === "") return;
+  const submitCreate = async () => {
+    try {
+      if (formItemId === "") return;
 
-    // =============================
-    // JIKA TAB MENU → INPUT PEMAKAIAN
-    // =============================
-    if (tab === "menu") {
-      router.post(
-        route("stok-harian-menu.store"),
-        {
+      // helper to resolve route URL (Ziggy) or fallback
+      const getUrl = (name: string, fallback: string) => {
+        if (typeof route === 'function') {
+          try {
+            return route(name);
+          } catch (e) {
+            console.warn('[StokHarian] route() failed, using fallback', e);
+          }
+        }
+        return fallback;
+      };
+
+      // helper to POST using Inertia if available, else fetch fallback
+      const doPost = async (url: string, payload: any) => {
+        console.log('[StokHarian] Request ->', url, payload);
+
+        if (typeof router !== 'undefined' && typeof router.post === 'function') {
+          router.post(url, payload, {
+            onSuccess: () => {
+              setShowInputModal(false);
+              resetForm();
+            },
+            onError: (err: any) => {
+              console.error('[StokHarian] POST error (router):', err);
+              alert('Gagal menyimpan: cek console untuk detail.');
+            },
+          });
+          return;
+        }
+
+        // Fetch fallback
+        console.warn('[StokHarian] router.post not available, using fetch fallback');
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': token,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin',
+        });
+
+        if (res.ok) {
+          setShowInputModal(false);
+          resetForm();
+        } else {
+          const text = await res.text();
+          console.error('[StokHarian] POST error (fetch):', res.status, text);
+          alert('Gagal menyimpan: server error');
+        }
+      };
+
+      if (tab === 'menu') {
+        const payload = {
           item_id: Number(formItemId),
           tanggal: date,
-          stok_keluar: Number(formPemakaian), // ⬅️ INI PEMAKAIAN
-        },
-        {
-          onSuccess: () => {
-            setShowInputModal(false);
-            resetForm();
-            alert("✅ Stok harian berhasil disimpan");
-            router.visit("/dashboard");
-          },
-        }
-      );
-      return;
-    }
+          pemakaian: Number(formPemakaian),
+        };
 
-    // =============================
-    // JIKA TAB MENTAH → STOK MASUK
-    // =============================
-    router.post(
-      route("stok-harian-mentah.store"),
-      {
+        const url = getUrl('stok-harian-menu.store', '/stok-harian/menu');
+        await doPost(url, payload);
+        return;
+      }
+
+      const payloadMentah = {
         item_id: Number(formItemId),
         tanggal: date,
         stok_awal: Number(formStokAwal),
         stok_masuk: Number(formStokMasuk),
-      },
-      {
-        onSuccess: () => {
-          setShowInputModal(false);
-          resetForm();
-          alert("✅ Stok harian berhasil disimpan");
-          router.visit("/dashboard");
-        },
+        };
+
+        const urlMentah = getUrl('stok-harian-mentah.store', '/stok-harian/mentah');
+        await doPost(urlMentah, payloadMentah);
+      } catch (err) {
+        console.error('[StokHarian] submitCreate crashed:', err);
+        alert('Terjadi error pada client, lihat console.');
       }
-    );
   };
 
 
@@ -553,7 +590,8 @@ const [pemakaian, setPemakaian] = useState("");
             Batal
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={() => submitCreate()}
             disabled={formItemId === ""}
             className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50"
           >
@@ -590,24 +628,6 @@ const [pemakaian, setPemakaian] = useState("");
               </div>
 
               {/* Stok Masuk hanya untuk Mentah */}
-              {tab === "menu" && (
-  <div>
-    <label className="block text-sm font-medium mb-1">
-      Pemakaian (Terjual)
-    </label>
-    <input
-      type="number"
-      min="0"
-      value={formPemakaian}
-      onChange={(e) =>
-        setFormPemakaian(
-          e.target.value === "" ? "" : Number(e.target.value)
-        )
-      }
-      className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-    />
-  </div>
-)}
 
 
               {/* Pemakaian hanya untuk Menu */}

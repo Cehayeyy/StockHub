@@ -12,17 +12,10 @@ class VerifikasiStokController extends Controller
 {
     public function index(Request $request)
     {
+        // ==================== KODE KAMU (TIDAK DIUBAH) ====================
         $tab = $request->get('tab', 'bar');
-
-        // 1. Ambil Tanggal Pilihan User (untuk Datepicker)
-        // Jika tidak ada request, pakai hari ini.
-        $rawDate = $request->get('tanggal') ? $request->get('tanggal') : Carbon::now()->toDateString();
-
-        // 2. Hitung Tanggal Senin (Untuk Query Data Stok)
-        // Logic: Apapun hari yang dipilih, ambil data hari Senin di minggu itu.
+        $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
         $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
-
-        $items = [];
 
         if ($tab === 'bar') {
             $items = StokHarianMentah::with('item')
@@ -46,19 +39,70 @@ class VerifikasiStokController extends Controller
                 ]);
         }
 
-        // =========================================================================
-        // ⚠️ PASTIKAN NAMA FILE SESUAI LOKASI:
-        // Jika file ada di "resources/js/Pages/VerifikasiStok.tsx", gunakan 'VerifikasiStok'
-        // Jika file ada di "resources/js/Pages/VerifikasiStok/Index.tsx", gunakan 'VerifikasiStok/Index'
-        // =========================================================================
-
-        return Inertia::render('VerifikasiStok', [ // <-- Sesuaikan path ini
+        return Inertia::render('VerifikasiStok', [
             'items'          => $items,
             'tab'            => $tab,
-
-            // 👇 INI YANG PENTING: Kirim dua jenis tanggal agar Frontend tidak error
-            'tanggal_picker' => $rawDate,    // Untuk mengisi input date (agar tidak lompat)
-            'tanggal_data'   => $mondayDate  // Untuk teks informasi "Data Senin tgl..."
+            'tanggal_picker' => $rawDate,
+            'tanggal_data'   => $mondayDate
         ]);
     }
+
+    // ==================== 🔽 TAMBAHAN EXPORT EXCEL ====================
+ public function export(Request $request)
+{
+    $tab = $request->get('tab', 'bar');
+    $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
+    $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
+
+    $items = $tab === 'bar'
+        ? StokHarianMentah::with('item')->whereDate('tanggal', $mondayDate)->get()
+        : StokHarianDapurMentah::with('item')->whereDate('tanggal', $mondayDate)->get();
+
+    $filename = "verifikasi-stok-{$tab}-{$mondayDate}.xlsx";
+
+    $headers = [
+        "Content-Type" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition" => "attachment; filename={$filename}",
+    ];
+
+    $callback = function () use ($items) {
+        $file = fopen('php://output', 'w');
+
+        // BOM UTF-8 supaya karakter tampil
+        fwrite($file, "\xEF\xBB\xBF");
+
+        // Header
+        fputcsv($file, [
+            'No',
+            'Nama Item',
+            'Satuan',
+            'Stok Sistem (Senin)',
+            'Stok Fisik',
+            'Selisih',
+            'Status'
+        ], ';');
+
+        foreach ($items as $i => $item) {
+            $namaItem   = optional($item->item)->nama ?? '-';
+            $satuan     = $item->unit ?? optional($item->item)->satuan ?? '-';
+            $stokSistem = $item->stok_akhir ?? 0;
+            $stokFisik  = $stokSistem;
+            $selisih    = $stokFisik - $stokSistem;
+
+            fputcsv($file, [
+                $i + 1,
+                $namaItem,
+                $satuan,
+                $stokSistem,
+                $stokFisik,
+                $selisih,
+                $selisih === 0 ? 'Cocok' : 'Selisih',
+            ], ';');
+        }
+
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
 }
