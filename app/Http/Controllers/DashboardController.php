@@ -23,18 +23,20 @@ class DashboardController extends Controller
         $alreadyInputToday = false;
 
         if ($user->role === 'bar') {
+            // Note: `stok_harian_menu` table does not have a `user_id` column.
+            // Check whether any submitted menu records exist for today.
             $alreadyInputToday = DB::table('stok_harian_menu')
                 ->whereDate('tanggal', $today)
-                ->where('user_id', $user->id)
                 ->where('is_submitted', true)
                 ->exists();
         }
 
 
         if ($user->role === 'dapur' || $user->role === 'kitchen') {
+            // Note: `stok_harian_dapur_menu` table does not have a `user_id` column.
+            // Check whether any submitted dapur menu records exist for today.
             $alreadyInputToday = DB::table('stok_harian_dapur_menu')
                 ->whereDate('tanggal', $today)
-                ->where('user_id', $user->id)
                 ->where('is_submitted', true)
                 ->exists();
         }
