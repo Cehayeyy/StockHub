@@ -147,6 +147,8 @@ const [pemakaian, setPemakaian] = useState("");
             onSuccess: () => {
               setShowInputModal(false);
               resetForm();
+              // Refresh stok-harian view so "tersisa" values reflect the new data
+              router.visit(route('stok-harian.bar'), { data: { tab, tanggal: date } });
             },
             onError: (err: any) => {
               console.error('[StokHarian] POST error (router):', err);
@@ -173,6 +175,8 @@ const [pemakaian, setPemakaian] = useState("");
         if (res.ok) {
           setShowInputModal(false);
           resetForm();
+          // fetch fallback: refresh stok-harian page explicitly
+          router.visit(route('stok-harian.bar'), { data: { tab, tanggal: date } });
         } else {
           const text = await res.text();
           console.error('[StokHarian] POST error (fetch):', res.status, text);
@@ -264,8 +268,8 @@ const [pemakaian, setPemakaian] = useState("");
       onSuccess: () => {
         setShowEditModal(false);
         resetForm();
-        alert("✅ Stok harian berhasil disimpan");
-        router.visit("/dashboard");
+        // Reload stok-harian page so the pooled "tersisa" values are recalculated on the server
+        router.visit(route('stok-harian.bar'), { data: { tab, tanggal: date } });
       },
       onError: (err: any) => {
           console.error("Error updating:", err);
@@ -290,8 +294,8 @@ const [pemakaian, setPemakaian] = useState("");
       onSuccess: () => {
         setShowDeleteModal(false);
         resetForm();
-        alert("✅ Stok harian berhasil disimpan");
-        router.visit("/dashboard");
+        // After delete, reload the stok-harian page to reflect recalculated tersisa
+        router.visit(route('stok-harian.bar'), { data: { tab, tanggal: date } });
       },
     });
   };
