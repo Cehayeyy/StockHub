@@ -41,7 +41,10 @@ interface PageProps {
 }
 
 export default function Bar() {
-  const { items, inputableMenus, tab, tanggal, lowStockItems } = usePage<any>().props as PageProps;
+    const page = usePage<any>();
+    const { items, inputableMenus, tab, tanggal, lowStockItems,} = page.props;
+    const url = page.url;
+
 
   const { auth } = usePage<any>().props;
   const role = auth?.user?.role;
@@ -70,6 +73,15 @@ const [pemakaian, setPemakaian] = useState("");
   useEffect(() => {
     setDate(tanggal);
   }, [tanggal]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(url.split("?")[1]);
+
+    if (params.get("autoInput") === "1") {
+      setShowInputModal(true);
+    }
+  }, []);
+
 
   // --- Handlers ---
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,6 +140,8 @@ const [pemakaian, setPemakaian] = useState("");
           onSuccess: () => {
             setShowInputModal(false);
             resetForm();
+            alert("✅ Stok harian berhasil disimpan");
+            router.visit("/dashboard");
           },
         }
       );
@@ -149,6 +163,8 @@ const [pemakaian, setPemakaian] = useState("");
         onSuccess: () => {
           setShowInputModal(false);
           resetForm();
+          alert("✅ Stok harian berhasil disimpan");
+          router.visit("/dashboard");
         },
       }
     );
@@ -211,6 +227,8 @@ const [pemakaian, setPemakaian] = useState("");
       onSuccess: () => {
         setShowEditModal(false);
         resetForm();
+        alert("✅ Stok harian berhasil disimpan");
+        router.visit("/dashboard");
       },
       onError: (err: any) => {
           console.error("Error updating:", err);
@@ -235,6 +253,8 @@ const [pemakaian, setPemakaian] = useState("");
       onSuccess: () => {
         setShowDeleteModal(false);
         resetForm();
+        alert("✅ Stok harian berhasil disimpan");
+        router.visit("/dashboard");
       },
     });
   };

@@ -246,6 +246,10 @@ class StokHarianController extends Controller
                 ]
             );
 
+            return redirect()->route('dashboard.staff')
+            ->with('success', 'Stok harian berhasil disimpan');
+
+
             ActivityLog::create([
                 'user_id'     => Auth::id(),
                 'activity'    => 'Input Stok Mentah',
@@ -253,7 +257,9 @@ class StokHarianController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Stok mentah disimpan.');
+        return redirect()->route('dashboard')
+    ->with('success', 'Stok harian berhasil disimpan');
+
     }
 
     // --- UPDATE MENU ---

@@ -10,6 +10,7 @@ use App\Models\ItemCategory;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\IzinRevisi;
 
 class DashboardController extends Controller
 {
@@ -18,7 +19,28 @@ class DashboardController extends Controller
         $user = $request->user();
 
         // ================= TAMBAHAN STOK HARIAN =================
-        $today = Carbon::today();
+        $today = Carbon::today()->toDateString();
+        $alreadyInputToday = false;
+
+        if ($user->role === 'bar') {
+            $alreadyInputToday = DB::table('stok_harian_menu')
+                ->whereDate('tanggal', $today)
+                ->where('user_id', $user->id)
+                ->where('is_submitted', true)
+                ->exists();
+        }
+
+
+        if ($user->role === 'dapur' || $user->role === 'kitchen') {
+            $alreadyInputToday = DB::table('stok_harian_dapur_menu')
+                ->whereDate('tanggal', $today)
+                ->where('user_id', $user->id)
+                ->where('is_submitted', true)
+                ->exists();
+        }
+
+
+
 
         // BAR
         $barMenu = DB::table('stok_harian_menu')
@@ -73,16 +95,28 @@ class DashboardController extends Controller
             $barMenuHabis + $barMentahHabis + $dapurMenuHabis + $dapurMentahHabis;
         // ================= END TAMBAHAN =================
 
+        // ================= IZIN REVISI =================
+        $izinRevisiPending = DB::table('izin_revisi')
+        ->join('users', 'izin_revisi.user_id', '=', 'users.id')
+        ->where('izin_revisi.status', 'pending')
+        ->select(
+            'izin_revisi.id',
+            'users.name',
+            'users.role'
+        )
+        ->get();
+
 
         $data = [
             'totalItem'     => Item::count(),
             'totalResep'    => Recipe::count(),
             'totalKategori' => ItemCategory::count(),
             'totalUser'     => User::count(),
-
-            // 🔥 DATA BARU (DITAMBAHKAN)
+            'izinRevisiPending' => $izinRevisiPending,
             'totalStokHarian' => $totalStokHarian,
             'stokHampirHabis' => $stokHampirHabis,
+            'alreadyInputToday' => $alreadyInputToday,
+
         ];
 
         // ================= SUPERVISOR / OWNER =================
@@ -94,11 +128,22 @@ class DashboardController extends Controller
 
         // ================= STAFF (BAR / DAPUR) =================
         if (in_array($user->role, ['bar', 'dapur', 'kitchen', 'staff_kitchen'])) {
-            return Inertia::render('DashboardStaff', $data);
+            return Inertia::render('DashboardStaff', array_merge($data, [
+                'alreadyInputToday' => $alreadyInputToday,
+                'flash' => [
+                    'success' => session('success'),
+                ],
+
+    ]));
         }
 
 
         // ================= FALLBACK =================
         abort(403, 'Role tidak dikenali');
+
+        $izinRevisiPending = IzinRevisi::with('user')
+    ->where('status', 'pending')
+    ->latest()
+    ->get();
     }
 }

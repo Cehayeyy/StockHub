@@ -116,6 +116,7 @@ export default function Dapur() {
       onSuccess: () => {
         setShowInputModal(false);
         resetForm();
+        router.visit("/dashboard");
       }
     });
   };
@@ -174,6 +175,7 @@ export default function Dapur() {
       onSuccess: () => {
         setShowEditModal(false);
         resetForm();
+        router.visit("/dashboard");
       },
       onError: (err: any) => {
           console.error(err);
@@ -196,6 +198,7 @@ export default function Dapur() {
       onSuccess: () => {
         setShowDeleteModal(false);
         resetForm();
+        router.visit("/dashboard");
       },
     });
   };

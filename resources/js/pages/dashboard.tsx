@@ -64,13 +64,21 @@ export default function Dashboard() {
     totalResep,
     totalKategori,
     totalUser,
+    izinRevisiPending,
   } = usePage<any>().props;
 
-
-
   const { totalStokHarian, stokHampirHabis } = usePage<any>().props;
-
   const [showPilihStok, setShowPilihStok] = useState(false);
+  const [showFormRevisi, setShowFormRevisi] = useState(false);
+  const [selectedIzin, setSelectedIzin] = useState<any>(null);
+
+const [formRevisi, setFormRevisi] = useState({
+  tanggalMulai: "",
+  jamMulai: "",
+  tanggalSelesai: "",
+  jamSelesai: "",
+});
+
 
 
   const pieData = [
@@ -78,47 +86,7 @@ export default function Dashboard() {
     { name: "Aman", value: totalItem - stokHampirHabis },
   ];
 
-  // Akses revisi
-  const [aksesRevisi, setAksesRevisi] = useState([
-    { id: 1, name: "Bar 1 meminta akses revisi stok harian", status: "pending" },
-    { id: 2, name: "Bar 2 meminta akses revisi stok harian", status: "pending" },
-    { id: 3, name: "Kitchen 1 meminta akses revisi stok harian", status: "pending" },
-    { id: 4, name: "Kitchen 2 meminta akses revisi stok harian", status: "pending" },
 
-  ]);
-
-  const [chartRevisi, setChartRevisi] = useState([
-    { name: "Permintaan Revisi", value: 7 },
-    { name: "Diterima", value: 0 },
-    { name: "Ditolak", value: 0 },
-  ]);
-
-  // Fungsi tombol setujui/tolak
-  const handleApprove = (id: number) => {
-    setAksesRevisi(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, status: "approved" } : item
-      )
-    );
-    setChartRevisi(prev => [
-      { name: "Permintaan Revisi", value: prev[0].value - 1 },
-      { name: "Diterima", value: prev[1].value + 1 },
-      { name: "Ditolak", value: prev[2].value },
-    ]);
-  };
-
-  const handleReject = (id: number) => {
-    setAksesRevisi(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, status: "rejected" } : item
-      )
-    );
-    setChartRevisi(prev => [
-      { name: "Permintaan Revisi", value: prev[0].value - 1 },
-      { name: "Diterima", value: prev[1].value },
-      { name: "Ditolak", value: prev[2].value + 1 },
-    ]);
-  };
 
   const handlePieClick = () => {
     setShowPilihStok(true);
@@ -130,7 +98,7 @@ export default function Dashboard() {
   return (
     <AppLayout header={<h2 className="text-2xl font-bold">Dashboard</h2>}>
       <Head title="Dashboard" />
-      <div className="space-y-8 pb-10">
+
 
         {/* Grid card */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -193,41 +161,7 @@ export default function Dashboard() {
         </div>
 
         {/* Akses revisi */}
-<div className="bg-[#F5F0EB] p-6 rounded-xl shadow-lg overflow-hidden">
-  <h3 className="font-bold mb-4">Akses Revisi</h3>
-  <motion.div layout className="space-y-2">
-    {aksesRevisi.map(item =>
-      item.status === "pending" ? (
-        <motion.div
-          key={item.id}
-          layout
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.4 }}
-          className="flex justify-between items-center p-2 border rounded-lg"
-        >
-          <span>{item.name}</span>
-          <div className="flex gap-2">
-            <button
-              className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              onClick={() => handleApprove(item.id)}
-            >
-              Setujui
-            </button>
-            <button
-              className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              onClick={() => handleReject(item.id)}
-            >
-              Tolak
-            </button>
-          </div>
-        </motion.div>
-      ) : null
-    )}
-  </motion.div>
-</div>
-      </div>
+
 
       {showPilihStok && (
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -269,7 +203,148 @@ export default function Dashboard() {
   </div>
 )}
 
+{izinRevisiPending.length > 0 && (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, ease: "easeOut" }}
+    className="bg-A97458 p-6 rounded-xl shadow-lg mt-6"
+  >
+    <h3 className="font-bold mb-4">Permintaan Izin Revisi</h3>
 
+    {izinRevisiPending.map((izin: any) => (
+      <motion.div
+        key={izin.id}
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
+        whileHover={{ scale: 1.02 }}
+        className="flex justify-between items-center mb-3 p-3 rounded-lg border hover:bg-gray-50"
+      >
+        <div>
+          <p className="font-semibold">{izin.name}</p>
+          <p className="text-sm text-gray-600">
+            Role: {izin.role}
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+        <button
+  onClick={() => {
+    setSelectedIzin(izin);
+    setShowFormRevisi(true);
+  }}
+  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+>
+  Setujui
+</button>
+
+          <button className="px-3 py-1 bg-red-600 text-white rounded">
+            Tolak
+          </button>
+        </div>
+      </motion.div>
+    ))}
+  </motion.div>
+)}
+
+
+{showFormRevisi && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <motion.div
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className="bg-white rounded-xl p-6 w-[400px] shadow-xl"
+    >
+      <h3 className="text-lg font-bold mb-4">
+        Izin Revisi Stok
+      </h3>
+
+      <p className="text-sm text-gray-600 mb-4">
+        {selectedIzin?.name} ({selectedIzin?.role})
+      </p>
+
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium">Tanggal Mulai</label>
+          <input
+            type="date"
+            className="w-full border rounded px-3 py-2"
+            onChange={(e) =>
+              setFormRevisi({ ...formRevisi, tanggalMulai: e.target.value })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Jam Mulai</label>
+          <input
+            type="time"
+            className="w-full border rounded px-3 py-2"
+            onChange={(e) =>
+              setFormRevisi({ ...formRevisi, jamMulai: e.target.value })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Tanggal Selesai</label>
+          <input
+            type="date"
+            className="w-full border rounded px-3 py-2"
+            onChange={(e) =>
+              setFormRevisi({ ...formRevisi, tanggalSelesai: e.target.value })
+            }
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Jam Selesai</label>
+          <input
+            type="time"
+            className="w-full border rounded px-3 py-2"
+            onChange={(e) =>
+              setFormRevisi({ ...formRevisi, jamSelesai: e.target.value })
+            }
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-3 mt-6">
+      <button
+  onClick={() => {
+    if (
+      !formRevisi.tanggalMulai ||
+      !formRevisi.jamMulai ||
+      !formRevisi.tanggalSelesai ||
+      !formRevisi.jamSelesai
+    ) {
+      alert("Lengkapi semua waktu izin revisi");
+      return;
+    }
+
+    console.log("IZIN REVISI:", {
+      user: selectedIzin,
+      waktu: formRevisi,
+    });
+
+    setShowFormRevisi(false);
+  }}
+  className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700"
+>
+  Simpan
+</button>
+
+        <button
+          onClick={() => setShowFormRevisi(false)}
+          className="flex-1 bg-gray-200 py-2 rounded hover:bg-gray-300"
+        >
+          Batal
+        </button>
+      </div>
+    </motion.div>
+  </div>
+)}
 
     </AppLayout>
 

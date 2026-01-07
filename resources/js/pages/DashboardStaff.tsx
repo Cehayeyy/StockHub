@@ -1,6 +1,4 @@
-
-
-import React, { useState } from "react";
+import React from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
 import { Box, Layers, BookOpen, ShieldCheck } from "lucide-react";
@@ -8,27 +6,22 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { motion } from "framer-motion";
 import CountUp from "react-countup";
 
-
-
 const COLORS = ["#8B5E3C", "#A97458"];
 
-
-
 const InfoCard = ({
-    title,
-    value,
-    icon: Icon,
-    bgColor,
-    onClick,
-  }: any) => (
-    <motion.div
-      onClick={onClick}
-      whileHover={{ scale: 1.05 }}
-      className={`bg-[#F5F0EB] p-6 rounded-xl shadow-lg flex items-center gap-4 ${
-        onClick ? "cursor-pointer hover:bg-[#EFE8E1]" : ""
-      }`}
-    >
-
+  title,
+  value,
+  icon: Icon,
+  bgColor,
+  onClick,
+}: any) => (
+  <motion.div
+    onClick={onClick}
+    whileHover={{ scale: 1.05 }}
+    className={`bg-[#F5F0EB] p-6 rounded-xl shadow-lg flex items-center gap-4 ${
+      onClick ? "cursor-pointer hover:bg-[#EFE8E1]" : ""
+    }`}
+  >
     <div className={`w-12 h-12 ${bgColor} rounded-lg flex items-center justify-center text-white`}>
       <Icon />
     </div>
@@ -42,18 +35,11 @@ const InfoCard = ({
 );
 
 export default function DashboardStaff() {
-    const { auth, totalItem, totalResep, totalKategori } = usePage<any>().props;
-
-
-
-    const { totalStokHarian, stokHampirHabis } = usePage<any>().props;
-
+  const { auth, totalItem, totalResep, totalKategori, alreadyInputToday, totalStokHarian, stokHampirHabis, flash } = usePage<any>().props;
 
   const pieData = [
     { name: "Hampir Habis", value: stokHampirHabis },
-    { name: "Aman", value: totalItem - stokHampirHabis
-        
-     },
+    { name: "Aman", value: Math.max(totalStokHarian - stokHampirHabis, 0) },
   ];
 
   const ajukanRevisi = () => {
@@ -66,47 +52,55 @@ export default function DashboardStaff() {
 
       <div className="space-y-8 pb-10">
 
+        {/* FLASH MESSAGE */}
+        {flash?.success && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-green-100 text-green-800 p-4 rounded-lg shadow mb-4"
+          >
+            ✅ {flash.success}
+          </motion.div>
+        )}
+
         {/* Card statistik */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-  <InfoCard
-    title="Total Item"
-    value={totalItem}
-    icon={Layers}
-    bgColor="bg-[#8B5E3C]"
-    onClick={() => router.visit("/item")}
-  />
+          <InfoCard
+            title="Total Item"
+            value={totalItem}
+            icon={Layers}
+            bgColor="bg-[#8B5E3C]"
+            onClick={() => router.visit("/item")}
+          />
 
-  <InfoCard
-    title="Total Resep"
-    value={totalResep}
-    icon={BookOpen}
-    bgColor="bg-[#A97458]"
-    onClick={() => router.visit("/resep")}
-  />
+          <InfoCard
+            title="Total Resep"
+            value={totalResep}
+            icon={BookOpen}
+            bgColor="bg-[#A97458]"
+            onClick={() => router.visit("/resep")}
+          />
 
-  <InfoCard
-    title="Total Kategori"
-    value={totalKategori}
-    icon={Box}
-    bgColor="bg-[#B9886C]"
-    onClick={() => router.visit("/kategori")}
-  />
-</div>
+          <InfoCard
+            title="Total Kategori"
+            value={totalKategori}
+            icon={Box}
+            bgColor="bg-[#B9886C]"
+            onClick={() => router.visit("/kategori")}
+          />
+        </div>
 
-
-        {/* Stok hampir habis */}
-        {/* Stok hampir habis */}
-<div
-  onClick={() => {
-    if (auth.user.role === "bar") {
-      router.visit("/stok-harian/bar");
-    } else if (auth.user.role === "dapur") {
-      router.visit("/stok-harian/dapur");
-    }
-  }}
-  className="relative bg-[#F5F0EB] p-6 rounded-xl shadow-lg cursor-pointer hover:bg-[#EFE8E1]"
->
-
+        {/* Stok hampir habis (chart) */}
+        <div
+          onClick={() => {
+            if (auth.user.role === "bar") {
+              router.visit("/stok-harian/bar");
+            } else if (auth.user.role === "dapur") {
+              router.visit("/stok-harian/dapur");
+            }
+          }}
+          className="relative bg-[#F5F0EB] p-6 rounded-xl shadow-lg cursor-pointer hover:bg-[#EFE8E1]"
+        >
           <p className="text-sm text-gray-700 mb-2">Stok Hampir Habis</p>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -132,9 +126,52 @@ export default function DashboardStaff() {
             Ajukan Izin Revisi Stok
           </button>
         </div>
+
+        {/* Input stok harian */}
+        <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.4 }}
+  className="bg-[#F5F0EB] p-6 rounded-xl shadow-lg flex items-center justify-between"
+>
+  {/* KIRI */}
+  <div>
+    <h3 className="font-bold text-lg mb-1">
+      {alreadyInputToday
+        ? "Stok Harian Sudah Disimpan"
+        : "Mulai Input Stok Harian"}
+    </h3>
+
+    <p className="text-sm text-gray-600">
+      {alreadyInputToday
+        ? "✅ Kamu sudah menyimpan data stok harian hari ini"
+        : "Input stok harian untuk divisi kamu hari ini"}
+    </p>
+  </div>
+
+  {/* KANAN */}
+  {!alreadyInputToday && (
+    <button
+      onClick={() => {
+        const role = auth.user.role;
+
+        if (role === "bar") {
+          router.visit("/stok-harian/bar?autoInput=1");
+        }
+
+        if (role === "kitchen" || role === "dapur") {
+          router.visit("/stok-harian/dapur?autoInput=1");
+        }
+      }}
+      className="px-5 py-2 bg-[#8B5E3C] text-white rounded-lg hover:bg-[#6F4E37] transition"
+    >
+      ➕ Input Harian
+    </button>
+  )}
+</motion.div>
+
+
       </div>
     </AppLayout>
   );
 }
-
-
