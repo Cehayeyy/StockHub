@@ -154,7 +154,8 @@ Route::get('/users', [UserController::class, 'index'])->name('users.index'); // 
     Route::get('/stok-harian/dapur', [StokHarianDapurController::class, 'dapur'])
         ->name('stok-harian.dapur');
 
-    Route::middleware(['role:owner,supervisor,dapur'])->group(function () {
+    Route::middleware(['role:owner,supervisor,dapur,kitchen,staff_kitchen'])->group(function () {
+
 
         Route::post('/stok-harian-dapur/menu', [StokHarianDapurController::class, 'storeMenu'])
             ->name('stok-harian-dapur-menu.store');

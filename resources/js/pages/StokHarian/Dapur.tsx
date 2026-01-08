@@ -496,7 +496,7 @@ const submitCreate = () => {
 
 </form>
 
-          </div>w
+          </div>
         </div>
       )}
 

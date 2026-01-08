@@ -25,7 +25,10 @@ class StokHarianDapurController extends Controller
         $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
         // 🔥 LOGIKA CARRY OVER: Jalankan hanya jika data hari ini BELUM ADA SAMA SEKALI
-        $this->ensureStokExists($tanggal);
+        if ($request->boolean('init')) {
+    $this->ensureStokExists($tanggal);
+}
+
 
         /* =========================================================
          * 1. LIST DATA (TABLE PAGINATION)
@@ -240,73 +243,144 @@ class StokHarianDapurController extends Controller
      * STORE MENU
      * ========================================================= */
     public function storeMenu(Request $request)
-    {
-        $data = $request->validate([
-            'recipe_id' => 'required|exists:recipes,id',
-            'tanggal'   => 'required|date',
-            'pemakaian' => 'nullable|numeric|min:0',
-        ]);
+{
+    $data = $request->validate([
+        'recipe_id' => 'required|exists:recipes,id',
+        'tanggal'   => 'required|date',
+        'pemakaian' => 'nullable|numeric|min:0',
+    ]);
 
-        DB::transaction(function () use ($data) {
-            if (StokHarianDapurMenu::where(['recipe_id' => $data['recipe_id'], 'tanggal' => $data['tanggal']])->exists()) return;
+    DB::transaction(function () use ($data) {
 
-            $recipe = Recipe::findOrFail($data['recipe_id']);
-            if (!is_array($recipe->ingredients)) return;
+        $recipe = Recipe::findOrFail($data['recipe_id']);
 
-            // Agregasi bahan dan hitung kapasitas awal
-            $grouped = collect($recipe->ingredients)->groupBy('item_id')->map(fn($g) => (int) collect($g)->sum('amount'))->toArray();
+        if (!is_array($recipe->ingredients)) return;
 
-            $stokMenuAwal = PHP_INT_MAX;
-            foreach ($grouped as $itemId => $butuh) {
-                if (!$itemId || $butuh <= 0) { $stokMenuAwal = 0; break; }
-                $mentah = StokHarianDapurMentah::where(['item_id' => $itemId, 'tanggal' => $data['tanggal']])->first();
-                if (!$mentah) { $stokMenuAwal = 0; break; }
-                $kapasitas = floor($mentah->stok_akhir / $butuh);
-                $stokMenuAwal = min($stokMenuAwal, $kapasitas);
-            }
-            $stokMenuAwal = max(0, $stokMenuAwal);
+        // Kelompokkan bahan
+        $grouped = collect($recipe->ingredients)
+            ->groupBy('item_id')
+            ->map(fn($g) => (int) collect($g)->sum('amount'))
+            ->toArray();
 
-            $initialPemakaian = $data['pemakaian'] ?? 0;
+        // Cek apakah row sudah ada
+        $existing = StokHarianDapurMenu::where([
+            'recipe_id' => $data['recipe_id'],
+            'tanggal'   => $data['tanggal']
+        ])->lockForUpdate()->first();
 
-            // Simpan menu dengan nilai pemakaian (jika ada)
-            $menu = StokHarianDapurMenu::create([
-                'recipe_id'   => $data['recipe_id'], 'tanggal' => $data['tanggal'],
-                'stok_awal'   => $stokMenuAwal, 'stok_masuk'  => 0, 'stok_keluar' => $initialPemakaian,
-                'stok_akhir'  => max(0, $stokMenuAwal - $initialPemakaian), 'unit' => 'porsi',
+        $pemakaianBaru = (int) ($data['pemakaian'] ?? 0);
+
+        // ============================================================
+        // 1) JIKA SUDAH ADA → UPDATE PEMAKAIAN SAJA
+        // ============================================================
+        if ($existing) {
+
+            $old = $existing->stok_keluar;
+            $new = min($pemakaianBaru, $existing->stok_awal); // tidak boleh > stok awal
+            $delta = $new - $old;
+
+            // Update stok menu
+            $existing->update([
+                'stok_keluar' => $new,
+                'stok_akhir'  => max(0, $existing->stok_awal - $new)
             ]);
 
-            // Jika ada pemakaian, lakukan sinkronisasi bahan mentah (delta)
-            $delta = $initialPemakaian; // oldUsage = 0
+            // Sync bahan mentah berdasarkan delta
             if ($delta != 0) {
                 foreach ($grouped as $itemId => $amountPerPorsi) {
-                    $qty = $delta * ($amountPerPorsi ?? 0);
-                    if ($qty == 0) continue;
 
-                    $mentah = StokHarianDapurMentah::where(['item_id' => $itemId, 'tanggal' => $data['tanggal']])->lockForUpdate()->first();
-                    if (!$mentah) {
-                        \Log::warning('storeMenu (dapur): mentah row not found', ['item_id' => $itemId, 'tanggal' => $data['tanggal']]);
-                        continue;
+                    $qty = $delta * $amountPerPorsi;
+
+                    $mentah = StokHarianDapurMentah::where([
+                        'item_id' => $itemId,
+                        'tanggal' => $data['tanggal']
+                    ])->lockForUpdate()->first();
+
+                    if ($mentah) {
+
+                        $newRawKeluar = max(0, $mentah->stok_keluar + $qty);
+
+                        $mentah->update([
+                            'stok_keluar' => $newRawKeluar,
+                            'stok_akhir'  => max(0, $mentah->stok_awal + $mentah->stok_masuk - $newRawKeluar),
+                        ]);
                     }
+                }
+            }
 
-                    $oldRawKeluar = $mentah->stok_keluar;
-                    $newRawKeluar = max(0, $oldRawKeluar + $qty);
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'activity' => 'Update Menu Dapur',
+                'description' => "Mengubah pemakaian menu '{$recipe->name}' menjadi {$new}."
+            ]);
+
+            return;
+        }
+
+        // ============================================================
+        // 2) JIKA BELUM ADA → CREATE BARU
+        // ============================================================
+
+        // Hitung stok awal menu
+        $stokMenuAwal = PHP_INT_MAX;
+        foreach ($grouped as $itemId => $butuh) {
+            if ($butuh <= 0) { $stokMenuAwal = 0; break; }
+
+            $mentah = StokHarianDapurMentah::where([
+                'item_id' => $itemId,
+                'tanggal' => $data['tanggal']
+            ])->first();
+
+            if (!$mentah) { $stokMenuAwal = 0; break; }
+
+            $kapasitas = floor($mentah->stok_akhir / $butuh);
+            $stokMenuAwal = min($stokMenuAwal, $kapasitas);
+        }
+        $stokMenuAwal = max(0, $stokMenuAwal);
+
+        // Create menu baru
+        $menu = StokHarianDapurMenu::create([
+            'recipe_id'   => $data['recipe_id'],
+            'tanggal'     => $data['tanggal'],
+            'stok_awal'   => $stokMenuAwal,
+            'stok_masuk'  => 0,
+            'stok_keluar' => $pemakaianBaru,
+            'stok_akhir'  => max(0, $stokMenuAwal - $pemakaianBaru),
+            'unit'        => 'porsi',
+        ]);
+
+        // Sync bahan mentah untuk pemakaian awal
+        if ($pemakaianBaru > 0) {
+            foreach ($grouped as $itemId => $amountPerPorsi) {
+
+                $qty = $pemakaianBaru * $amountPerPorsi;
+
+                $mentah = StokHarianDapurMentah::where([
+                    'item_id' => $itemId,
+                    'tanggal' => $data['tanggal']
+                ])->lockForUpdate()->first();
+
+                if ($mentah) {
+
+                    $newRawKeluar = max(0, $mentah->stok_keluar + $qty);
 
                     $mentah->update([
                         'stok_keluar' => $newRawKeluar,
                         'stok_akhir'  => max(0, $mentah->stok_awal + $mentah->stok_masuk - $newRawKeluar),
                     ]);
-
-                    \Log::info('storeMenu (dapur): updated mentah', ['item_id' => $mentah->item_id, 'tanggal' => $mentah->tanggal, 'old_stok_keluar' => $oldRawKeluar, 'new_stok_keluar' => $newRawKeluar, 'qty' => $qty]);
                 }
             }
+        }
 
-            ActivityLog::create([
-                'user_id' => Auth::id(), 'activity' => 'Tambah Menu Dapur', 'description' => "Menambahkan menu '{$recipe->name}'. Pemakaian: {$initialPemakaian}."
-            ]);
-        });
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'activity' => 'Tambah Menu Dapur',
+            'description' => "Menambahkan menu '{$recipe->name}'. Pemakaian awal: {$pemakaianBaru}."
+        ]);
+    });
 
-        return back()->with('success', 'Menu dapur berhasil ditambahkan.');
-    }
+    return back()->with('success', 'Menu dapur berhasil disimpan.');
+}
 
     /* =========================================================
      * UPDATE MENU (Dengan Trigger Recalculate)
