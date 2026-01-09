@@ -32,6 +32,32 @@ export default function VerifikasiStok() {
       { preserveScroll: true }
     );
   };
+  const handleExport = async () => {
+  const payload = {
+    tab,
+    tanggal: tanggal_picker,
+    fisik: physicalStocks, // kirim stok fisik user
+  };
+
+  const query = new URLSearchParams(payload as any).toString();
+
+  const response = await fetch(route("verifikasi-stok.export") + "?" + query, {
+    method: "GET",
+  });
+
+  if (!response.ok) return alert("Gagal download laporan");
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `verifikasi-stok-${tab}-${tanggal_picker}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 
   const handleTabSwitch = (t: "bar" | "dapur") => {
     router.get(
@@ -165,11 +191,18 @@ export default function VerifikasiStok() {
             </table>
           </div>
 
-          <div className="mt-6 flex justify-end">
-            <button className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2" onClick={() => alert("Fitur simpan belum tersedia.")}>
-              <Save className="w-4 h-4" /> Simpan Laporan
-            </button>
-          </div>
+        <div className="mt-6 flex justify-end gap-3">
+
+  {/* EXPORT EXCEL */}
+
+        <button
+        className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2"
+        onClick={handleExport}
+        >
+        <Save className="w-4 h-4" /> Simpan Laporan
+        </button>
+        </div>
+
         </div>
       </div>
     </AppLayout>

@@ -9,6 +9,7 @@ class StokHarianMenu extends Model
     protected $table = 'stok_harian_menu';
 
     protected $fillable = [
+        'user_id',
         'item_id',
         'tanggal',
         'stok_awal',
@@ -16,6 +17,8 @@ class StokHarianMenu extends Model
         'stok_keluar',
         'stok_akhir',
         'pemakaian',
+        'is_submitted',
+        'unit',
     ];
 
     protected $casts = [

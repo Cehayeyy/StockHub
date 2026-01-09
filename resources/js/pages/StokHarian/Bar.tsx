@@ -252,12 +252,7 @@ export default function Bar() {
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
           <div className="flex flex-col items-end gap-4 mb-6">
             <div className="flex gap-3">
-              {tab === "mentah" && (
-                <button onClick={() => setShowInputModal(true)} className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Input Data
-                </button>
-              )}
-              {tab === "menu" && (role === "bar" || role === "dapur") && (
+              {(tab === "mentah" || (tab === "menu" && (role === "bar" || role === "dapur"))) && (
                 <button onClick={() => setShowInputModal(true)} className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2">
                   <Plus className="w-4 h-4" /> Input Data
                 </button>

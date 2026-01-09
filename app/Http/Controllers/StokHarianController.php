@@ -65,6 +65,7 @@ class StokHarianController extends Controller
         }
 
         // --- 2. HITUNG LOW STOCK ITEMS ---
+        // Menggunakan versi HEAD Anda yang lebih sederhana
         $lowMentah = StokHarianMentah::with('item')
             ->whereDate('tanggal', $tanggal)
             ->where('stok_akhir', '<', 7)
@@ -330,12 +331,13 @@ class StokHarianController extends Controller
 
             // 5. Update Semua Menu
             foreach ($targetMenus as $menu) {
+                // Logic: Stok Awal Menu = Jatah + Pemakaian (agar history masuk akal)
                 $newStokAwal = $allocatedStock + $menu->stok_keluar;
 
                 $menu->update([
                     'stok_awal'  => $newStokAwal,
                     'stok_masuk' => 0,
-                    'stok_akhir' => $allocatedStock
+                    'stok_akhir' => $allocatedStock // Tersisa = Jatah Pembagian
                 ]);
             }
         }

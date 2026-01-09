@@ -17,6 +17,7 @@ class StokHarianDapurMentah extends Model
         'stok_keluar',
         'stok_akhir',
         'unit',
+        'is_submitted',
     ];
 
     protected $casts = [

@@ -5,9 +5,11 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\IzinRevisiController;
 use App\Http\Controllers\StokHarianController;
 use App\Http\Controllers\StokHarianDapurController;
 use App\Http\Controllers\VerifikasiStokController; // 🔥 Import Controller Baru
@@ -29,6 +31,25 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware(['auth'])
         ->name('dashboard');
+
+
+
+
+
+
+        Route::post('/izin-revisi', function () {
+            // sementara dummy (nanti bisa ke DB)
+            return back()->with('success', 'Permintaan izin revisi dikirim');
+        });
+
+        Route::post('/izin-revisi', [IzinRevisiController::class, 'store']);
+
+ Route::get('/items', [ItemController::class, 'index'])->name('items.index');
+Route::get('/recipes', [RecipeController::class, 'index'])->name('recipes.index');
+Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+Route::get('/users', [UserController::class, 'index'])->name('users.index'); // supervisor only
+
+
 
     // ===========================
     // MANAJEMEN AKUN
@@ -133,7 +154,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/stok-harian/dapur', [StokHarianDapurController::class, 'dapur'])
         ->name('stok-harian.dapur');
 
-    Route::middleware(['role:owner,supervisor,dapur'])->group(function () {
+    Route::middleware(['role:owner,supervisor,dapur,kitchen,staff_kitchen'])->group(function () {
+
 
         Route::post('/stok-harian-dapur/menu', [StokHarianDapurController::class, 'storeMenu'])
             ->name('stok-harian-dapur-menu.store');
@@ -157,8 +179,17 @@ Route::middleware(['auth'])->group(function () {
     // ===========================
     // 🔥 VERIFIKASI STOK (BARU)
     // ===========================
-    Route::get('/verifikasi-stok', [VerifikasiStokController::class, 'index'])
-        ->name('verifikasi-stok.index');
+    // ===========================
+// 🔥 VERIFIKASI STOK
+// ===========================
+Route::get('/verifikasi-stok', [VerifikasiStokController::class, 'index'])
+    ->name('verifikasi-stok.index');
+
+Route::get('/verifikasi-stok/export', [VerifikasiStokController::class, 'export'])
+    ->name('verifikasi-stok.export');
+
+
+
 
     // ===========================
     // LAPORAN AKTIVITAS

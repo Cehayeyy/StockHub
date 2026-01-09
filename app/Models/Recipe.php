@@ -10,21 +10,27 @@ class Recipe extends Model
     use HasFactory;
 
     protected $fillable = [
+        'item_id',          // 🔥 WAJIB
         'name',
         'division',
         'ingredients',
         'total_ingredients',
     ];
 
-    /**
-     * Casting kolom ingredients agar otomatis jadi Array/JSON
-     */
     protected $casts = [
         'ingredients' => 'array',
     ];
 
     /**
-     * Relasi ke Stok Harian Dapur (Jika diperlukan)
+     * Relasi ke Item (MENU)
+     */
+    public function item()
+    {
+        return $this->belongsTo(Item::class);
+    }
+
+    /**
+     * Relasi ke Stok Harian Dapur
      */
     public function stokHarianDapur()
     {
