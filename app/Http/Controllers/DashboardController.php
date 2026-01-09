@@ -22,38 +22,36 @@ class DashboardController extends Controller
         $today = Carbon::today()->toDateString();
         $alreadyInputToday = false;
 
-        if ($user->role === 'bar') {
-            // Note: `stok_harian_menu` table does not have a `user_id` column.
-            // Check whether any submitted menu records exist for today.
-            $alreadyInputToday = DB::table('stok_harian_menu')
-                ->whereDate('tanggal', $today)
-                ->where('is_submitted', true)
-                ->exists();
-        }
+       if ($user->role === 'bar') {
+   $alreadyInputToday = DB::table('stok_harian_menu')
+    ->whereDate('tanggal', $today)
+    ->exists();
 
-
-        if ($user->role === 'dapur' || $user->role === 'kitchen') {
-            // Note: `stok_harian_dapur_menu` table does not have a `user_id` column.
-            // Check whether any submitted dapur menu records exist for today.
-            $alreadyInputToday = DB::table('stok_harian_dapur_menu')
-                ->whereDate('tanggal', $today)
-                ->where('is_submitted', true)
-                ->exists();
-        }
+}
+if (in_array($user->role, ['dapur', 'kitchen', 'staff_kitchen'])) {
+    $alreadyInputToday = DB::table('stok_harian_dapur_menu')
+        ->whereDate('tanggal', $today)
+        ->where('user_id', $user->id)
+        ->where('is_submitted', true)
+        ->exists();
+}
 
 
 
 
         // BAR
         $barMenu = DB::table('stok_harian_menu')
-        ->whereDate('tanggal', $today)
-        ->count();
+    ->whereDate('tanggal', $today)
+    ->where('user_id', $user->id)
+    ->count();
 
-    $barMenuHabis = DB::table('stok_harian_menu')
-        ->whereDate('tanggal', $today)
-        ->where('stok_akhir', '>', 0)
-        ->where('stok_akhir', '<=', 5)
-        ->count();
+$barMenuHabis = DB::table('stok_harian_menu')
+    ->whereDate('tanggal', $today)
+    ->where('user_id', $user->id)
+    ->where('stok_akhir', '>', 0)
+    ->where('stok_akhir', '<=', 5)
+    ->count();
+
 
 
         $barMentah = DB::table('stok_harian_mentah')
@@ -108,6 +106,10 @@ class DashboardController extends Controller
         )
         ->get();
 
+        $izinPending = \App\Models\IzinRevisi::where('user_id', $user->id)
+    ->where('status', 'pending')
+    ->exists();
+
 
         $data = [
             'totalItem'     => Item::count(),
@@ -118,6 +120,8 @@ class DashboardController extends Controller
             'totalStokHarian' => $totalStokHarian,
             'stokHampirHabis' => $stokHampirHabis,
             'alreadyInputToday' => $alreadyInputToday,
+            'izinPending' => $izinPending,
+
 
         ];
 
@@ -132,8 +136,10 @@ class DashboardController extends Controller
         if (in_array($user->role, ['bar', 'dapur', 'kitchen', 'staff_kitchen'])) {
             return Inertia::render('DashboardStaff', array_merge($data, [
                 'alreadyInputToday' => $alreadyInputToday,
+                'alreadyRequestedRevision' => $izinPending,
                 'flash' => [
                     'success' => session('success'),
+                    'error' => session('error'),
                 ],
 
     ]));
@@ -141,11 +147,34 @@ class DashboardController extends Controller
 
 
         // ================= FALLBACK =================
-        abort(403, 'Role tidak dikenali');
+
 
         $izinRevisiPending = IzinRevisi::with('user')
     ->where('status', 'pending')
     ->latest()
     ->get();
+
+    // Logika untuk memperbarui kolom is_submitted setelah data disimpan
+        if ($user->role === 'bar') {
+            DB::table('stok_harian_menu')
+                ->whereDate('tanggal', $today)
+                ->where('user_id', $user->id)
+                ->update(['is_submitted' => true]);
+        }
+
+        if (in_array($user->role, ['dapur', 'kitchen', 'staff_kitchen'])) {
+            DB::table('stok_harian_dapur_menu')
+                ->whereDate('tanggal', $today)
+                ->where('user_id', $user->id)
+                ->update(['is_submitted' => true]);
+        }
+
+        \Log::info('alreadyInputToday value:', ['alreadyInputToday' => $alreadyInputToday]);
+
+        $today = Carbon::today();
+
+
+
     }
+
 }

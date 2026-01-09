@@ -92,6 +92,18 @@ const [formRevisi, setFormRevisi] = useState({
     setShowPilihStok(true);
   };
 
+const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
+    router.post(route('izin-revisi.update', id), { action }, {
+        onSuccess: () => {
+            // Opsional: reload page agar izinPending staff update
+            router.reload();
+        },
+        onError: (err) => {
+            console.error(err);
+            alert("Terjadi kesalahan, coba lagi.");
+        }
+    });
+};
 
 
 
@@ -229,19 +241,25 @@ const [formRevisi, setFormRevisi] = useState({
         </div>
 
         <div className="flex gap-2">
-        <button
+      <button
   onClick={() => {
+    // reset langsung staff
+    updateIzinRevisi(izin.id, 'approve');
     setSelectedIzin(izin);
-    setShowFormRevisi(true);
+    setShowFormRevisi(true); // tetap tampilkan form
   }}
   className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
 >
   Setujui
 </button>
 
-          <button className="px-3 py-1 bg-red-600 text-white rounded">
-            Tolak
-          </button>
+<button
+  onClick={() => updateIzinRevisi(izin.id, 'reject')}
+  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+>
+  Tolak
+</button>
+
         </div>
       </motion.div>
     ))}

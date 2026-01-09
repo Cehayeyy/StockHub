@@ -34,21 +34,67 @@ const InfoCard = ({
   </motion.div>
 );
 
+
+
+
 export default function DashboardStaff() {
-  const { auth, totalItem, totalResep, totalKategori, alreadyInputToday, totalStokHarian, stokHampirHabis, flash } = usePage<any>().props;
+  const { auth, totalItem, totalResep, totalKategori, alreadyInputToday, totalStokHarian, stokHampirHabis, flash, alreadyRequestedRevision} = usePage<any>().props;
+
+  // Tambahkan log untuk memeriksa data dari usePage().props
+  console.log('usePage props:', usePage().props);
+
+  // Validasi tambahan untuk properti yang digunakan
+  if (!auth || !auth.user) {
+    return <div>Data tidak tersedia. Silakan coba lagi nanti.</div>;
+  }
+
+  console.log('alreadyInputToday:', alreadyInputToday);
 
   const pieData = [
     { name: "Hampir Habis", value: stokHampirHabis },
     { name: "Aman", value: Math.max(totalStokHarian - stokHampirHabis, 0) },
   ];
 
-  const ajukanRevisi = () => {
-    router.post("/izin-revisi");
-  };
+ const ajukanRevisi = () => {
+  router.post(route("izin-revisi.store"), {}, {
+    preserveScroll: true,
+    onSuccess: (page) => {
+      console.log('Page props after request:', page.props);
+      // page.props.flash akan otomatis ada jika backend mengirim flash
+    },
+  });
+};
+
+
+console.log("FLASH:", flash);
+
+
 
   return (
     <AppLayout header={<h2 className="text-2xl font-bold">Dashboard</h2>}>
       <Head title="Dashboard Staff" />
+
+      {/* FLASH MESSAGE */}
+{flash?.error && (
+  <motion.div
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="mb-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-700"
+  >
+    ❌ {flash.error}
+  </motion.div>
+)}
+
+{flash?.success && (
+  <motion.div
+    initial={{ opacity: 0, y: -10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="mb-4 rounded-lg bg-green-100 px-4 py-3 text-sm text-green-700"
+  >
+    ✅ {flash.success}
+  </motion.div>
+)}
+
 
       <div className="space-y-8 pb-10">
 
@@ -119,12 +165,17 @@ export default function DashboardStaff() {
             <ShieldCheck size={20} /> Meminta Izin Revisi
           </h3>
 
-          <button
-            onClick={ajukanRevisi}
-            className="px-4 py-2 bg-[#8B5E3C] text-white rounded-lg hover:bg-[#6F4E37]"
-          >
-            Ajukan Izin Revisi Stok
-          </button>
+         <button
+  onClick={ajukanRevisi}
+  disabled={alreadyRequestedRevision}
+  className={`px-4 py-2 rounded-lg text-white ${
+    alreadyRequestedRevision ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#8B5E3C] hover:bg-[#6F4E37]'
+  }`}
+>
+  {alreadyRequestedRevision ? "Ajukan akses revisi sudah terkirim" : "Ajukan Izin Revisi Stok"}
+</button>
+
+
         </div>
 
         {/* Input stok harian */}
@@ -156,11 +207,19 @@ export default function DashboardStaff() {
         const role = auth.user.role;
 
         if (role === "bar") {
-          router.visit("/stok-harian/bar?autoInput=1");
+          router.visit("/stok-harian/bar?autoInput=1", {
+            onSuccess: () => {
+              router.reload(); // Memuat ulang data dari server
+            },
+          });
         }
 
         if (role === "kitchen" || role === "dapur") {
-          router.visit("/stok-harian/dapur?autoInput=1");
+          router.visit("/stok-harian/dapur?autoInput=1", {
+            onSuccess: () => {
+              router.reload(); // Memuat ulang data dari server
+            },
+          });
         }
       }}
       className="px-5 py-2 bg-[#8B5E3C] text-white rounded-lg hover:bg-[#6F4E37] transition"
@@ -173,5 +232,6 @@ export default function DashboardStaff() {
 
       </div>
     </AppLayout>
+
   );
 }

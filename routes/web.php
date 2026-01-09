@@ -35,12 +35,17 @@ Route::middleware(['auth'])->group(function () {
 
 
 
+Route::post('/izin-revisi/ajukan', [IzinRevisiController::class, 'store'])
+    ->name('izin-revisi.store');
 
 
-        Route::post('/izin-revisi', function () {
-            // sementara dummy (nanti bisa ke DB)
-            return back()->with('success', 'Permintaan izin revisi dikirim');
-        });
+Route::middleware(['auth', 'role:supervisor,owner'])->group(function () {
+    Route::post('/izin-revisi/{izinRevisi}/update', [IzinRevisiController::class, 'update'])->name('izin-revisi.update');
+});
+
+
+
+
 
         Route::post('/izin-revisi', [IzinRevisiController::class, 'store']);
 

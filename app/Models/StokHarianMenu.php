@@ -25,6 +25,18 @@ class StokHarianMenu extends Model
         'tanggal' => 'date',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($model) {
+            // Perbarui kolom is_submitted jika stok_keluar atau stok_masuk diubah
+            if ($model->isDirty(['stok_keluar', 'stok_masuk'])) {
+                $model->is_submitted = true;
+            }
+        });
+    }
+
     public function item()
     {
         return $this->belongsTo(Item::class);
