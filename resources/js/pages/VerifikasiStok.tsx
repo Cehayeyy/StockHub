@@ -112,7 +112,6 @@ export default function VerifikasiStok() {
                 <tr>
                   <th className="p-4 text-center w-16">No</th>
                   <th className="p-4">Nama Item</th>
-                  <th className="p-4 text-center">Satuan</th>
                   <th className="p-4 text-center bg-blue-50/50">Stok Sistem (Senin)</th>
                   <th className="p-4 text-center bg-yellow-50/50 w-40">Stok Fisik</th>
                   <th className="p-4 text-center">Selisih</th>

@@ -23,6 +23,7 @@ interface DropdownItem {
   stok_awal?: number;
   pemakaian?: number;
   stok_masuk?: number;
+  tersisa?: number;
 }
 
 interface LowStockItem {
@@ -51,11 +52,12 @@ export default function Dapur() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Form State (Type: number or empty string)
+  // Form State
   const [formRecordId, setFormRecordId] = useState<number | null>(null);
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
   const [formStokAwal, setFormStokAwal] = useState<number | "">("");
+  const [formStokTersisa, setFormStokTersisa] = useState<number | "">("");
   const [formStokMasuk, setFormStokMasuk] = useState<number | "">("");
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
@@ -84,13 +86,13 @@ export default function Dapur() {
     setFormItemId("");
     setFormItemName("");
     setFormStokAwal("");
+    setFormStokTersisa("");
     setFormStokMasuk("");
     setFormPemakaian("");
     setFormSatuan("porsi");
   };
 
   // --- Actions ---
-
   const submitCreate = () => {
     if (formItemId === "") return;
 
@@ -124,8 +126,8 @@ export default function Dapur() {
     setFormRecordId(item.id);
     setFormItemId(item.item_id);
     setFormItemName(item.nama);
-    // Fix: Assign number directly
     setFormStokAwal(item.stok_awal);
+    setFormStokTersisa(item.tersisa);
     setFormStokMasuk(item.stok_masuk ?? "");
     setFormPemakaian(item.pemakaian);
     setFormSatuan(item.satuan || "porsi");
@@ -166,10 +168,10 @@ export default function Dapur() {
             alert("Error: Pemakaian tidak boleh kurang dari 0");
             return;
         }
-        payload.pemakaian = valKeluar;
+        // 🔥 PERBAIKAN UTAMA DISINI: Ganti 'pemakaian' jadi 'stok_keluar'
+        payload.stok_keluar = valKeluar;
     }
 
-    // Fix: Syntax router.put yang benar
     router.put(route(routeName, formRecordId), payload, {
       onSuccess: () => {
         setShowEditModal(false);
@@ -205,8 +207,7 @@ export default function Dapur() {
       <Head title="Stok Harian Dapur" />
 
       <div className="py-6 space-y-6">
-
-        {/* SECTION 1: ALERT STOK MENIPIS */}
+        {/* SECTION 1: ALERT */}
         {lowStockItems && lowStockItems.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-2">
             <div className="p-2 bg-red-100 rounded-full text-red-600">
@@ -221,18 +222,13 @@ export default function Dapur() {
           </div>
         )}
 
-        {/* SECTION 2: TABEL UTAMA */}
+        {/* SECTION 2: TABLE */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
-
           <div className="flex flex-col items-end gap-4 mb-6">
             <div className="flex gap-3">
               {tab === 'mentah' && (
-                <button
-                  onClick={() => setShowInputModal(true)}
-                  className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Input Data
+                <button onClick={() => setShowInputModal(true)} className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all">
+                  <Plus className="w-4 h-4" /> Input Data
                 </button>
               )}
             </div>
@@ -294,13 +290,12 @@ export default function Dapur() {
           </div>
         </div>
 
-        {/* SECTION 3: CHART STOK HAMPIR HABIS */}
+        {/* SECTION 3: CHART */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="w-2 h-6 bg-red-500 rounded-full inline-block"></span>
             Grafik Stok Hampir Habis ({"<"} 7)
           </h3>
-
           {lowStockItems.length > 0 ? (
             <div className="space-y-4">
               {lowStockItems.map((item, idx) => (
@@ -310,10 +305,7 @@ export default function Dapur() {
                     <span className="text-red-500">{item.tersisa} Tersisa</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-red-500 to-red-400 h-full rounded-full transition-all duration-500 ease-out"
-                      style={{ width: `${Math.min((item.tersisa / 7) * 100, 100)}%` }}
-                    ></div>
+                    <div className="bg-gradient-to-r from-red-500 to-red-400 h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${Math.min((item.tersisa / 7) * 100, 100)}%` }}></div>
                   </div>
                 </div>
               ))}
@@ -330,11 +322,10 @@ export default function Dapur() {
       {showInputModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
-            <h2 className="text-lg font-bold text-center mb-6">
-              Input Stok {tab === "menu" ? "& Pemakaian" : "Mentah"}
-            </h2>
+            <h2 className="text-lg font-bold text-center mb-6">Input Stok {tab === "menu" ? "& Pemakaian" : "Mentah"}</h2>
             <form onSubmit={(e) => { e.preventDefault(); submitCreate(); }} className="space-y-4">
               <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">{tab === "menu" ? "Nama Menu" : "Nama Item"}</label>
                 <div className="relative">
@@ -342,15 +333,13 @@ export default function Dapur() {
                     value={formItemId}
                     onChange={(e) => {
                       const id = e.target.value;
-                      // FIX: Safe conversion
                       setFormItemId(id === "" ? "" : Number(id));
-
                       const source = tab === "menu" ? availableMenus : inputableMenus;
                       const selected = source.find((m) => m.id === Number(id));
-
                       if (selected) {
                         setFormSatuan(selected.satuan || "porsi");
                         setFormStokAwal(selected.stok_awal ?? 0);
+                        setFormStokTersisa(selected.tersisa ?? 0);
                         setFormStokMasuk(selected.stok_masuk ?? "");
                         setFormPemakaian(selected.pemakaian ?? 0);
                       }
@@ -365,15 +354,24 @@ export default function Dapur() {
                   <ChevronDown className="w-4 h-4 absolute right-3 top-3 text-gray-400 pointer-events-none" />
                 </div>
               </div>
+
               <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm" /></div>
               <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
 
-              {tab === "mentah" && (
-                <div><label className="block text-sm font-medium mb-1">Stok Masuk</label><input type="number" min="0" value={formStokMasuk} onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
-              )}
-              {tab === "menu" && (
-                <div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
-              )}
+              {/* FIELD STOK TERSISA */}
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-600">Sisa Stok Saat Ini</label>
+                <input
+                  type="text"
+                  value={formStokTersisa}
+                  readOnly
+                  className="w-full bg-gray-200 border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-700 font-semibold cursor-not-allowed focus:outline-none"
+                />
+              </div>
+
+              {tab === "mentah" && (<div><label className="block text-sm font-medium mb-1">Stok Masuk</label><input type="number" min="0" value={formStokMasuk} onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
+              {tab === "menu" && (<div><label className="block text-sm font-medium mb-1">Pemakaian</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(e.target.value === "" ? "" : Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
+
               <div className="flex justify-end gap-3 pt-4"><button type="button" onClick={() => setShowInputModal(false)} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" disabled={formItemId === ""} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed">Simpan</button></div>
             </form>
           </div>
@@ -390,6 +388,17 @@ export default function Dapur() {
               <div><label className="block text-sm font-medium mb-1">Nama Item</label><input type="text" value={formItemName} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none text-gray-600" /></div>
               <div><label className="block text-sm font-medium mb-1">Satuan</label><input type="text" value={formSatuan} readOnly className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm focus:outline-none" /></div>
               <div><label className="block text-sm font-medium mb-1">Stok Awal</label><input type="number" min="0" value={formStokAwal} onChange={(e) => setFormStokAwal(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>
+
+              {/* FIELD STOK TERSISA DI EDIT */}
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-600">Sisa Stok Saat Ini</label>
+                <input
+                  type="text"
+                  value={formStokTersisa}
+                  readOnly
+                  className="w-full bg-gray-200 border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-700 font-semibold cursor-not-allowed focus:outline-none"
+                />
+              </div>
 
               {tab === "mentah" && (<div><label className="block text-sm font-medium mb-1">Stok Masuk</label><input type="number" min="0" value={formStokMasuk} onChange={(e) => setFormStokMasuk(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
               {tab === "menu" && (<div><label className="block text-sm font-medium mb-1">Pemakaian (Terjual)</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
