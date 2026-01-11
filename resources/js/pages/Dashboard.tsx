@@ -6,11 +6,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
   ResponsiveContainer,
 } from "recharts";
 import { motion } from "framer-motion";
@@ -55,15 +50,14 @@ const InfoCard = ({
 
 export default function Dashboard() {
   const {
-    auth,
     totalItem,
     totalResep,
     totalKategori,
     totalUser,
     izinRevisiPending,
+    stokHampirHabis,
   } = usePage<any>().props;
 
-  const { totalStokHarian, stokHampirHabis } = usePage<any>().props;
   const [showPilihStok, setShowPilihStok] = useState(false);
   const [showFormRevisi, setShowFormRevisi] = useState(false);
   const [selectedIzin, setSelectedIzin] = useState<any>(null);
@@ -82,6 +76,20 @@ export default function Dashboard() {
 
   const handlePieClick = () => {
     setShowPilihStok(true);
+  };
+
+  // --- FUNGSI UPDATE IZIN (DIGABUNGKAN) ---
+  const submitIzinRevisi = (id: number, action: 'approve' | 'reject', extraData: any = {}) => {
+    router.post(route('izin-revisi.update', id), { action, ...extraData }, {
+        onSuccess: () => {
+            setShowFormRevisi(false);
+            setFormRevisi({ tanggalMulai: "", jamMulai: "", tanggalSelesai: "", jamSelesai: "" });
+        },
+        onError: (err) => {
+            console.error(err);
+            alert("Terjadi kesalahan, coba lagi.");
+        }
+    });
   };
 
   return (
@@ -186,7 +194,10 @@ export default function Dashboard() {
                   Setujui
                 </button>
 
-                <button className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition">
+                <button
+                  onClick={() => submitIzinRevisi(izin.id, 'reject')}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition"
+                >
                   Tolak
                 </button>
               </div>
@@ -201,7 +212,6 @@ export default function Dashboard() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            // RESPONSIVE FIX: width dinamis (w-full max-w-[320px])
             className="bg-[#F5F0EB] rounded-xl p-6 w-full max-w-[320px] shadow-2xl"
           >
             <h3 className="text-lg font-bold mb-2 text-center text-gray-800">
@@ -243,7 +253,6 @@ export default function Dashboard() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            // RESPONSIVE FIX: width dinamis dan max-height agar bisa discroll di HP landscape
             className="bg-white rounded-xl p-6 w-full max-w-[400px] shadow-2xl overflow-y-auto max-h-[90vh]"
           >
             <h3 className="text-lg font-bold mb-1 text-gray-800">
@@ -319,12 +328,8 @@ export default function Dashboard() {
                     return;
                   }
 
-                  console.log("IZIN REVISI:", {
-                    user: selectedIzin,
-                    waktu: formRevisi,
-                  });
-
-                  setShowFormRevisi(false);
+                  // Submit ke backend
+                  submitIzinRevisi(selectedIzin.id, 'approve', formRevisi);
                 }}
                 className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition font-medium shadow-md"
               >
