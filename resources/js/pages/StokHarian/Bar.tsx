@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Trash2, Plus, AlertTriangle } from "lucide-react";
+import { Search, ChevronDown, Trash2, Plus, AlertTriangle, Edit, Package } from "lucide-react";
 
 // --- Types ---
 interface ItemData {
@@ -248,33 +248,126 @@ export default function Bar() {
           </div>
         )}
 
-        {/* SECTION 2: TABLE */}
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
-          <div className="flex flex-col items-end gap-4 mb-6">
-            <div className="flex gap-3">
+        {/* SECTION 2: CONTENT */}
+        <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
+
+          {/* CONTROLS (Responsive) */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+
+            {/* Input Button */}
+            <div className="flex gap-3 w-full md:w-auto">
               {(tab === "mentah" || (tab === "menu" && (role === "bar" || role === "dapur"))) && (
-                <button onClick={() => setShowInputModal(true)} className="bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2">
+                <button
+                  onClick={() => setShowInputModal(true)}
+                  className="flex-1 md:flex-none justify-center bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2 rounded-full text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
+                >
                   <Plus className="w-4 h-4" /> Input Data
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <input type="date" value={date} onChange={handleDateChange} className="bg-[#FDF3E4] border-none rounded-full px-4 py-2 text-sm w-40" />
-              <div className="relative">
-                <input type="text" placeholder="Search..." value={search} onChange={handleSearch} className="bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm w-64" />
+            {/* Date & Search */}
+            <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+              <input
+                type="date"
+                value={date}
+                onChange={handleDateChange}
+                className="w-full md:w-40 bg-[#FDF3E4] border-none rounded-full px-4 py-2 text-sm text-[#8B5E3C] font-medium focus:ring-2 focus:ring-[#D9A978]"
+              />
+              <div className="relative w-full md:w-auto">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={search}
+                  onChange={handleSearch}
+                  className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm focus:ring-2 focus:ring-[#D9A978]"
+                />
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
               </div>
             </div>
 
-            <div className="flex bg-[#FDF3E4] rounded-full p-1 mt-2">
-              <button onClick={() => handleTabSwitch("menu")} className={`px-6 py-1 rounded-full text-sm font-medium transition ${tab === "menu" ? "bg-[#D9A978] text-white" : "text-gray-500"}`}>Menu</button>
-              <button onClick={() => handleTabSwitch("mentah")} className={`px-6 py-1 rounded-full text-sm font-medium transition ${tab === "mentah" ? "bg-[#D9A978] text-white" : "text-gray-500"}`}>Mentah</button>
+            {/* Tabs */}
+            <div className="flex w-full md:w-auto bg-[#FDF3E4] rounded-full p-1">
+              <button
+                onClick={() => handleTabSwitch("menu")}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-full text-sm font-medium transition-all ${tab === "menu" ? "bg-[#D9A978] text-white shadow-md" : "text-gray-500 hover:text-[#D9A978]"}`}
+              >
+                Menu
+              </button>
+              <button
+                onClick={() => handleTabSwitch("mentah")}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-full text-sm font-medium transition-all ${tab === "mentah" ? "bg-[#D9A978] text-white shadow-md" : "text-gray-500 hover:text-[#D9A978]"}`}
+              >
+                Mentah
+              </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-100">
-            <table className="w-full text-sm text-left">
+          {/* --- MOBILE VIEW (CARDS) --- */}
+          {/* Tampil di layar kecil (< md) */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {items.data.length > 0 ? (
+              items.data.map((item) => (
+                <div key={item.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-orange-50 p-2 rounded-lg text-[#D9A978]">
+                        <Package className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-800 text-sm">{item.nama}</h4>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">{item.satuan ?? 'porsi'}</span>
+                      </div>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-md ${item.tersisa < 7 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                      Sisa: {item.tersisa}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3 bg-gray-50 p-2 rounded-lg">
+                    <div>
+                      <p className="text-gray-400 mb-1">Awal</p>
+                      <p className="font-bold text-gray-700">{item.stok_awal}</p>
+                    </div>
+                    {tab === "mentah" && (
+                      <div>
+                        <p className="text-gray-400 mb-1">Masuk</p>
+                        <p className="font-bold text-gray-700">{item.stok_masuk ?? 0}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-gray-400 mb-1">Pakai</p>
+                      <p className="font-bold text-gray-700">{item.pemakaian}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 border-t pt-3">
+                    <button
+                      onClick={() => handleEditClick(item)}
+                      className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
+                    >
+                      <Edit className="w-3 h-3" /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(item.id)}
+                      className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition"
+                    >
+                      <Trash2 className="w-3 h-3" /> Hapus
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <p className="text-gray-500 text-sm">Belum ada data stok.</p>
+              </div>
+            )}
+          </div>
+
+          {/* --- DESKTOP VIEW (TABLE) --- */}
+          {/* Tampil di layar sedang ke atas (md:block) */}
+          <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-100">
+            <table className="w-full text-sm text-left whitespace-nowrap">
               <thead className="bg-gray-50 text-gray-700 font-semibold border-b">
                 <tr>
                   <th className="p-4 text-center w-16">No</th>
@@ -292,8 +385,8 @@ export default function Bar() {
                 {items.data.length > 0 ? (
                   items.data.map((item, i) => (
                     <tr key={item.id} className="hover:bg-[#FFF9F0] transition">
-                      <td className="p-4 text-center">{i + 1}</td>
-                      <td className="p-4 font-medium">{item.nama}</td>
+                      <td className="p-4 text-center text-gray-500">{i + 1}</td>
+                      <td className="p-4 font-medium text-gray-800">{item.nama}</td>
                       <td className="p-4 text-center text-gray-500">{item.satuan}</td>
                       <td className="p-4 text-center">{item.stok_awal}</td>
                       {tab === "mentah" && <td className="p-4 text-center">{item.stok_masuk ?? 0}</td>}
@@ -316,17 +409,17 @@ export default function Bar() {
           </div>
         </div>
 
-        {/* SECTION 3: CHART */}
+        {/* SECTION 3: CHART (Responsive Grid) */}
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="w-2 h-6 bg-red-500 rounded-full inline-block"></span>
             Grafik Stok Hampir Habis ({"<"} 7)
           </h3>
           {lowStockItems.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {lowStockItems.map((item, idx) => (
-                <div key={idx} className="flex flex-col gap-1">
-                  <div className="flex justify-between text-xs font-semibold text-gray-600">
+                <div key={idx} className="flex flex-col gap-1 p-3 border border-gray-100 rounded-xl hover:shadow-sm transition-shadow">
+                  <div className="flex justify-between text-xs font-semibold text-gray-600 mb-2">
                     <span>{item.nama} <span className="text-gray-400 font-normal">({item.kategori})</span></span>
                     <span className="text-red-500">{item.tersisa} Tersisa</span>
                   </div>
@@ -344,8 +437,8 @@ export default function Bar() {
 
       {/* MODAL 1: INPUT DATA */}
       {showInputModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-6 md:p-8 shadow-2xl animate-in zoom-in-95 overflow-y-auto max-h-[90vh]">
             <h2 className="text-lg font-bold text-center mb-6">Input Data {tab === "menu" ? "Pemakaian Menu" : "Stok Bahan Mentah"}</h2>
             <form onSubmit={(e) => { e.preventDefault(); submitCreate(); }} className="space-y-4">
               <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
@@ -403,8 +496,8 @@ export default function Bar() {
               )}
 
               <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={() => { setShowInputModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button>
-                <button type="submit" disabled={formItemId === ""} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50">Simpan</button>
+                <button type="button" onClick={() => { setShowInputModal(false); resetForm(); }} className="px-6 py-2 rounded-full border w-full md:w-auto">Batal</button>
+                <button type="submit" disabled={formItemId === ""} className="px-6 py-2 rounded-full bg-[#D9A978] text-white font-bold disabled:opacity-50 w-full md:w-auto">Simpan</button>
               </div>
             </form>
           </div>
@@ -413,8 +506,8 @@ export default function Bar() {
 
       {/* MODAL 3: EDIT DATA */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-[400px] rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-6 md:p-8 shadow-2xl animate-in zoom-in-95 overflow-y-auto max-h-[90vh]">
             <h2 className="text-lg font-bold text-center mb-6">Edit Stok {tab === "menu" ? "Menu" : "Bahan"}</h2>
             <form onSubmit={(e) => { e.preventDefault(); submitUpdate(); }} className="space-y-4">
               <div><label className="block text-sm font-medium mb-1">Tanggal</label><div className="bg-gray-100 px-4 py-2.5 rounded-xl text-sm border">{new Date(date).toLocaleDateString("id-ID")}</div></div>
@@ -436,7 +529,10 @@ export default function Bar() {
               {tab === "mentah" && (<div><label className="block text-sm font-medium mb-1">Stok Masuk</label><input type="number" min="0" value={formStokMasuk} onChange={(e) => setFormStokMasuk(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
               {tab === "menu" && (<div><label className="block text-sm font-medium mb-1">Pemakaian (Terjual)</label><input type="number" min="0" value={formPemakaian} onChange={(e) => setFormPemakaian(Number(e.target.value))} className="w-full bg-white border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]" /></div>)}
 
-              <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border">Batal</button><button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold">Update</button></div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button type="button" onClick={() => { setShowEditModal(false); resetForm(); }} className="px-6 py-2 rounded-full border w-full md:w-auto">Batal</button>
+                <button type="submit" className="px-6 py-2 rounded-full bg-[#1D8CFF] text-white font-bold w-full md:w-auto">Update</button>
+              </div>
             </form>
           </div>
         </div>
@@ -444,12 +540,15 @@ export default function Bar() {
 
       {/* MODAL 4: HAPUS DATA */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-[350px] rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 className="text-red-500 w-6 h-6" /></div>
             <h2 className="text-lg font-bold text-gray-800 mb-2">Hapus Data?</h2>
             <p className="text-sm text-gray-500 mb-6">Data yang dihapus tidak dapat dikembalikan.</p>
-            <div className="flex justify-center gap-3"><button onClick={() => setShowDeleteModal(false)} className="px-5 py-2 rounded-full border text-sm font-semibold">Batal</button><button onClick={submitDelete} className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600">Hapus</button></div>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setShowDeleteModal(false)} className="px-5 py-2 rounded-full border text-sm font-semibold flex-1">Batal</button>
+              <button onClick={submitDelete} className="px-5 py-2 rounded-full bg-red-500 text-white text-sm font-semibold hover:bg-red-600 flex-1">Hapus</button>
+            </div>
           </div>
         </div>
       )}

@@ -1,12 +1,10 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, User, Calendar, Edit, Trash2 } from 'lucide-react';
 
 export default function Manajemen() {
     // Pastikan users memiliki struktur paginasi atau array biasa
-    // Jika backend mengirim Paginator, users.data adalah array-nya
-    // Jika backend mengirim collection, users adalah array-nya
     const { users, csrf_token, errors }: any = usePage().props;
 
     // Normalisasi data user (apakah paginate atau collection biasa)
@@ -130,12 +128,22 @@ export default function Manajemen() {
         });
     };
 
+    // Helper badge role
+    const getRoleBadgeClass = (role: string) => {
+        switch (role.toLowerCase()) {
+            case 'bar': return 'bg-purple-50 text-purple-700 border-purple-100';
+            case 'kitchen': return 'bg-orange-50 text-orange-700 border-orange-100';
+            case 'supervisor': return 'bg-blue-50 text-blue-700 border-blue-100';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
     return (
         <AppLayout header="Manajemen Akun">
             <Head title="Manajemen Akun" />
 
             <div className="py-6">
-                <div className={`bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px] flex flex-col ${
+                <div className={`bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px] flex flex-col ${
                         showModal || confirmDelete || showEditModal ? 'blur-sm pointer-events-none' : ''
                     }`}
                 >
@@ -145,16 +153,60 @@ export default function Manajemen() {
 
                         <button
                             onClick={openModal}
-                            className="flex items-center gap-2 bg-[#D9A978] text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-[#c4925e] transition"
+                            className="flex items-center gap-2 bg-[#D9A978] text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-[#c4925e] transition w-full md:w-auto justify-center"
                         >
                             <Plus className="w-4 h-4" />
                             Tambah Akun
                         </button>
                     </div>
 
-                    {/* --- TABEL (TANPA SCROLL VERTICAL) --- */}
-                    {/* Menggunakan overflow-x-auto agar responsif horizontal */}
-                    <div className="w-full rounded-xl border border-gray-100 bg-white overflow-hidden flex-1 mb-6">
+                    {/* --- MOBILE VIEW (CARDS) --- */}
+                    {/* Tampil di layar kecil (< md) */}
+                    <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
+                        {userList.length === 0 ? (
+                             <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                                Belum ada pengguna.
+                            </div>
+                        ) : (
+                            userList.map((u: any) => (
+                                <div key={u.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <div className="font-bold text-gray-800">{u.username}</div>
+                                            <div className="text-sm text-gray-500">{u.name || '-'}</div>
+                                        </div>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
+                                            {u.role}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center text-xs text-gray-400 mb-4 gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        Dibuat: {new Date(u.created_at).toLocaleDateString('id-ID')}
+                                    </div>
+
+                                    <div className="flex gap-2 border-t pt-3">
+                                        <button
+                                            onClick={() => openEditModal(u)}
+                                            className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
+                                        >
+                                            <Edit className="w-3 h-3" /> Edit
+                                        </button>
+                                        <button
+                                            onClick={() => openDeleteModal(u.id)}
+                                            className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition"
+                                        >
+                                            <Trash2 className="w-3 h-3" /> Hapus
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* --- DESKTOP VIEW (TABLE) --- */}
+                    {/* Tampil di layar sedang ke atas (md:block) */}
+                    <div className="hidden md:block w-full rounded-xl border border-gray-100 bg-white overflow-hidden flex-1 mb-6">
                         <div className="w-full overflow-x-auto">
                             <table className="w-full text-left text-sm whitespace-nowrap">
                                 <thead className="bg-gray-50 text-gray-600 font-bold uppercase text-xs border-b border-gray-100">
@@ -178,7 +230,6 @@ export default function Manajemen() {
                                         userList.map((u: any, index: number) => (
                                             <tr key={u.id} className="hover:bg-[#FFF9F0] transition">
                                                 <td className="px-6 py-4 text-center text-gray-500">
-                                                    {/* Jika paginate, sesuaikan nomor urut */}
                                                     {users.current_page
                                                         ? (users.current_page - 1) * users.per_page + index + 1
                                                         : index + 1}
@@ -190,7 +241,7 @@ export default function Manajemen() {
                                                     {u.name || '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 uppercase tracking-wide">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
                                                         {u.role}
                                                     </span>
                                                 </td>
@@ -221,10 +272,10 @@ export default function Manajemen() {
                         </div>
                     </div>
 
-                    {/* --- PAGINATION (DILUAR TABEL) --- */}
+                    {/* --- PAGINATION (Responsive) --- */}
                     {links.length > 3 && (
-                        <div className="mt-auto flex justify-center md:justify-end">
-                            <nav className="inline-flex rounded-md shadow-sm -space-x-px bg-white">
+                        <div className="mt-auto flex justify-center md:justify-end pt-4">
+                            <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
                                 {links.map((link: any, i: number) => {
                                     let label = link.label;
                                     if (label.includes('&laquo;')) label = 'Prev';
@@ -240,22 +291,19 @@ export default function Manajemen() {
                                                 }
                                             }}
                                             className={`
-                                                relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors
-                                                ${i === 0 ? 'rounded-l-md' : ''}
-                                                ${i === links.length - 1 ? 'rounded-r-md' : ''}
+                                                relative inline-flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all rounded-full
                                                 ${
                                                     link.active
-                                                        ? 'z-10 bg-[#D9A978] border-[#D9A978] text-white hover:bg-[#c4925e]'
-                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                        ? 'bg-[#D9A978] text-white shadow-md'
+                                                        : 'text-gray-600 hover:bg-white hover:text-[#D9A978]'
                                                 }
-                                                ${!link.url ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}
+                                                ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}
                                             `}
-                                        >
-                                            {label}
-                                        </button>
+                                            dangerouslySetInnerHTML={{ __html: label }}
+                                        />
                                     );
                                 })}
-                            </nav>
+                            </div>
                         </div>
                     )}
 
@@ -264,8 +312,8 @@ export default function Manajemen() {
 
             {/* ===================== MODAL TAMBAH ===================== */}
             {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-                    <div className="bg-white rounded-3xl shadow-xl w-[380px] p-8 animate-fadeIn">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 sm:p-8 animate-fadeIn">
                         <h2 className="text-xl font-bold text-center mb-6 text-gray-800">
                             Tambah Akun Baru
                         </h2>
@@ -352,8 +400,8 @@ export default function Manajemen() {
 
             {/* ===================== MODAL EDIT USER ===================== */}
             {showEditModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-                    <div className="bg-white rounded-3xl shadow-xl w-[380px] p-8 animate-fadeIn">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 sm:p-8 animate-fadeIn">
                         <h2 className="text-xl font-bold text-center mb-6 text-gray-800">
                             Edit Akun
                         </h2>
@@ -436,8 +484,8 @@ export default function Manajemen() {
 
             {/* ===================== MODAL DELETE ===================== */}
             {confirmDelete && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-                    <div className="bg-white rounded-3xl shadow-xl w-[360px] p-8 text-center animate-fadeIn">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-8 text-center animate-fadeIn">
                         <h2 className="text-xl font-bold text-gray-900 mb-2">Hapus Akun?</h2>
                         <p className="text-gray-500 text-sm mb-8 leading-relaxed">
                             Anda yakin ingin menghapus user ini? Tindakan ini tidak dapat dibatalkan.

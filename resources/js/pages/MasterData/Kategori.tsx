@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, X, Plus } from "lucide-react"; // Tambahkan import 'Plus'
+import { Search, ChevronDown, X, Plus, Box, Layers } from "lucide-react";
 
 type Division = "bar" | "kitchen";
 
@@ -16,6 +16,7 @@ interface Category {
   division: Division;
   total_items: number;
   items: CategoryItem[];
+  no?: number; // Tambahkan properti opsional 'no'
 }
 
 type PageProps = {
@@ -131,7 +132,7 @@ export default function KategoriPage() {
     if (!name) return;
 
     router.post(
-      route("kategori.store"), // pastikan route ini ada di web.php
+      route("kategori.store"),
       { name, division: staffDivision },
       {
         onSuccess: () => {
@@ -196,18 +197,18 @@ export default function KategoriPage() {
       <Head title={`Kategori ${titleDivisionLabel}`} />
 
       <div className="space-y-6">
-        <div className="rounded-3xl bg-[#FFFFFF] p-8 shadow-inner">
-          <div className="rounded-3xl bg-[#FFFFFF] p-6 shadow">
+        <div className="rounded-3xl bg-[#FFFFFF] p-4 md:p-8 shadow-inner">
+          <div className="rounded-3xl bg-[#FFFFFF] p-4 md:p-6 shadow border border-gray-100 min-h-[500px] flex flex-col">
             {/* HEADER */}
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 w-full md:w-auto">
                 <h2 className="text-2xl font-semibold text-[#8B5E3C]">
                   {`Kategori ${titleDivisionLabel}`}
                 </h2>
 
                 {/* Dropdown Divisi */}
                 {!isStaff && (
-                  <div className="relative inline-block w-40">
+                  <div className="relative inline-block w-full md:w-40">
                     <button
                       type="button"
                       onClick={() =>
@@ -254,25 +255,24 @@ export default function KategoriPage() {
               </div>
 
               {/* Right controls: Tambah + Search */}
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center w-full md:w-auto">
                 {!isStaff && (
-                  // 🔥 UPDATE STYLE TOMBOL DISINI 🔥
                   <button
                     type="button"
                     onClick={openAddModal}
-                    className="flex items-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a]"
+                    className="flex items-center justify-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a] w-full md:w-auto"
                   >
                     <Plus className="h-4 w-4" />
                     Tambah Kategori
                   </button>
                 )}
-                <div className="relative">
+                <div className="relative w-full md:w-auto">
                   <input
                     type="text"
                     placeholder="Search...."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-56 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
+                    className="w-full md:w-56 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#E5C39C]"
                   />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#C38E5F]">
                     <Search className="h-4 w-4" />
@@ -281,8 +281,61 @@ export default function KategoriPage() {
               </div>
             </div>
 
-            {/* TABLE */}
-            <div className="rounded-lg border border-gray-200 bg-white">
+            {/* --- MOBILE VIEW (CARDS) --- */}
+            {/* Tampil di layar kecil (< md) */}
+            <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
+                {filteredCategories.length === 0 ? (
+                     <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                        Belum ada kategori untuk divisi ini.
+                    </div>
+                ) : (
+                    filteredCategories.map((cat) => (
+                        <div key={cat.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                             <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-orange-50 p-2 rounded-lg text-[#DABA93]">
+                                        <Layers className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-gray-800">{translateCategoryName(cat.name)}</div>
+                                        <div className="text-xs text-gray-500">Total Item: {cat.total_items}</div>
+                                    </div>
+                                </div>
+                             </div>
+
+                             <div className="flex gap-2 border-t pt-3 mt-2">
+                                <button
+                                     onClick={() => openViewModal(cat)}
+                                     className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
+                                 >
+                                     View
+                                 </button>
+
+                                 {!isStaff && (
+                                     <>
+                                        <button
+                                            onClick={() => openEditModal(cat)}
+                                            className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            onClick={() => openDeleteModal(cat)}
+                                            className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition"
+                                        >
+                                            Hapus
+                                        </button>
+                                     </>
+                                 )}
+                             </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* --- DESKTOP VIEW (TABLE) --- */}
+            {/* Tampil di layar sedang ke atas (md:block) */}
+            <div className="hidden md:block rounded-lg border border-gray-200 bg-white overflow-hidden">
               <table className="min-w-full table-auto text-left text-sm">
                 <thead className="border-b bg-gray-100 text-xs font-semibold uppercase text-gray-700">
                   <tr>
@@ -362,9 +415,9 @@ export default function KategoriPage() {
         <Modal onClose={() => setAddModalOpen(false)}>
           <form
             onSubmit={handleAddCategory}
-            className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-xl"
+            className="w-full max-w-sm md:max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-xl"
           >
-            <h3 className="mb-6 text-center text-2xl font-semibold text-gray-800">
+            <h3 className="mb-6 text-center text-xl md:text-2xl font-semibold text-gray-800">
               Tambah Kategori
             </h3>
 
@@ -404,9 +457,9 @@ export default function KategoriPage() {
         <Modal onClose={() => setEditModalOpen(false)}>
           <form
             onSubmit={handleUpdateCategory}
-            className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-xl"
+            className="w-full max-w-sm md:max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-xl"
           >
-            <h3 className="mb-6 text-center text-2xl font-semibold text-gray-800">
+            <h3 className="mb-6 text-center text-xl md:text-2xl font-semibold text-gray-800">
               Edit Kategori
             </h3>
 
@@ -444,9 +497,9 @@ export default function KategoriPage() {
       {/* MODAL: VIEW */}
       {viewModalOpen && selectedCategory && (
         <Modal onClose={() => setViewModalOpen(false)}>
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-sm md:max-w-lg rounded-3xl bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-gray-800">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-800">
                 Detail Kategori{" "}
                 {translateCategoryName(selectedCategory.name)}
               </h3>
@@ -500,7 +553,7 @@ export default function KategoriPage() {
       {/* MODAL: HAPUS */}
       {deleteModalOpen && selectedCategory && (
         <Modal onClose={() => setDeleteModalOpen(false)}>
-          <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-xl">
+          <div className="w-full max-w-sm md:max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-xl">
             <h3 className="mb-4 text-center text-xl font-semibold text-gray-800">
               Hapus Kategori..? <span className="ml-1">⚠️</span>
             </h3>
@@ -549,13 +602,15 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div
         className="absolute inset-0"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-50">{children}</div>
+      <div className="relative z-50 w-full flex justify-center pointer-events-auto">
+        {children}
+      </div>
     </div>
   );
 }
