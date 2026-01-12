@@ -149,10 +149,15 @@ $barMenuHabis = DB::table('stok_harian_menu')
         // ================= FALLBACK =================
 
 
-        $izinRevisiPending = IzinRevisi::with('user')
+       $izinRevisiPending = IzinRevisi::with('user')
     ->where('status', 'pending')
-    ->latest()
-    ->get();
+    ->get()
+    ->map(fn ($izin) => [
+        'id'   => $izin->id,
+        'name' => $izin->user->name,
+        'role' => $izin->role,
+    ]);
+
 
     // Logika untuk memperbarui kolom is_submitted setelah data disimpan
         if ($user->role === 'bar') {

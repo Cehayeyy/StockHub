@@ -93,16 +93,20 @@ const [formRevisi, setFormRevisi] = useState({
   };
 
 const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
-    router.post(route('izin-revisi.update', id), { action }, {
-        onSuccess: () => {
-            // Opsional: reload page agar izinPending staff update
-            router.reload();
-        },
-        onError: (err) => {
-            console.error(err);
-            alert("Terjadi kesalahan, coba lagi.");
-        }
-    });
+  router.post(
+    route('izin-revisi.update', id),
+    { action },
+    {
+      preserveScroll: true,
+      onSuccess: () => {
+        setShowFormRevisi(false);
+        setSelectedIzin(null);
+        router.reload({
+          only: ['izinRevisiPending'],
+        });
+      },
+    }
+  );
 };
 
 
@@ -241,17 +245,16 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
         </div>
 
         <div className="flex gap-2">
-      <button
+ <button
   onClick={() => {
-    // reset langsung staff
-    updateIzinRevisi(izin.id, 'approve');
     setSelectedIzin(izin);
-    setShowFormRevisi(true); // tetap tampilkan form
+    setShowFormRevisi(true); // cuma buka modal
   }}
   className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
 >
   Setujui
 </button>
+
 
 <button
   onClick={() => updateIzinRevisi(izin.id, 'reject')}
@@ -341,17 +344,13 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
       return;
     }
 
-    console.log("IZIN REVISI:", {
-      user: selectedIzin,
-      waktu: formRevisi,
-    });
-
-    setShowFormRevisi(false);
+    updateIzinRevisi(selectedIzin.id, 'approve');
   }}
   className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700"
 >
   Simpan
 </button>
+
 
         <button
           onClick={() => setShowFormRevisi(false)}
