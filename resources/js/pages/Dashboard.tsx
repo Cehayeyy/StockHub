@@ -180,9 +180,12 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="bg-[#A97458] p-4 sm:p-6 rounded-xl shadow-lg"
+         className="bg-[#F5F0EB] p-4 sm:p-6 rounded-xl shadow-lg"
         >
-          <h3 className="font-bold mb-4 text-white">Permintaan Izin Revisi</h3>
+          <h3 className="font-bold mb-4 text-gray-800">
+  Permintaan Izin Revisi
+</h3>
+
 
           {izinRevisiPending.map((izin: any) => (
             <motion.div
@@ -192,7 +195,11 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
               transition={{ duration: 0.3 }}
               whileHover={{ scale: 1.01 }}
               // RESPONSIVE FIX: flex-col di mobile, flex-row di sm ke atas
-              className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 p-3 bg-white rounded-lg border shadow-sm gap-3 sm:gap-0"
+                className="flex flex-col sm:flex-row justify-between items-start sm:items-center
+            mb-3 p-3 rounded-lg border border-[#E6DCD2]
+            bg-transparent hover:bg-[#EFE8E1] transition
+            gap-3 sm:gap-0"
+
             >
               <div>
                 <p className="font-semibold text-gray-800">{izin.name}</p>

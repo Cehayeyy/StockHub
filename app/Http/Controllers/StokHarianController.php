@@ -82,34 +82,31 @@ class StokHarianController extends Controller
                     'kategori' => 'Bahan Mentah'
                 ]);
 
-            $lowMenu = StokHarianMenu::with('item')
-                ->whereDate('tanggal', $tanggal)
-                ->where('stok_akhir', '<', 7)
-                ->get()
-                ->toBase()
-                ->map(function($s) use ($tanggal) {
-                    $tersisa = $s->stok_akhir;
-                    $recipe = Recipe::where('item_id', $s->item_id)->first();
+            $allMenus = StokHarianMenu::with('item')->whereDate('tanggal', $tanggal)->get();
 
-                    if ($recipe && !empty($recipe->ingredients)) {
-                        $maxBisaDibuat = 999999;
-                        foreach ($recipe->ingredients as $ing) {
-                            $rawItemId = $ing['item_id'] ?? null;
-                            $butuh = $ing['amount'] ?? 0;
-                            if ($rawItemId && $butuh > 0) {
-                                $stokMentah = StokHarianMentah::where('item_id', $rawItemId)
-                                    ->where('tanggal', $tanggal)
-                                    ->first();
-                                $sisaFisik = $stokMentah ? $stokMentah->stok_akhir : 0;
-                                $kapasitas = floor($sisaFisik / $butuh);
-                                if ($kapasitas < $maxBisaDibuat) $maxBisaDibuat = $kapasitas;
-                            }
+            $lowMenu = $allMenus->map(function($s) use ($tanggal) {
+                $tersisa = $s->stok_akhir;
+                $recipe = Recipe::where('item_id', $s->item_id)->first();
+
+                if ($recipe && !empty($recipe->ingredients)) {
+                    $maxBisaDibuat = 999999;
+                    foreach ($recipe->ingredients as $ing) {
+                        $rawItemId = $ing['item_id'] ?? null;
+                        $butuh = $ing['amount'] ?? 0;
+                        if ($rawItemId && $butuh > 0) {
+                            $stokMentah = StokHarianMentah::where('item_id', $rawItemId)
+                                ->where('tanggal', $tanggal)
+                                ->first();
+                            $sisaFisik = $stokMentah ? $stokMentah->stok_akhir : 0;
+                            $kapasitas = floor($sisaFisik / $butuh);
+                            if ($kapasitas < $maxBisaDibuat) $maxBisaDibuat = $kapasitas;
                         }
-                        $tersisa = ($maxBisaDibuat === 999999) ? 0 : $maxBisaDibuat;
                     }
+                    $tersisa = ($maxBisaDibuat === 999999) ? 0 : $maxBisaDibuat;
+                }
 
-                    return ['nama' => $s->item->nama, 'tersisa' => $tersisa, 'kategori' => 'Menu'];
-                })->filter(fn($item) => $item['tersisa'] < 7)->values();
+                return ['nama' => $s->item->nama, 'tersisa' => $tersisa, 'kategori' => 'Menu'];
+            })->filter(fn($item) => $item['tersisa'] < 7)->values();
 
             $lowStockItems = $lowMentah->concat($lowMenu)->values();
         } catch (\Throwable $e) {
@@ -410,8 +407,8 @@ class StokHarianController extends Controller
             }
 
             ActivityLog::create([
-                'user_id'     => Auth::id(),
-                'activity'    => 'Update Stok Menu',
+                'user_id' => Auth::id(),
+                'activity' => 'Update Stok Menu',
                 'description' => "Update penjualan '{$menu->item->nama}'."
             ]);
         });
@@ -433,7 +430,6 @@ class StokHarianController extends Controller
         ActivityLog::create([
             'user_id' => Auth::id(), 'activity' => 'Update Stok Mentah', 'description' => "Update mentah '{$stok->item->nama}'."
         ]);
-
         return back()->with('success', 'Stok mentah diperbarui.');
     }
 
@@ -461,44 +457,25 @@ class StokHarianController extends Controller
     {
         $menu = StokHarianMenu::with('item')->findOrFail($id);
         $nama = $menu->item->nama;
-
         DB::transaction(function () use ($menu, $nama) {
-
-            // Kembalikan stok mentah jika menu sudah terjual
             $recipe = Recipe::where('name', $nama)->first();
-
             if ($menu->stok_keluar > 0 && $recipe && is_array($recipe->ingredients)) {
                 foreach ($recipe->ingredients as $ing) {
-                    $qtyToRestore = $menu->stok_keluar * ($ing['amount'] ?? 0);
-
-                    if ($qtyToRestore > 0) {
-                        $mentah = StokHarianMentah::where([
-                            'item_id' => $ing['item_id'],
-                            'tanggal' => $menu->tanggal
-                        ])->first();
-
+                    $qty = $menu->stok_keluar * ($ing['amount'] ?? 0);
+                    if ($qty > 0) {
+                        $mentah = StokHarianMentah::where(['item_id' => $ing['item_id'], 'tanggal' => $menu->tanggal])->first();
                         if ($mentah) {
-                            $newRawKeluar = max(0, $mentah->stok_keluar - $qtyToRestore);
-                            $mentah->stok_keluar = $newRawKeluar;
-                            $mentah->stok_akhir = ($mentah->stok_awal + $mentah->stok_masuk) - $newRawKeluar;
+                            $mentah->stok_keluar = max(0, $mentah->stok_keluar - $qty);
+                            $mentah->stok_akhir = ($mentah->stok_awal + $mentah->stok_masuk) - $mentah->stok_keluar;
                             $mentah->save();
-
-                            // Hitung ulang setelah restore
                             $this->distributeStockToMenus($mentah->item_id, $mentah->stok_akhir, $menu->tanggal);
                         }
                     }
                 }
             }
-
             $menu->delete();
-
-            ActivityLog::create([
-                'user_id'     => Auth::id(),
-                'activity'    => 'Hapus Stok Menu',
-                'description' => "Menghapus data stok menu '{$nama}'."
-            ]);
+            ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Stok Menu', 'description' => "Menghapus menu '{$nama}'."]);
         });
-
         return back()->with('success', 'Data stok dihapus.');
     }
 
@@ -507,7 +484,6 @@ class StokHarianController extends Controller
     {
         $mentah = StokHarianMentah::with('item')->findOrFail($id);
         $nama = $mentah->item->nama;
-
         $mentah->delete();
         ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Stok Mentah', 'description' => "Menghapus mentah '{$nama}'."]);
         return back()->with('success', 'Data stok mentah dihapus.');
