@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, Trash, ChevronDown, Plus } from "lucide-react";
+import { Search, Trash, ChevronDown, Plus, BookOpen } from "lucide-react";
 
 interface Recipe {
   id: number;
@@ -55,7 +55,9 @@ const Resep: React.FC = () => {
   const isStaff = role === "bar" || role === "kitchen";
 
   // State
-  const [selectedDivision, setSelectedDivision] = useState<"bar" | "dapur">(division);
+  const [selectedDivision, setSelectedDivision] = useState<"bar" | "dapur">(
+    division
+  );
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -83,10 +85,14 @@ const Resep: React.FC = () => {
     bahan_mentah.find((it) => it.id === id);
 
   const findRawItemByName = (name: string) =>
-    bahan_mentah.find((it) => it.name.trim().toLowerCase() === name.trim().toLowerCase());
+    bahan_mentah.find(
+      (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
 
   const findMenuByName = (name: string) =>
-    bahan_menu.find((it) => it.name.trim().toLowerCase() === name.trim().toLowerCase());
+    bahan_menu.find(
+      (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
 
   // --- HANDLERS ---
   const changeDivision = (div: "bar" | "dapur") => {
@@ -134,7 +140,11 @@ const Resep: React.FC = () => {
     setIngredients((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const changeIngredient = (id: number, field: keyof Ingredient, value: any) => {
+  const changeIngredient = (
+    id: number,
+    field: keyof Ingredient,
+    value: any
+  ) => {
     setIngredients((prev) =>
       prev.map((ing) => {
         if (ing.id !== id) return ing;
@@ -153,9 +163,6 @@ const Resep: React.FC = () => {
   const saveRecipe = (e: React.FormEvent) => {
     e.preventDefault();
     const menu = findMenuByName(menuName);
-
-    // Validasi opsional: Beri warning jika menu belum ada di master item
-    // if (!menu) { alert("Info: Menu ini belum ada di Data Induk Item."); }
 
     const invalid = ingredients.some((ing) => !ing.item_id || ing.amount <= 0);
     if (invalid) return alert("Pastikan semua bahan valid dan jumlah > 0.");
@@ -200,7 +207,11 @@ const Resep: React.FC = () => {
     setOpenEditModal(true);
   };
 
-  const changeEditIngredient = (id: number, field: keyof Ingredient, value: any) => {
+  const changeEditIngredient = (
+    id: number,
+    field: keyof Ingredient,
+    value: any
+  ) => {
     setEditIngredients((prev) =>
       prev.map((ing) => {
         if (ing.id !== id) return ing;
@@ -262,7 +273,9 @@ const Resep: React.FC = () => {
   );
 
   return (
-    <AppLayout header={`Resep ${selectedDivision === "bar" ? "Bar" : "Dapur"}`}>
+    <AppLayout
+      header={`Resep ${selectedDivision === "bar" ? "Bar" : "Dapur"}`}
+    >
       <Head title="Resep" />
 
       {/* --- DATALISTS (Sumber Data Dropdown) --- */}
@@ -279,12 +292,12 @@ const Resep: React.FC = () => {
       </datalist>
 
       <div className="py-6">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px] flex flex-col">
+        <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px] flex flex-col">
           {/* HEADER */}
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {/* Division Selector */}
             {!isStaff ? (
-              <div className="relative inline-block w-40">
+              <div className="relative inline-block w-full md:w-40">
                 <button
                   type="button"
                   onClick={() => setShowDivisionDropdown((prev) => !prev)}
@@ -321,31 +334,87 @@ const Resep: React.FC = () => {
             )}
 
             {/* Right Controls */}
-            <div className="flex gap-3 items-center">
+            <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
               {!isStaff && (
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a]"
+                  className="flex w-full md:w-auto items-center justify-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a]"
                 >
                   <Plus className="h-4 w-4" />
                   Tambah Resep
                 </button>
               )}
-              <div className="relative">
+              <div className="relative w-full md:w-auto">
                 <input
                   type="text"
                   placeholder="Search..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-64 rounded-full bg-[#FDF3E4] pl-4 pr-10 py-2 text-sm border-none focus:ring-2 focus:ring-[#D9A978]"
+                  className="w-full md:w-64 rounded-full bg-[#FDF3E4] pl-4 pr-10 py-2 text-sm border-none focus:ring-2 focus:ring-[#D9A978]"
                 />
                 <Search className="absolute right-3 top-2 h-4 w-4 text-[#C38E5F]" />
               </div>
             </div>
           </div>
 
-          {/* TABLE */}
-          <div className="w-full overflow-x-auto rounded-xl border border-gray-100 bg-white">
+          {/* --- MOBILE VIEW (CARDS) --- */}
+          {/* Tampil di layar kecil (< md) */}
+          <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
+            {filteredRecipes.length === 0 ? (
+                <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                    Belum ada resep.
+                </div>
+            ) : (
+                filteredRecipes.map((r) => (
+                    <div key={r.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-orange-50 p-2 rounded-lg text-[#D9A978]">
+                                    <BookOpen className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="font-bold text-gray-800">{r.name}</div>
+                                    <div className="text-xs text-gray-500">{r.total_ingredients} bahan</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="text-xs text-gray-400 mb-3 pl-1">
+                            Dibuat: {r.created_at || "-"}
+                        </div>
+
+                        <div className="flex gap-2 border-t pt-3">
+                            <button
+                                onClick={() => openViewRecipe(r)}
+                                className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-600 transition"
+                            >
+                                View
+                            </button>
+                            {!isStaff && (
+                                <>
+                                    <button
+                                        onClick={() => openEdit(r)}
+                                        className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-600 transition"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => openDeleteConfirm(r.id)}
+                                        className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-600 transition"
+                                    >
+                                        Hapus
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                ))
+            )}
+          </div>
+
+          {/* --- DESKTOP VIEW (TABLE) --- */}
+          {/* Tampil di layar sedang ke atas (md:block) */}
+          <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-gray-100 bg-white">
             <table className="w-full text-sm whitespace-nowrap text-left">
               <thead className="bg-[#F3F3F3] text-gray-700 font-bold border-b">
                 <tr>
@@ -379,21 +448,21 @@ const Resep: React.FC = () => {
                           {!isStaff && (
                             <button
                               onClick={() => openEdit(r)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs"
+                              className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs hover:bg-blue-600 transition"
                             >
                               Edit
                             </button>
                           )}
                           <button
                             onClick={() => openViewRecipe(r)}
-                            className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs"
+                            className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs hover:bg-blue-600 transition"
                           >
                             View
                           </button>
                           {!isStaff && (
                             <button
                               onClick={() => openDeleteConfirm(r.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded-full text-xs"
+                              className="px-3 py-1 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition"
                             >
                               Hapus
                             </button>
@@ -411,8 +480,8 @@ const Resep: React.FC = () => {
 
       {/* --- MODAL TAMBAH RESEP --- */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-xl">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-xl font-semibold text-center mb-4">
               Tambah Resep
             </h3>
@@ -435,21 +504,30 @@ const Resep: React.FC = () => {
               <div>
                 <p className="font-semibold text-sm">Bahan Mentah</p>
                 {ingredients.map((ing, idx) => (
-                  <div key={ing.id} className="bg-gray-100 p-2 rounded-xl flex gap-2 items-center mb-2">
-                    <span className="text-xs font-bold text-gray-500 w-4">{idx + 1}.</span>
+                  <div
+                    key={ing.id}
+                    className="bg-gray-100 p-2 rounded-xl flex flex-wrap gap-2 items-center mb-2"
+                  >
+                    <span className="text-xs font-bold text-gray-500 w-4">
+                      {idx + 1}.
+                    </span>
                     <input
                       type="text"
                       list="raw-datalist"
                       value={ing.item_name}
-                      onChange={(e) => changeIngredient(ing.id, "item_name", e.target.value)}
-                      className="flex-1 bg-white rounded px-2 py-1 text-xs border border-gray-200"
+                      onChange={(e) =>
+                        changeIngredient(ing.id, "item_name", e.target.value)
+                      }
+                      className="flex-1 bg-white rounded px-2 py-1 text-xs border border-gray-200 min-w-[120px]"
                       placeholder="pilih bahan..."
                       required
                     />
                     <input
                       type="number"
                       value={ing.amount}
-                      onChange={(e) => changeIngredient(ing.id, "amount", Number(e.target.value))}
+                      onChange={(e) =>
+                        changeIngredient(ing.id, "amount", Number(e.target.value))
+                      }
                       className="w-16 bg-white rounded px-2 py-1 text-xs border border-gray-200"
                       placeholder="Jml"
                       required
@@ -458,18 +536,28 @@ const Resep: React.FC = () => {
                     <input
                       type="text"
                       value={ing.unit}
-                      onChange={(e) => changeIngredient(ing.id, "unit", e.target.value)}
+                      onChange={(e) =>
+                        changeIngredient(ing.id, "unit", e.target.value)
+                      }
                       className="w-16 bg-white rounded px-2 py-1 text-xs border border-gray-200"
                       placeholder="Satuan"
                       readOnly
                     />
-                    <button type="button" onClick={() => removeIngredient(ing.id)} className="text-red-500">
-                        <Trash className="w-4 h-4" />
+                    <button
+                      type="button"
+                      onClick={() => removeIngredient(ing.id)}
+                      className="text-red-500"
+                    >
+                      <Trash className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
-                <button type="button" onClick={addIngredient} className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition">
-                    Tambah Bahan
+                <button
+                  type="button"
+                  onClick={addIngredient}
+                  className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition w-full md:w-auto"
+                >
+                  Tambah Bahan
                 </button>
               </div>
 
@@ -495,8 +583,8 @@ const Resep: React.FC = () => {
 
       {/* --- MODAL EDIT RESEP --- */}
       {openEditModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-xl">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-xl font-semibold text-center mb-4">Edit Resep</h3>
             <form onSubmit={updateRecipe} className="space-y-5">
               <div>
@@ -515,35 +603,58 @@ const Resep: React.FC = () => {
               <div>
                 <p className="font-semibold text-sm">Bahan Mentah</p>
                 {editIngredients.map((ing, idx) => (
-                  <div key={ing.id} className="bg-gray-100 p-2 rounded-xl flex gap-2 items-center mb-2">
-                    <span className="text-xs font-bold text-gray-500 w-4">{idx + 1}.</span>
+                  <div
+                    key={ing.id}
+                    className="bg-gray-100 p-2 rounded-xl flex flex-wrap gap-2 items-center mb-2"
+                  >
+                    <span className="text-xs font-bold text-gray-500 w-4">
+                      {idx + 1}.
+                    </span>
                     <input
                       type="text"
                       list="raw-datalist"
                       value={ing.item_name}
-                      onChange={(e) => changeEditIngredient(ing.id, "item_name", e.target.value)}
-                      className="flex-1 bg-white rounded px-2 py-1 text-xs border border-gray-200"
+                      onChange={(e) =>
+                        changeEditIngredient(ing.id, "item_name", e.target.value)
+                      }
+                      className="flex-1 bg-white rounded px-2 py-1 text-xs border border-gray-200 min-w-[120px]"
                     />
                     <input
                       type="number"
                       value={ing.amount}
-                      onChange={(e) => changeEditIngredient(ing.id, "amount", Number(e.target.value))}
+                      onChange={(e) =>
+                        changeEditIngredient(
+                          ing.id,
+                          "amount",
+                          Number(e.target.value)
+                        )
+                      }
                       className="w-16 bg-white rounded px-2 py-1 text-xs border border-gray-200"
                     />
                     <input
                       type="text"
                       value={ing.unit}
-                      onChange={(e) => changeEditIngredient(ing.id, "unit", e.target.value)}
+                      onChange={(e) =>
+                        changeEditIngredient(ing.id, "unit", e.target.value)
+                      }
                       className="w-16 bg-white rounded px-2 py-1 text-xs border border-gray-200"
                       readOnly
                     />
-                    <button type="button" onClick={() => removeEditIngredient(ing.id)} className="text-red-500">
-                        <Trash className="w-4 h-4" />
+                    <button
+                      type="button"
+                      onClick={() => removeEditIngredient(ing.id)}
+                      className="text-red-500"
+                    >
+                      <Trash className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
-                <button type="button" onClick={addEditIngredient} className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition">
-                    Tambah Bahan
+                <button
+                  type="button"
+                  onClick={addEditIngredient}
+                  className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition w-full md:w-auto"
+                >
+                  Tambah Bahan
                 </button>
               </div>
 
@@ -569,8 +680,8 @@ const Resep: React.FC = () => {
 
       {/* --- MODAL VIEW --- */}
       {openViewModal && viewRecipe && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-3xl w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-3xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between mb-4">
               <h2 className="text-xl font-bold">
                 Detail Resep — {viewRecipe.name}
@@ -618,11 +729,14 @@ const Resep: React.FC = () => {
 
       {/* --- MODAL DELETE --- */}
       {openDeleteModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-8 rounded-3xl w-full max-w-sm text-center shadow-xl">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Hapus Resep?</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Hapus Resep?
+            </h2>
             <p className="text-gray-500 text-sm mb-6">
-              Menghapus resep ini akan menghapus semua data bahan terkait. Tindakan ini tidak dapat dibatalkan.
+              Menghapus resep ini akan menghapus semua data bahan terkait.
+              Tindakan ini tidak dapat dibatalkan.
             </p>
             <div className="flex justify-center gap-4">
               <button

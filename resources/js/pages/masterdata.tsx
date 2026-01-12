@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
-import { Search } from 'lucide-react';
+import { Search, Package, Box, Filter } from 'lucide-react';
 
 interface ItemData {
   id: number;
@@ -65,23 +65,23 @@ export default function MasterData() {
       <div className="space-y-6">
 
         {/* --- BAGIAN ATAS: TAB DIVISI & SEARCH --- */}
-        <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-          <div className="flex space-x-1 bg-transparent p-1 rounded-lg">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex space-x-1 bg-white p-1 rounded-lg border border-gray-200 w-full md:w-auto">
             <button
               onClick={() => setActiveDivision('Bar')}
-              className={`px-6 py-1 text-sm font-bold transition-all duration-200 border-b-2
+              className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold transition-all duration-200 rounded-md
                 ${activeDivision === 'Bar'
-                  ? 'border-[#5D4037] text-[#5D4037]'
-                  : 'border-transparent text-gray-600 hover:text-gray-600'}`}
+                  ? 'bg-[#5D4037] text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Bar
             </button>
             <button
               onClick={() => setActiveDivision('Kitchen')}
-              className={`px-6 py-1 text-sm font-bold transition-all duration-200 border-b-2
+              className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold transition-all duration-200 rounded-md
                 ${activeDivision === 'Kitchen'
-                  ? 'border-[#5D4037] text-[#5D4037]'
-                  : 'border-transparent text-gray-600 hover:text-gray-600'}`}
+                  ? 'bg-[#5D4037] text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Kitchen
             </button>
@@ -90,7 +90,7 @@ export default function MasterData() {
           <div className="relative w-full md:w-72">
             <input
               type="text"
-              placeholder="Search...."
+              placeholder="Cari item..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-4 pr-10 py-2 rounded-full border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-[#DABA93] focus:border-transparent transition-all text-sm shadow-sm"
@@ -104,41 +104,75 @@ export default function MasterData() {
         </div>
 
         {/* --- BAGIAN TENGAH: BUTTON KATEGORI --- */}
-        <div className="bg-gray-200 rounded-lg p-1 flex justify-between shadow-inner">
+        <div className="bg-white border border-gray-200 rounded-lg p-1 flex justify-between shadow-sm overflow-x-auto">
            {(['Finish', 'Semi finish', 'Raw'] as const).map((category) => (
              <button
                key={category}
                onClick={() => setActiveCategory(category)}
-               className={`flex-1 py-1.5 text-center text-sm font-semibold rounded-md transition-all duration-200
+               className={`flex-1 py-2 px-2 text-center text-sm font-semibold rounded-md transition-all duration-200 whitespace-nowrap
                  ${activeCategory === category
-                   ? 'bg-gray-500 text-white shadow-sm'
-                   : 'text-gray-900 hover:bg-gray-300'}`}
+                   ? 'bg-gray-100 text-gray-900 border border-gray-200 shadow-sm'
+                   : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}
              >
                {category}
              </button>
            ))}
         </div>
 
-        {/* --- TABEL DATA (Diperbarui sesuai request) --- */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        {/* --- MOBILE VIEW (CARDS) --- */}
+        {/* Tampil di layar kecil (< md) */}
+        <div className="grid grid-cols-1 gap-4 md:hidden">
+          {filteredItems.length > 0 ? (
+            filteredItems.map((item, index) => (
+              <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-orange-50 p-2 rounded-lg text-[#DABA93]">
+                      <Package className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-800 text-sm">{item.itemName}</h4>
+                      <span className="text-xs text-gray-500">{item.division} - {item.categoryName}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                    No. {index + 1}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex justify-between items-center border-t border-gray-100 pt-3">
+                  <span className="text-xs text-gray-500 font-medium">Quantity</span>
+                  <span className="text-sm font-bold text-gray-800 bg-gray-50 px-3 py-1 rounded-md border border-gray-200">
+                    {item.qty}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-10 bg-white rounded-xl border border-gray-200">
+              <p className="text-gray-500 text-sm">Tidak ada data ditemukan</p>
+            </div>
+          )}
+        </div>
+
+        {/* --- DESKTOP VIEW (TABLE) --- */}
+        {/* Tampil di layar sedang ke atas (md:block) */}
+        <div className="hidden md:block bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              {/* Header: Abu-abu muda, Teks Hitam/Gelap */}
-              <thead className="bg-gray-100 text-gray-900 border-b border-gray-200">
+              <thead className="bg-gray-50 text-gray-900 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 font-bold w-16">No</th>
-                  <th className="px-6 py-4 font-bold">Nama kategori</th>
+                  <th className="px-6 py-4 font-bold w-16 text-center">No</th>
+                  <th className="px-6 py-4 font-bold">Nama Kategori</th>
                   <th className="px-6 py-4 font-bold">Item</th>
                   <th className="px-6 py-4 font-bold text-center">Qty</th>
                 </tr>
               </thead>
-
-              {/* Body: Putih */}
               <tbody className="divide-y divide-gray-200 bg-white">
                 {filteredItems.length > 0 ? (
                   filteredItems.map((item, index) => (
                     <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-gray-500">
+                      <td className="px-6 py-4 text-gray-500 text-center">
                         {index + 1}
                       </td>
                       <td className="px-6 py-4 text-gray-900 font-medium">

@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
-import { Download, Calendar, Search } from 'lucide-react';
+import { Download, Calendar, Search, User, Clock } from 'lucide-react';
 
 // --- Types ---
 interface ActivityLog {
@@ -78,16 +78,25 @@ export default function LaporanAktivitas() {
       })
     : 'Pilih tanggal';
 
+  // Helper untuk warna badge
+  const getBadgeClass = (activity: string) => {
+    const act = activity.toLowerCase();
+    if (act.includes('delete') || act.includes('hapus')) return 'bg-red-50 text-red-700 border-red-100';
+    if (act.includes('create') || act.includes('tambah') || act.includes('login')) return 'bg-green-50 text-green-700 border-green-100';
+    if (act.includes('update') || act.includes('edit')) return 'bg-amber-50 text-amber-700 border-amber-100';
+    return 'bg-blue-50 text-blue-700 border-blue-100';
+  };
+
   return (
     <AppLayout header="Laporan Aktifitas">
       <Head title="Laporan Aktivitas" />
 
       <div className="py-6">
-        {/* Container Utama: Flex col agar pagination bisa didorong ke bawah (mt-auto) */}
-        <div className="rounded-3xl bg-white p-6 md:p-8 shadow-sm border border-gray-100 min-h-[600px] flex flex-col">
+        {/* Container Utama: Padding responsif */}
+        <div className="rounded-3xl bg-white p-4 md:p-8 shadow-sm border border-gray-100 min-h-[600px] flex flex-col">
 
           {/* --- HEADER & FILTERS --- */}
-          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
+          <div className="mb-6 md:mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
             <form onSubmit={handleFilterSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-center w-full md:w-auto">
 
               {/* Tombol Download */}
@@ -143,8 +152,55 @@ export default function LaporanAktivitas() {
             </form>
           </div>
 
-          {/* --- TABEL DATA --- */}
-          <div className="w-full rounded-xl border border-gray-100 bg-white overflow-hidden mb-6">
+          {/* --- MOBILE VIEW (CARDS) --- */}
+          {/* Hanya muncul di layar kecil (< md) */}
+          <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
+            {logs.data.length === 0 ? (
+              <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                Belum ada aktifitas yang tercatat.
+              </div>
+            ) : (
+              logs.data.map((log) => (
+                <div key={log.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all">
+
+                  {/* Card Header: Activity Badge & Time */}
+                  <div className="flex justify-between items-start mb-3">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${getBadgeClass(log.activity)}`}>
+                      {log.activity}
+                    </span>
+                    <div className="text-xs text-gray-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date(log.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} •
+                      {new Date(log.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(/\./g, ':')}
+                    </div>
+                  </div>
+
+                  {/* Card Body: User & Desc */}
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="bg-gray-100 p-2 rounded-full">
+                      <User className="w-4 h-4 text-gray-600" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-800 text-sm">
+                        {log.name || log.username || '-'}
+                      </div>
+                      {log.username && <div className="text-xs text-gray-400">@{log.username}</div>}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-50">
+                    <span className="font-medium text-gray-500 text-xs block mb-1">Keterangan:</span>
+                    {log.description || '-'}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* --- DESKTOP VIEW (TABLE) --- */}
+          {/* Hanya muncul di layar sedang ke atas (md:block) */}
+          <div className="hidden md:block w-full rounded-xl border border-gray-100 bg-white overflow-hidden mb-6">
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead className="bg-gray-50 text-xs font-bold uppercase text-gray-500 border-b border-gray-100">
@@ -193,17 +249,7 @@ export default function LaporanAktivitas() {
                           )}
                         </td>
                         <td className="px-6 py-4 align-top text-center">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border
-                              ${
-                                log.activity.toLowerCase().includes('delete') || log.activity.toLowerCase().includes('hapus')
-                                ? 'bg-red-50 text-red-700 border-red-100'
-                                : log.activity.toLowerCase().includes('create') || log.activity.toLowerCase().includes('tambah') || log.activity.toLowerCase().includes('login')
-                                ? 'bg-green-50 text-green-700 border-green-100'
-                                : log.activity.toLowerCase().includes('update') || log.activity.toLowerCase().includes('edit')
-                                ? 'bg-amber-50 text-amber-700 border-amber-100'
-                                : 'bg-blue-50 text-blue-700 border-blue-100'
-                              }
-                          `}>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${getBadgeClass(log.activity)}`}>
                             {log.activity}
                           </span>
                         </td>
@@ -220,10 +266,10 @@ export default function LaporanAktivitas() {
             </div>
           </div>
 
-          {/* --- PAGINATION (STYLE SAMA DENGAN ITEM.TSX) --- */}
+          {/* --- PAGINATION --- */}
           {logs.links && logs.links.length > 3 && (
             <div className="mt-auto flex justify-center pt-4">
-              <div className="flex gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
+              <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
                 {logs.links.map((link, i) => {
                   let label = link.label;
                   if (label.includes('&laquo;')) label = 'Prev';
@@ -238,7 +284,7 @@ export default function LaporanAktivitas() {
                           router.get(link.url, { date: selectedDate, search }, { preserveScroll: true, preserveState: true });
                         }
                       }}
-                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                      className={`px-3 sm:px-4 py-2 rounded-full text-xs font-medium transition-all ${
                         link.active
                           ? "bg-[#D9A978] text-white shadow-md"
                           : "text-gray-600 hover:bg-white hover:text-[#D9A978]"

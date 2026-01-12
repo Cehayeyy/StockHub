@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Plus } from "lucide-react"; // Tambahkan import 'Plus'
+import { Search, ChevronDown, Plus, Package } from "lucide-react";
 
 type Division = "bar" | "kitchen";
 
@@ -191,14 +191,14 @@ export default function ItemPage() {
       <Head title="Item" />
 
       <div className="py-6">
-        <div className="bg-white p-6 rounded-3xl shadow-inner min-h-[600px] flex flex-col">
+        <div className="bg-white p-4 md:p-6 rounded-3xl shadow-inner min-h-[600px] flex flex-col">
 
           {/* --- FILTER & HEADER --- */}
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-            {/* Division Dropdown (Hanya muncul jika BUKAN staff biasa) */}
+            {/* Division Dropdown */}
             {!isStaff ? (
-              <div className="relative inline-block w-40">
+              <div className="relative inline-block w-full md:w-40">
                 <button
                   type="button"
                   onClick={() => {
@@ -239,17 +239,14 @@ export default function ItemPage() {
                 )}
               </div>
             ) : (
-                // Jika Staff, tampilkan teks biasa tanpa dropdown
                 <div className="px-4 py-2 rounded-full bg-[#F6E1C6] text-sm font-medium text-[#7A4A2B] capitalize w-fit">
-                    {division}
+                  {division}
                 </div>
             )}
 
             {/* Add & Search */}
-            <div className="flex flex-col md:flex-row md:items-center gap-3">
-              {/* Tombol Tambah Item (Biasanya staff tidak boleh tambah master data, tapi sesuaikan logic Anda) */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
               {!isStaff && (
-                  // 🔥 UPDATE STYLE TOMBOL DISINI 🔥
                   <button
                     onClick={() => {
                       setEditId(null);
@@ -257,14 +254,14 @@ export default function ItemPage() {
                       setKategoriId(null);
                       setOpenModal(true);
                     }}
-                    className="flex items-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a]"
+                    className="flex items-center justify-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a] w-full md:w-auto"
                   >
                     <Plus className="h-4 w-4" />
                     Tambah Item
                   </button>
               )}
 
-              <div className="relative">
+              <div className="relative w-full md:w-auto">
                 <input
                   type="text"
                   placeholder="Search...."
@@ -277,15 +274,64 @@ export default function ItemPage() {
                       { preserveScroll: true, preserveState: true }
                     );
                   }}
-                  className="w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:ring-[#D9A978]"
+                  className="w-full md:w-64 rounded-full border border-[#E5C39C] bg-[#FDF3E4] px-4 py-2 pr-10 text-sm focus:ring-[#D9A978]"
                 />
                 <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-[#C38E5F]" />
               </div>
             </div>
           </div>
 
-          {/* --- TABLE (NO SCROLL, RESPONSIVE) --- */}
-          <div className="w-full overflow-x-auto rounded-xl border border-gray-100 bg-white mb-6">
+          {/* --- MOBILE VIEW (CARDS) --- */}
+          {/* Tampil di layar kecil (< md) */}
+          <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
+              {filteredItems.length > 0 ? (
+                  filteredItems.map((item, index) => (
+                      <div key={item.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                          <div className="flex justify-between items-start mb-2">
+                              <div className="flex items-center gap-3">
+                                  <div className="bg-orange-50 p-2 rounded-lg text-[#D9A978]">
+                                      <Package className="w-5 h-5" />
+                                  </div>
+                                  <div>
+                                      <h4 className="font-bold text-gray-800 text-sm">{item.nama}</h4>
+                                      <span className="text-xs text-gray-500">
+                                          {item.item_category ? translateCategoryName(item.item_category.name) : "-"}
+                                      </span>
+                                  </div>
+                              </div>
+                              <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
+                                  {item.satuan ?? "porsi"}
+                              </span>
+                          </div>
+
+                          {!isStaff && (
+                              <div className="flex gap-2 border-t pt-3 mt-3">
+                                  <button
+                                      onClick={() => handleEdit(item)}
+                                      className="flex-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition text-center"
+                                  >
+                                      Edit
+                                  </button>
+                                  <button
+                                      onClick={() => openDeleteConfirm(item.id)}
+                                      className="flex-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition text-center"
+                                  >
+                                      Hapus
+                                  </button>
+                              </div>
+                          )}
+                      </div>
+                  ))
+              ) : (
+                  <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                      <p className="text-gray-500 text-sm">Tidak ada item ditemukan</p>
+                  </div>
+              )}
+          </div>
+
+          {/* --- DESKTOP VIEW (TABLE) --- */}
+          {/* Tampil di layar sedang ke atas (md:block) */}
+          <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-gray-100 bg-white mb-6">
             <table className="w-full text-sm whitespace-nowrap">
               <thead className="bg-[#F3F3F3] text-gray-700 font-semibold border-b">
                 <tr>
@@ -315,8 +361,7 @@ export default function ItemPage() {
                       </td>
                       <td className="p-3 text-center">
                         <div className="flex justify-center gap-2">
-                          {/* Hanya Owner/Supervisor yang boleh Edit/Hapus */}
-                          {!isStaff && (
+                          {!isStaff ? (
                               <>
                                 <button
                                     onClick={() => handleEdit(item)}
@@ -331,8 +376,9 @@ export default function ItemPage() {
                                     Hapus
                                 </button>
                               </>
+                          ) : (
+                              <span className="text-gray-400 text-xs">-</span>
                           )}
-                          {isStaff && <span className="text-gray-400 text-xs">-</span>}
                         </div>
                       </td>
                     </tr>
@@ -348,42 +394,44 @@ export default function ItemPage() {
             </table>
           </div>
 
-          {/* --- PAGINATION (OUTSIDE TABLE) --- */}
-          <div className="mt-auto flex justify-center">
-            <div className="flex gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
-              {safeItems.links.map((link, i) => {
-                 let label = link.label;
-                 if (label.includes('&laquo;')) label = 'Prev';
-                 if (label.includes('&raquo;')) label = 'Next';
+          {/* --- PAGINATION (RESPONSIVE) --- */}
+          {safeItems.links.length > 3 && (
+              <div className="mt-auto flex justify-center pb-4">
+                <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
+                  {safeItems.links.map((link, i) => {
+                    let label = link.label;
+                    if (label.includes('&laquo;')) label = 'Prev';
+                    if (label.includes('&raquo;')) label = 'Next';
 
-                 return (
-                    <button
-                      key={i}
-                      disabled={!link.url}
-                      onClick={() =>
-                        link.url &&
-                        router.get(link.url, {}, { preserveScroll: true })
-                      }
-                      className={`px-4 py-2 rounded-full text-xs font-medium transition-all ${
-                        link.active
-                          ? "bg-[#D9A978] text-white shadow-md"
-                          : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
-                      } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
-                      dangerouslySetInnerHTML={{ __html: label }}
-                    />
-                 );
-              })}
-            </div>
-          </div>
+                    return (
+                      <button
+                        key={i}
+                        disabled={!link.url}
+                        onClick={() =>
+                          link.url &&
+                          router.get(link.url, {}, { preserveScroll: true })
+                        }
+                        className={`px-3 sm:px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                          link.active
+                            ? "bg-[#D9A978] text-white shadow-md"
+                            : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
+                        } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
+                        dangerouslySetInnerHTML={{ __html: label }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+          )}
 
         </div>
       </div>
 
       {/* --- MODAL ADD/EDIT --- */}
       {openModal && !isStaff && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[460px] rounded-3xl shadow-xl p-8 transform transition-all scale-100">
-            <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl p-6 md:p-8 transform transition-all scale-100">
+            <h2 className="text-xl md:text-2xl font-bold text-center mb-6 text-gray-800">
               {editId ? "Edit Item" : "Tambah Item"}
             </h2>
 
@@ -472,19 +520,19 @@ export default function ItemPage() {
                 />
               </div>
 
-              <div className="flex justify-between pt-6">
+              <div className="flex justify-between pt-6 gap-3">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-6 py-2.5 bg-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-300 transition"
+                  className="flex-1 px-4 py-2.5 bg-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-300 transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-[#D9A978] text-white rounded-xl font-bold shadow-md hover:bg-[#c4925e] transition"
+                  className="flex-1 px-4 py-2.5 bg-[#D9A978] text-white rounded-xl font-bold shadow-md hover:bg-[#c4925e] transition"
                 >
-                  {editId ? "Simpan Perubahan" : "Simpan"}
+                  {editId ? "Simpan" : "Tambah"}
                 </button>
               </div>
             </form>
@@ -494,26 +542,26 @@ export default function ItemPage() {
 
       {/* --- MODAL DELETE --- */}
       {openDeleteModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-[400px] rounded-3xl shadow-xl p-8 text-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-xl p-8 text-center">
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               Hapus Item?
             </h2>
 
             <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-              Tindakan ini akan menghapus data item secara permanen dan mungkin mempengaruhi stok terkait.
+              Tindakan ini akan menghapus data item secara permanen.
             </p>
 
             <div className="flex justify-center gap-4">
               <button
-                className="px-6 py-2.5 bg-gray-100 rounded-xl text-gray-700 font-semibold hover:bg-gray-200 transition min-w-[100px]"
+                className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl text-gray-700 font-semibold hover:bg-gray-200 transition"
                 onClick={() => setOpenDeleteModal(false)}
               >
                 Batal
               </button>
 
               <button
-                className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-semibold shadow-md hover:bg-red-600 transition min-w-[100px]"
+                className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl font-semibold shadow-md hover:bg-red-600 transition"
                 onClick={confirmDelete}
               >
                 Hapus

@@ -135,12 +135,6 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
   const isStaff = role !== 'owner' && role !== 'supervisor';
 
-  // Debug logs (bisa dihapus nanti)
-  console.log('ROLE ASLI:', rawRole);
-  console.log('ROLE NORMALIZED:', role);
-  console.log('IS STAFF:', isStaff);
-  console.log("DIVISION FIXED:", division);
-
   // AUTO LOGOUT IDLE 10 MENIT + LOGOUT SAAT BROWSER DITUTUP ATAU DEVICE MATI
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -206,7 +200,9 @@ export default function AppLayout({ header, children }: LayoutProps) {
       .replace(/\./g, ':') + ' WIB';
 
   return (
-    <div className="flex h-screen bg-theme-background">
+    // FIX SCROLL: overflow-hidden di root untuk mencegah scroll body ganda
+    <div className="flex h-screen w-full bg-theme-background overflow-hidden">
+
       {/* Modal Login Berhasil */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -225,9 +221,10 @@ export default function AppLayout({ header, children }: LayoutProps) {
       )}
 
       {/* Sidebar */}
-      <aside className="w-64 bg-[#502A07] text-white/90 p-5 flex flex-col">
+      {/* FIX SCROLL: flex-shrink-0 (agar lebar tetap), overflow-y-auto (agar menu bisa discroll sendiri) */}
+      <aside className="w-64 bg-[#502A07] text-white/90 p-5 flex flex-col flex-shrink-0 h-full overflow-y-auto hidden md:flex">
         {/* Profil User + Nama Warung */}
-        <div className="flex items-center mb-8">
+        <div className="flex items-center mb-8 flex-shrink-0">
           <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
             <span className="text-xl font-bold text-theme-sidebar">
               {auth.user.name.charAt(0)}
@@ -341,7 +338,6 @@ export default function AppLayout({ header, children }: LayoutProps) {
             )}
           </div>
 
-          {/* 🔥 UPDATE: VERIFIKASI STOK - GUNAKAN ROUTE NAME YANG BENAR */}
           <SidebarLink href="verifikasi-stok.index" icon={ClipboardCheck}>
             Verifikasi Stok
           </SidebarLink>
@@ -356,7 +352,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
         </nav>
 
         {/* TOMBOL KELUAR */}
-        <div>
+        <div className="mt-auto pt-4 flex-shrink-0">
           <Link
             href={route('logout')}
             method="post"
@@ -370,8 +366,11 @@ export default function AppLayout({ header, children }: LayoutProps) {
       </aside>
 
       {/* AREA KANAN */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm p-6">
+      {/* FIX SCROLL: min-w-0 agar konten tidak melebar paksa keluar layar */}
+      <div className="flex-1 flex flex-col h-screen min-w-0 bg-gray-50 relative">
+
+        {/* Header */}
+        <header className="bg-white shadow-sm p-6 flex-shrink-0 z-10 w-full">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <img
@@ -380,7 +379,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
                 className="h-10"
               />
               {header && (
-                <div className="ml-6 text-2xl font-semibold text-gray-800">
+                <div className="ml-6 text-2xl font-semibold text-gray-800 hidden md:block">
                   {header}
                 </div>
               )}
@@ -402,7 +401,11 @@ export default function AppLayout({ header, children }: LayoutProps) {
         </header>
 
         {/* KONTEN HALAMAN */}
-        <main className="flex-1 p-8 overflow-y-visible">{children}</main>
+        {/* FIX SCROLL: overflow-y-auto di sini agar hanya area ini yang discroll */}
+        {/* overflow-y-visible diganti jadi overflow-y-auto + min-h-0 */}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full min-h-0">
+            {children}
+        </main>
       </div>
     </div>
   );
