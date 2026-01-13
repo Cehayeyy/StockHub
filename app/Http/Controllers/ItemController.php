@@ -4,11 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\ItemCategory;
-use App\Models\ActivityLog; // Import Model Log
+use App\Models\ActivityLog;
+use App\Models\Recipe;
+use App\Models\StokHarianMenu;
+use App\Models\StokHarianMentah;
+use App\Models\StokHarianDapurMenu;
+use App\Models\StokHarianDapurMentah;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ItemController extends Controller
 {
@@ -97,7 +103,6 @@ class ItemController extends Controller
 
         $cat = ItemCategory::create($data);
 
-        // LOG AKTIVITAS
         ActivityLog::create([
             'user_id'     => Auth::id(),
             'activity'    => 'Tambah Kategori',
@@ -131,7 +136,6 @@ class ItemController extends Controller
 
         $item = Item::create($data);
 
-        // LOG AKTIVITAS
         ActivityLog::create([
             'user_id'     => Auth::id(),
             'activity'    => 'Tambah Item',
@@ -166,7 +170,6 @@ class ItemController extends Controller
 
         $item->update($data);
 
-        // LOG AKTIVITAS
         ActivityLog::create([
             'user_id'     => Auth::id(),
             'activity'    => 'Update Item',
@@ -178,19 +181,57 @@ class ItemController extends Controller
             ->with('success', 'Item berhasil diupdate!');
     }
 
-    public function destroy(Item $item)
+    // --- PERBAIKAN UTAMA DI SINI ---
+    public function destroy($id)
     {
+        $item = Item::findOrFail($id);
         $division = $item->division;
         $name = $item->nama;
 
-        $item->delete();
+        DB::transaction(function () use ($item, $name) {
+            // 1. Hapus Relasi Resep (Jika ada)
+            // Cari resep yang terhubung (bisa via nama atau item_id)
+            $relatedRecipes = Recipe::where('name', $item->nama)
+                                    ->orWhere('item_id', $item->id)
+                                    ->get();
 
-        // LOG AKTIVITAS
-        ActivityLog::create([
-            'user_id'     => Auth::id(),
-            'activity'    => 'Hapus Item',
-            'description' => "Menghapus item master '{$name}'."
-        ]);
+            foreach ($relatedRecipes as $recipe) {
+                // Hapus Stok Dapur Menu (Pakai recipe_id)
+                StokHarianDapurMenu::where('recipe_id', $recipe->id)->delete();
+
+                // HAPUS Stok Menu Bar (Jika ada, Bar biasanya pakai item_id, jadi skip recipe_id disini agar tidak error)
+                // Jika Bar juga pakai recipe_id di tabelnya, baru uncomment ini.
+                // Tapi error Anda bilang kolom recipe_id tidak ada di stok_harian_menu.
+                // StokHarianMenu::where('recipe_id', $recipe->id)->delete(); // <-- INI YANG BIKIN ERROR, DIHAPUS.
+
+                // Hapus Resep
+                $recipe->delete();
+            }
+
+            // 2. Hapus Stok Harian yang terhubung via ITEM_ID (Direct Link)
+            // Ini menangani Bar Menu & Bar Mentah & Dapur Mentah
+
+            // Bar Mentah
+            StokHarianMentah::where('item_id', $item->id)->delete();
+
+            // Bar Menu (Tabel stok_harian_menu pakai item_id)
+            StokHarianMenu::where('item_id', $item->id)->delete();
+
+            // Dapur Mentah
+            StokHarianDapurMentah::where('item_id', $item->id)->delete();
+
+            // Dapur Menu (Biasanya pakai recipe_id, sudah dihandle di atas.
+            // Jangan hapus by item_id jika kolomnya tidak ada di tabel stok_harian_dapur_menu)
+
+            // 3. Hapus Item Utama
+            $item->delete();
+
+            ActivityLog::create([
+                'user_id'     => Auth::id(),
+                'activity'    => 'Hapus Item',
+                'description' => "Menghapus item master '{$name}' dan seluruh data terkait."
+            ]);
+        });
 
         return redirect()
             ->route('item.index', ['division' => $division])
@@ -210,7 +251,6 @@ class ItemController extends Controller
 
         $itemCategory->delete();
 
-        // LOG AKTIVITAS
         ActivityLog::create([
             'user_id'     => Auth::id(),
             'activity'    => 'Hapus Kategori',

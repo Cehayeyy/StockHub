@@ -21,80 +21,53 @@ class DashboardController extends Controller
         $user = $request->user();
         $today = Carbon::today()->toDateString();
 
-        // ================= 1. AUTO UPDATE STATUS =================
-        if ($user->role === 'bar') {
-            DB::table('stok_harian_menu')
-                ->whereDate('tanggal', $today)
-                ->where('user_id', $user->id)
-                ->update(['is_submitted' => true]);
-        } elseif (in_array($user->role, ['dapur', 'kitchen', 'staff_kitchen'])) {
-            try {
-                DB::table('stok_harian_dapur_menu')
-                    ->whereDate('tanggal', $today)
-                    ->where('user_id', $user->id)
-                    ->update(['is_submitted' => true]);
-            } catch (\Exception $e) {
-                // Ignore if the table is not ready
-            }
-        }
-
-        // ================= 2. CHECK STATUS INPUT TODAY =================
+        // ================= 1. CHECK STATUS INPUT HARI INI =================
         $alreadyInputToday = false;
+
         if ($user->role === 'bar') {
+            // Cek tabel Bar
             $alreadyInputToday = DB::table('stok_harian_menu')
                 ->whereDate('tanggal', $today)
                 ->where('user_id', $user->id)
-                ->where('is_submitted', true)
+                ->where('is_submitted', 1)
                 ->exists();
+
         } elseif (in_array($user->role, ['dapur', 'kitchen', 'staff_kitchen'])) {
+            // Cek tabel Dapur
+            // Kita bungkus try-catch agar tidak error jika tabel belum ada (saat migrasi awal)
             try {
+                // Cek apakah ada setidaknya satu item menu yang sudah disubmit oleh user ini hari ini
                 $alreadyInputToday = DB::table('stok_harian_dapur_menu')
                     ->whereDate('tanggal', $today)
-                    ->where('user_id', $user->id)
-                    ->where('is_submitted', true)
+                    ->where('user_id', $user->id) // Sesuai dengan update di StokHarianDapurController
+                    ->where('is_submitted', 1)
                     ->exists();
             } catch (\Exception $e) {
-                // Ignore if the table is not ready
+                $alreadyInputToday = false;
             }
         }
 
-        // ✅ FIX: Log::info sekarang akan berfungsi
-        Log::info('Dashboard Access', [
-            'user' => $user->name,
-            'role' => $user->role,
-            'alreadyInputToday' => $alreadyInputToday
-        ]);
-
-        // ================= 3. HITUNG STATISTIK BAR =================
-        $barMenu = DB::table('stok_harian_menu')
-            ->whereDate('tanggal', $today)
-            ->where('user_id', $user->id)
-            ->count();
-
+        // ================= 2. HITUNG STATISTIK BAR =================
+        $barMenu = DB::table('stok_harian_menu')->whereDate('tanggal', $today)->count();
         $barMenuHabis = DB::table('stok_harian_menu')
             ->whereDate('tanggal', $today)
-            ->where('user_id', $user->id)
             ->where('stok_akhir', '>', 0)
             ->where('stok_akhir', '<=', 5)
             ->count();
 
-        $barMentah = DB::table('stok_harian_mentah')
-            ->whereDate('tanggal', $today)
-            ->count();
-
+        $barMentah = DB::table('stok_harian_mentah')->whereDate('tanggal', $today)->count();
         $barMentahHabis = DB::table('stok_harian_mentah')
             ->whereDate('tanggal', $today)
             ->where('stok_akhir', '>', 0)
             ->where('stok_akhir', '<=', 5)
             ->count();
 
-        // ================= 4. HITUNG STATISTIK DAPUR =================
+        // ================= 3. HITUNG STATISTIK DAPUR =================
         $dapurMenu = 0;
         $dapurMenuHabis = 0;
         $dapurMentah = 0;
         $dapurMentahHabis = 0;
 
-        // Bungkus try-catch agar Dashboard tidak error total jika tabel dapur belum ada
         try {
             $dapurMenu = DB::table('stok_harian_dapur_menu')->whereDate('tanggal', $today)->count();
 
@@ -112,29 +85,25 @@ class DashboardController extends Controller
                 ->where('stok_akhir', '<=', 5)
                 ->count();
         } catch (\Exception $e) {
-            // Tabel dapur belum siap, nilai tetap 0
+            // Ignore if table not found
         }
 
-        // ================= 5. TOTAL DATA =================
+        // ================= 4. TOTAL DATA =================
         $totalStokHarian = $barMenu + $barMentah + $dapurMenu + $dapurMentah;
         $stokHampirHabis = $barMenuHabis + $barMentahHabis + $dapurMenuHabis + $dapurMentahHabis;
 
-        // ================= 6. IZIN REVISI =================
+        // ================= 5. IZIN REVISI =================
         $izinRevisiPending = DB::table('izin_revisi')
             ->join('users', 'izin_revisi.user_id', '=', 'users.id')
             ->where('izin_revisi.status', 'pending')
-            ->select(
-                'izin_revisi.id',
-                'users.name',
-                'users.role'
-            )
+            ->select('izin_revisi.id', 'users.name', 'users.role')
             ->get();
 
         $izinPending = IzinRevisi::where('user_id', $user->id)
             ->where('status', 'pending')
             ->exists();
 
-        // ================= 7. DATA PREPARATION =================
+        // ================= 6. DATA PREPARATION =================
         $data = [
             'totalItem'         => Item::count(),
             'totalResep'        => Recipe::count(),
@@ -143,7 +112,7 @@ class DashboardController extends Controller
             'izinRevisiPending' => $izinRevisiPending,
             'totalStokHarian'   => $totalStokHarian,
             'stokHampirHabis'   => $stokHampirHabis,
-            'alreadyInputToday' => $alreadyInputToday,
+            'alreadyInputToday' => $alreadyInputToday, // Variabel penting untuk mengubah tampilan Dashboard
             'izinPending'       => $izinPending,
             'flash'             => [
                 'success' => session('success'),
@@ -151,7 +120,7 @@ class DashboardController extends Controller
             ],
         ];
 
-        // ================= 8. RETURN VIEW =================
+        // ================= 7. RETURN VIEW =================
 
         // Jika Supervisor / Owner
         if (in_array($user->role, ['owner', 'supervisor'])) {
