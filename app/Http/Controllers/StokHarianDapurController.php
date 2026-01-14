@@ -9,6 +9,7 @@ use App\Models\StokHarianDapurMentah;
 use App\Models\Recipe;
 use App\Models\Item;
 use App\Models\ActivityLog;
+use App\Models\IzinRevisi;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -237,6 +238,12 @@ class StokHarianDapurController extends Controller
                 'activity'    => 'Input Pemakaian Dapur',
                 'description' => "Input pemakaian '{$recipe->name}': {$newUsage} porsi."
             ]);
+
+            // Tandai izin revisi sebagai used jika ada
+            IzinRevisi::where('user_id', Auth::id())
+                ->where('status', 'approved')
+                ->where('end_time', '>', Carbon::now())
+                ->update(['status' => 'used']);
         });
 
         // Redirect Back (UX)

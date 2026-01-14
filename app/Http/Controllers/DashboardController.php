@@ -52,21 +52,31 @@ class DashboardController extends Controller
         $barMenuHabis = DB::table('stok_harian_menu')
             ->whereDate('tanggal', $today)
             ->where('stok_akhir', '>', 0)
-            ->where('stok_akhir', '<=', 5)
+            ->where('stok_akhir', '<=', 7)
+            ->count();
+        $barMenuHabisTotal = DB::table('stok_harian_menu')
+            ->whereDate('tanggal', $today)
+            ->where('stok_akhir', '=', 0)
             ->count();
 
         $barMentah = DB::table('stok_harian_mentah')->whereDate('tanggal', $today)->count();
         $barMentahHabis = DB::table('stok_harian_mentah')
             ->whereDate('tanggal', $today)
             ->where('stok_akhir', '>', 0)
-            ->where('stok_akhir', '<=', 5)
+            ->where('stok_akhir', '<=', 7)
+            ->count();
+        $barMentahHabisTotal = DB::table('stok_harian_mentah')
+            ->whereDate('tanggal', $today)
+            ->where('stok_akhir', '=', 0)
             ->count();
 
         // ================= 3. HITUNG STATISTIK DAPUR =================
         $dapurMenu = 0;
         $dapurMenuHabis = 0;
+        $dapurMenuHabisTotal = 0;
         $dapurMentah = 0;
         $dapurMentahHabis = 0;
+        $dapurMentahHabisTotal = 0;
 
         try {
             $dapurMenu = DB::table('stok_harian_dapur_menu')->whereDate('tanggal', $today)->count();
@@ -74,7 +84,12 @@ class DashboardController extends Controller
             $dapurMenuHabis = DB::table('stok_harian_dapur_menu')
                 ->whereDate('tanggal', $today)
                 ->where('stok_akhir', '>', 0)
-                ->where('stok_akhir', '<=', 5)
+                ->where('stok_akhir', '<=', 7)
+                ->count();
+
+            $dapurMenuHabisTotal = DB::table('stok_harian_dapur_menu')
+                ->whereDate('tanggal', $today)
+                ->where('stok_akhir', '=', 0)
                 ->count();
 
             $dapurMentah = DB::table('stok_harian_dapur_mentah')->whereDate('tanggal', $today)->count();
@@ -82,7 +97,12 @@ class DashboardController extends Controller
             $dapurMentahHabis = DB::table('stok_harian_dapur_mentah')
                 ->whereDate('tanggal', $today)
                 ->where('stok_akhir', '>', 0)
-                ->where('stok_akhir', '<=', 5)
+                ->where('stok_akhir', '<=', 7)
+                ->count();
+
+            $dapurMentahHabisTotal = DB::table('stok_harian_dapur_mentah')
+                ->whereDate('tanggal', $today)
+                ->where('stok_akhir', '=', 0)
                 ->count();
         } catch (\Exception $e) {
             // Ignore if table not found
@@ -91,6 +111,7 @@ class DashboardController extends Controller
         // ================= 4. TOTAL DATA =================
         $totalStokHarian = $barMenu + $barMentah + $dapurMenu + $dapurMentah;
         $stokHampirHabis = $barMenuHabis + $barMentahHabis + $dapurMenuHabis + $dapurMentahHabis;
+        $stokHabis = $barMenuHabisTotal + $barMentahHabisTotal + $dapurMenuHabisTotal + $dapurMentahHabisTotal;
 
         // ================= 5. IZIN REVISI =================
         $izinRevisiPending = DB::table('izin_revisi')
@@ -103,15 +124,59 @@ class DashboardController extends Controller
             ->where('status', 'pending')
             ->exists();
 
+        // Cek izin revisi yang sudah approved dan masih aktif (belum melewati end_time)
+        $izinApproved = IzinRevisi::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where('end_time', '>', Carbon::now())
+            ->first();
+
         // ================= 6. DATA PREPARATION =================
+
+        // Tentukan divisi berdasarkan role user
+        $userDivision = null;
+        if ($user->role === 'bar') {
+            $userDivision = 'bar';
+        } elseif (in_array($user->role, ['dapur', 'kitchen', 'staff_kitchen'])) {
+            $userDivision = 'kitchen'; // atau 'dapur' tergantung nilai di database
+        }
+
+        // Hitung total berdasarkan role
+        if (in_array($user->role, ['owner', 'supervisor'])) {
+            // Supervisor/Owner melihat semua data
+            $totalItem = Item::count();
+            $totalResep = Recipe::count();
+            $totalKategori = ItemCategory::count();
+            $totalStokHarianFiltered = $totalStokHarian;
+            $stokHampirHabisFiltered = $stokHampirHabis;
+            $stokHabisFiltered = $stokHabis;
+        } elseif ($user->role === 'bar') {
+            // Staff Bar hanya melihat data bar
+            $totalItem = Item::where('division', 'bar')->count();
+            $totalResep = Recipe::where('division', 'bar')->count();
+            $totalKategori = ItemCategory::where('division', 'bar')->count();
+            $totalStokHarianFiltered = $barMenu + $barMentah;
+            $stokHampirHabisFiltered = $barMenuHabis + $barMentahHabis;
+            $stokHabisFiltered = $barMenuHabisTotal + $barMentahHabisTotal;
+        } else {
+            // Staff Dapur/Kitchen hanya melihat data dapur
+            // Handle both 'kitchen' and 'dapur' values untuk kompatibilitas
+            $totalItem = Item::whereIn('division', ['kitchen', 'dapur'])->count();
+            $totalResep = Recipe::whereIn('division', ['kitchen', 'dapur'])->count();
+            $totalKategori = ItemCategory::whereIn('division', ['kitchen', 'dapur'])->count();
+            $totalStokHarianFiltered = $dapurMenu + $dapurMentah;
+            $stokHampirHabisFiltered = $dapurMenuHabis + $dapurMentahHabis;
+            $stokHabisFiltered = $dapurMenuHabisTotal + $dapurMentahHabisTotal;
+        }
+
         $data = [
-            'totalItem'         => Item::count(),
-            'totalResep'        => Recipe::count(),
-            'totalKategori'     => ItemCategory::count(),
+            'totalItem'         => $totalItem,
+            'totalResep'        => $totalResep,
+            'totalKategori'     => $totalKategori,
             'totalUser'         => User::count(),
             'izinRevisiPending' => $izinRevisiPending,
-            'totalStokHarian'   => $totalStokHarian,
-            'stokHampirHabis'   => $stokHampirHabis,
+            'totalStokHarian'   => $totalStokHarianFiltered,
+            'stokHampirHabis'   => $stokHampirHabisFiltered,
+            'stokHabis'         => $stokHabisFiltered,
             'alreadyInputToday' => $alreadyInputToday, // Variabel penting untuk mengubah tampilan Dashboard
             'izinPending'       => $izinPending,
             'flash'             => [
@@ -131,6 +196,10 @@ class DashboardController extends Controller
         if (in_array($user->role, ['bar', 'dapur', 'kitchen', 'staff_kitchen'])) {
             return Inertia::render('DashboardStaff', array_merge($data, [
                 'alreadyRequestedRevision' => $izinPending,
+                'izinApproved' => $izinApproved ? [
+                    'start_time' => $izinApproved->start_time->toIso8601String(),
+                    'end_time' => $izinApproved->end_time->toIso8601String(),
+                ] : null,
             ]));
         }
 

@@ -12,6 +12,13 @@ class IzinRevisi extends Model
         'user_id',
         'role',
         'status',
+        'start_time',
+        'end_time',
+    ];
+
+    protected $casts = [
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
     ];
 
     public function user()

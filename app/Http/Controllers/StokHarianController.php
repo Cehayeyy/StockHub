@@ -9,6 +9,7 @@ use App\Models\StokHarianMentah;
 use App\Models\Recipe;
 use App\Models\Item;
 use App\Models\ActivityLog;
+use App\Models\IzinRevisi;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -263,6 +264,12 @@ class StokHarianController extends Controller
                 'activity'    => 'Input Pemakaian Bar',
                 'description' => "Input pemakaian '{$item->nama}': {$newUsage}."
             ]);
+
+            // Tandai izin revisi sebagai used jika ada
+            IzinRevisi::where('user_id', Auth::id())
+                ->where('status', 'approved')
+                ->where('end_time', '>', Carbon::now())
+                ->update(['status' => 'used']);
         });
 
         return back()->with('success', 'Stok menu tersimpan.');
