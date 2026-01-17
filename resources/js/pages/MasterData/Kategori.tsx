@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
 import { Search, ChevronDown, X, Plus, Box, Layers } from "lucide-react";
 
-type Division = "bar" | "kitchen";
+type Division = "bar" | "dapur";
 
 interface CategoryItem {
   id: number;
@@ -65,7 +65,7 @@ export default function KategoriPage() {
   } = usePage<PageProps & { auth: any }>().props;
 
   const role = auth.user.role;
-  const isStaff = role === "bar" || role === "kitchen";
+  const isStaff = role === "bar" || role === "dapur";
   const staffDivision = isStaff ? role : serverDivision;
 
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
@@ -190,7 +190,7 @@ export default function KategoriPage() {
     });
   };
 
-  const titleDivisionLabel = staffDivision === "bar" ? "Bar" : "Kitchen";
+  const titleDivisionLabel = staffDivision === "bar" ? "Bar" : "Dapur";
 
   return (
     <AppLayout header={`Kategori ${titleDivisionLabel}`}>
@@ -239,14 +239,14 @@ export default function KategoriPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => changeDivision("kitchen")}
+                          onClick={() => changeDivision("dapur")}
                           className={`block w-full rounded-b-2xl px-4 py-2 text-left ${
-                            serverDivision === "kitchen"
+                            serverDivision === "dapur"
                               ? "bg-[#F6E1C6] font-semibold"
                               : ""
                           }`}
                         >
-                          Kitchen
+                          Dapur
                         </button>
                       </div>
                     )}

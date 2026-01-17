@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
 import { Search, ChevronDown, Plus, Package } from "lucide-react";
 
-type Division = "bar" | "kitchen";
+type Division = "bar" | "dapur";
 
 type ItemCategory = {
   id: number;
@@ -79,7 +79,7 @@ export default function ItemPage() {
 
   // --- LOGIKA ROLE & DIVISION (MERGED) ---
   const role = auth?.user?.role;
-  const isStaff = role === "bar" || role === "kitchen";
+  const isStaff = role === "bar" || role === "dapur";
   const userDivision = isStaff ? (role as Division) : null;
 
   const safeItems: PaginatedItems = {
@@ -208,7 +208,7 @@ export default function ItemPage() {
                   className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B]"
                 >
                   <span className="capitalize">
-                    {division === "bar" ? "Bar" : "Kitchen"}
+                    {division === "bar" ? "Bar" : "Dapur"}
                   </span>
                   <ChevronDown
                     className={`h-4 w-4 transition-transform ${
@@ -228,12 +228,12 @@ export default function ItemPage() {
                       Bar
                     </button>
                     <button
-                      onClick={() => changeDivision("kitchen")}
+                      onClick={() => changeDivision("dapur")}
                       className={`block w-full px-4 py-2 text-left ${
-                        division === "kitchen" ? "bg-[#F6E1C6] font-semibold" : ""
+                        division === "dapur" ? "bg-[#F6E1C6] font-semibold" : ""
                       }`}
                     >
-                      Kitchen
+                      Dapur
                     </button>
                   </div>
                 )}
@@ -455,7 +455,7 @@ export default function ItemPage() {
                 <input
                   type="text"
                   readOnly
-                  value={division === "bar" ? "Bar" : "Kitchen"}
+                  value={division === "bar" ? "Bar" : "Dapur"}
                   className="w-full bg-gray-100 rounded-xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed"
                 />
               </div>

@@ -85,7 +85,7 @@ const CountdownTimer = ({ endTime }: { endTime: string }) => {
   );
 };
 
-// Komponen Card Statistik Atas - Simple dan formal dengan warna sama
+// Komponen Card Statistik Atas - Simple dan formal dengan warna sama - RESPONSIVE
 const InfoCard = ({
   title,
   value,
@@ -96,16 +96,16 @@ const InfoCard = ({
     onClick={onClick}
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
-    className={`bg-[#F9F6F3] p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 ${
-      onClick ? "cursor-pointer hover:bg-[#F0EBE5] transition" : ""
+    className={`bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 ${
+      onClick ? "cursor-pointer hover:bg-[#F0EBE5] transition active:scale-95" : ""
     }`}
   >
-    <div className="w-12 h-12 bg-[#8B5E3C] rounded-xl flex items-center justify-center text-white shadow-sm">
-      <Icon size={24} />
+    <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-[#8B5E3C] rounded-lg sm:rounded-xl flex items-center justify-center text-white shadow-sm flex-shrink-0">
+      <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
     </div>
-    <div>
-      <p className="text-sm text-gray-500 font-medium">{title}</p>
-      <p className="text-3xl font-extrabold text-gray-800">
+    <div className="min-w-0">
+      <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">{title}</p>
+      <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-800">
         <CountUp end={value} duration={1.2} />
       </p>
     </div>
@@ -149,29 +149,31 @@ export default function DashboardStaff() {
       <Head title="Dashboard Staff" />
 
       {/* FLASH MESSAGE (Notifikasi Sukses/Gagal) */}
-      <div className="space-y-4 mb-6">
+      <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
         {flash?.error && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 font-medium">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg sm:rounded-xl bg-red-50 border border-red-200 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-700 font-medium">
             ❌ {flash.error}
           </motion.div>
         )}
         {flash?.success && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 font-medium">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg sm:rounded-xl bg-green-50 border border-green-200 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-green-700 font-medium">
             ✅ {flash.success}
           </motion.div>
         )}
       </div>
 
-      <div className="space-y-8 pb-10">
+      <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-6 sm:pb-8 md:pb-10">
 
-        {/* 1. CARD STATISTIK - Warna sama */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 1. CARD STATISTIK - Warna sama - RESPONSIVE */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <InfoCard title="Total Item" value={totalItem} icon={Layers} onClick={() => router.visit("/item")} />
           <InfoCard title="Total Resep" value={totalResep} icon={BookOpen} onClick={() => router.visit("/resep")} />
-          <InfoCard title="Total Kategori" value={totalKategori} icon={Box} onClick={() => router.visit("/kategori")} />
+          <div className="col-span-2 md:col-span-1">
+            <InfoCard title="Total Kategori" value={totalKategori} icon={Box} onClick={() => router.visit("/kategori")} />
+          </div>
         </div>
 
-        {/* 2. STATUS STOK - 3 Kategori */}
+        {/* 2. STATUS STOK - 3 Kategori - RESPONSIVE */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -179,18 +181,18 @@ export default function DashboardStaff() {
             if (auth.user.role === "bar") router.visit("/stok-harian/bar");
             else if (["dapur", "kitchen", "staff_kitchen"].includes(auth.user.role)) router.visit("/stok-harian/dapur");
           }}
-          className="bg-[#F9F6F3] p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:bg-[#F0EBE5] transition"
+          className="bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:bg-[#F0EBE5] transition active:scale-[0.99]"
         >
-          <div className="mb-4">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <TrendingUp size={20} className="text-[#8B5E3C]" />
+          <div className="mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B5E3C]" />
               Status Stok Harian
             </h3>
-            <p className="text-sm text-gray-500 mt-1">Klik untuk melihat detail stok</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Klik untuk melihat detail stok</p>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="relative w-full md:w-1/2 h-[200px]">
+          <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6">
+            <div className="relative w-full md:w-1/2 h-[160px] sm:h-[180px] md:h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -198,8 +200,8 @@ export default function DashboardStaff() {
                     dataKey="value"
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
+                    innerRadius={45}
+                    outerRadius={65}
                     paddingAngle={3}
                     stroke="none"
                   >
@@ -217,85 +219,85 @@ export default function DashboardStaff() {
               </ResponsiveContainer>
               {/* Center Text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-bold text-gray-800">{totalStokHarian}</span>
+                <span className="text-xl sm:text-2xl font-bold text-gray-800">{totalStokHarian}</span>
                 <span className="text-xs text-gray-500">Total</span>
               </div>
             </div>
 
-            {/* Legend kustom dengan 3 kategori */}
-            <div className="w-full md:w-1/2 space-y-3">
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
+            {/* Legend kustom dengan 3 kategori - RESPONSIVE */}
+            <div className="w-full md:w-1/2 space-y-2 sm:space-y-3">
+              <div className="flex items-center justify-between p-2 sm:p-3 bg-red-50 rounded-lg sm:rounded-xl border border-red-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500 flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-gray-700 text-sm">Stok Habis</span>
-                    <p className="text-xs text-gray-500">Stok = 0</p>
+                    <span className="font-medium text-gray-700 text-xs sm:text-sm">Stok Habis</span>
+                    <p className="text-[10px] sm:text-xs text-gray-500 hidden sm:block">Stok = 0</p>
                   </div>
                 </div>
-                <span className="text-xl font-bold text-red-600">{stokHabis || 0}</span>
+                <span className="text-lg sm:text-xl font-bold text-red-600">{stokHabis || 0}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+              <div className="flex items-center justify-between p-2 sm:p-3 bg-amber-50 rounded-lg sm:rounded-xl border border-amber-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500 flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-gray-700 text-sm">Hampir Habis</span>
-                    <p className="text-xs text-gray-500">Stok 1-7</p>
+                    <span className="font-medium text-gray-700 text-xs sm:text-sm">Hampir Habis</span>
+                    <p className="text-[10px] sm:text-xs text-gray-500 hidden sm:block">Stok 1-7</p>
                   </div>
                 </div>
-                <span className="text-xl font-bold text-amber-600">{stokHampirHabis || 0}</span>
+                <span className="text-lg sm:text-xl font-bold text-amber-600">{stokHampirHabis || 0}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl border border-green-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+              <div className="flex items-center justify-between p-2 sm:p-3 bg-green-50 rounded-lg sm:rounded-xl border border-green-100">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500 flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-gray-700 text-sm">Stok Aman</span>
-                    <p className="text-xs text-gray-500">Stok &gt; 7</p>
+                    <span className="font-medium text-gray-700 text-xs sm:text-sm">Stok Aman</span>
+                    <p className="text-[10px] sm:text-xs text-gray-500 hidden sm:block">Stok &gt; 7</p>
                   </div>
                 </div>
-                <span className="text-xl font-bold text-green-600">{stokAman}</span>
+                <span className="text-lg sm:text-xl font-bold text-green-600">{stokAman}</span>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* 3. CARD IZIN REVISI - Desain lebih clean */}
+        {/* 3. CARD IZIN REVISI - Desain lebih clean - RESPONSIVE */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+          className="bg-white p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100"
         >
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-              <ShieldCheck size={20} className="text-amber-600" />
+          <div className="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800">Izin Revisi Stok</h3>
-              <p className="text-sm text-gray-500">Ajukan izin untuk mengubah stok yang sudah disubmit</p>
+              <h3 className="font-bold text-gray-800 text-sm sm:text-base">Izin Revisi Stok</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Ajukan izin untuk mengubah stok yang sudah disubmit</p>
             </div>
           </div>
 
           {/* Tampilkan Timer jika izin sudah disetujui */}
           {izinApproved ? (
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-green-50 text-green-700 rounded-full text-xs sm:text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 Izin Disetujui
               </div>
 
-              <div className="bg-gray-50 p-5 rounded-xl">
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-3">Sisa Waktu Revisi</p>
+              <div className="bg-gray-50 p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl">
+                <p className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2 sm:mb-3">Sisa Waktu Revisi</p>
                 <CountdownTimer endTime={izinApproved.end_time} />
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 text-xs text-gray-500 pt-2">
-                <div className="flex items-center gap-2">
-                  <Clock size={14} />
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-500 pt-1 sm:pt-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   <span>Mulai: {new Date(izinApproved.start_time).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })} WIB</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={14} />
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   <span>Selesai: {new Date(izinApproved.end_time).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })} WIB</span>
                 </div>
               </div>
@@ -304,10 +306,10 @@ export default function DashboardStaff() {
             <button
               onClick={ajukanRevisi}
               disabled={alreadyRequestedRevision}
-              className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition ${
+              className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition ${
                 alreadyRequestedRevision
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-[#8B5E3C] text-white hover:bg-[#6F4E37]'
+                  : 'bg-[#8B5E3C] text-white hover:bg-[#6F4E37] active:scale-95'
               }`}
             >
               {alreadyRequestedRevision ? "Menunggu Persetujuan..." : "Ajukan Izin Revisi"}
@@ -315,36 +317,36 @@ export default function DashboardStaff() {
           )}
         </motion.div>
 
-        {/* 4. CARD INPUT HARIAN - Desain lebih clean */}
+        {/* 4. CARD INPUT HARIAN - Desain lebih clean - RESPONSIVE */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+          className="bg-white p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100"
         >
           {alreadyInputToday && !izinApproved ? (
             // --- TAMPILAN SESUDAH DISIMPAN ---
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-bold text-gray-800">Stok Harian Sudah Tersimpan</h3>
-                <p className="text-sm text-gray-500">Data stok harian hari ini sudah berhasil disimpan</p>
+                <h3 className="font-bold text-gray-800 text-sm sm:text-base">Stok Harian Sudah Tersimpan</h3>
+                <p className="text-xs sm:text-sm text-gray-500">Data stok harian hari ini sudah berhasil disimpan</p>
               </div>
             </div>
           ) : (
             // --- TAMPILAN SEBELUM INPUT atau IZIN REVISI AKTIF ---
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#8B5E3C]/10 rounded-xl flex items-center justify-center">
-                  <Layers size={24} className="text-[#8B5E3C]" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8B5E3C]/10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B5E3C]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-800">Input Stok Harian</h3>
-                  <p className="text-sm text-gray-500">Catat stok harian untuk divisi kamu</p>
+                  <h3 className="font-bold text-gray-800 text-sm sm:text-base">Input Stok Harian</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">Catat stok harian untuk divisi kamu</p>
                 </div>
               </div>
 
@@ -357,9 +359,9 @@ export default function DashboardStaff() {
                     router.visit("/stok-harian/dapur?tab=menu&autoInput=1");
                   }
                 }}
-                className="w-full sm:w-auto px-6 py-3 bg-[#8B5E3C] text-white rounded-xl hover:bg-[#6F4E37] transition font-semibold text-sm flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-[#8B5E3C] text-white rounded-lg sm:rounded-xl hover:bg-[#6F4E37] transition font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
                 Mulai Input

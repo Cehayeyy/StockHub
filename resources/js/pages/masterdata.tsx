@@ -5,7 +5,7 @@ import { Search, Package, Box, Filter } from 'lucide-react';
 
 interface ItemData {
   id: number;
-  division: 'Bar' | 'Kitchen';
+  division: 'Bar' | 'Dapur';
   category: 'Finish' | 'Semi finish' | 'Raw';
   categoryName: string;
   itemName: string;
@@ -14,7 +14,7 @@ interface ItemData {
 
 export default function MasterData() {
   // --- STATE ---
-  const [activeDivision, setActiveDivision] = useState<'Bar' | 'Kitchen'>('Bar');
+  const [activeDivision, setActiveDivision] = useState<'Bar' | 'Dapur'>('Bar');
   const [activeCategory, setActiveCategory] = useState<'Finish' | 'Semi finish' | 'Raw'>('Finish');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -44,9 +44,9 @@ export default function MasterData() {
     { id: 17, division: 'Bar', category: 'Raw', categoryName: 'Raw', itemName: 'Kopi bubuk', qty: 13 },
     { id: 18, division: 'Bar', category: 'Raw', categoryName: 'Raw', itemName: 'Gula pasir', qty: 15 },
 
-    // --- KITCHEN ---
-    { id: 19, division: 'Kitchen', category: 'Finish', categoryName: 'Finish', itemName: 'Nasi Goreng', qty: 30 },
-    { id: 20, division: 'Kitchen', category: 'Raw', categoryName: 'Raw', itemName: 'Beras', qty: 50 },
+    // --- DAPUR ---
+    { id: 19, division: 'Dapur', category: 'Finish', categoryName: 'Finish', itemName: 'Nasi Goreng', qty: 30 },
+    { id: 20, division: 'Dapur', category: 'Raw', categoryName: 'Raw', itemName: 'Beras', qty: 50 },
   ];
 
   const filteredItems = allItems.filter(item => {
@@ -77,13 +77,13 @@ export default function MasterData() {
               Bar
             </button>
             <button
-              onClick={() => setActiveDivision('Kitchen')}
+              onClick={() => setActiveDivision('Dapur')}
               className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold transition-all duration-200 rounded-md
-                ${activeDivision === 'Kitchen'
+                ${activeDivision === 'Dapur'
                   ? 'bg-[#5D4037] text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100'}`}
             >
-              Kitchen
+              Dapur
             </button>
           </div>
 

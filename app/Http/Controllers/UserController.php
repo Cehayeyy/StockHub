@@ -14,9 +14,22 @@ class UserController extends Controller
     {
         $users = User::select('id', 'username', 'name', 'email', 'role', 'created_at')->get();
 
+        // Tentukan role yang boleh dibuat berdasarkan role user yang login
+        $currentUserRole = Auth::user()->role;
+        $allowedRoles = [];
+
+        if ($currentUserRole === 'owner') {
+            // Owner bisa membuat semua role kecuali owner
+            $allowedRoles = ['supervisor', 'bar', 'dapur'];
+        } elseif ($currentUserRole === 'supervisor') {
+            // Supervisor hanya bisa membuat bar dan dapur
+            $allowedRoles = ['bar', 'dapur'];
+        }
+
         return Inertia::render('manajemen', [
             'users' => $users,
             'csrf_token' => csrf_token(),
+            'allowedRoles' => $allowedRoles,
         ]);
     }
 
@@ -25,9 +38,10 @@ class UserController extends Controller
         $role = strtolower($role);
         $prefix = match ($role) {
             'bar' => 'bar',
-            'kitchen' => 'kitchen',
+            'dapur' => 'dapur',
             'supervisor' => 'supervisor',
-            'default' => $role,
+            'owner' => 'owner',
+            default => $role,
         };
 
         $lastUser = User::where('role', $role)
@@ -46,13 +60,29 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'role'     => 'required|in:bar,kitchen,supervisor',
+            'role'     => 'required|in:bar,dapur,supervisor,owner',
             'name'     => 'required|string|max:255',
-            'username' => 'nullable|string|max:255',
-            'password' => 'required|min:4',
+            'username' => 'nullable|string|min:5|max:255',
+            'password' => 'required|min:5',
+        ], [
+            'username.min' => 'Username tidak boleh kurang dari 5 karakter.',
+            'password.min' => 'Password tidak boleh kurang dari 5 karakter.',
+            'password.required' => 'Password wajib diisi.',
         ]);
 
         $role = strtolower($request->role);
+        $currentUserRole = Auth::user()->role;
+
+        // Validasi permission: supervisor tidak boleh membuat supervisor/owner
+        if ($currentUserRole === 'supervisor' && in_array($role, ['supervisor', 'owner'])) {
+            return back()->withErrors(['role' => 'Anda tidak memiliki izin untuk membuat akun dengan role ini.']);
+        }
+
+        // Hanya owner yang boleh membuat owner (tapi biasanya tidak diperlukan)
+        if ($role === 'owner' && $currentUserRole !== 'owner') {
+            return back()->withErrors(['role' => 'Hanya owner yang dapat membuat akun owner.']);
+        }
+
         $username = $request->username ?: $this->generateNextUsername($role);
 
         $user = User::create([
@@ -78,15 +108,31 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'role'     => 'required|in:bar,kitchen,supervisor',
+            'role'     => 'required|in:bar,dapur,supervisor,owner',
             'name'     => 'required|string|max:255',
-            'username' => 'required|string|max:255',
-            'password' => 'nullable|min:4',
+            'username' => 'required|string|min:5|max:255',
+            'password' => 'nullable|min:5',
+        ], [
+            'username.min' => 'Username tidak boleh kurang dari 5 karakter.',
+            'password.min' => 'Password tidak boleh kurang dari 5 karakter.',
         ]);
+
+        $role = strtolower($request->role);
+        $currentUserRole = Auth::user()->role;
+
+        // Validasi permission: supervisor tidak boleh mengubah ke supervisor/owner
+        if ($currentUserRole === 'supervisor' && in_array($role, ['supervisor', 'owner'])) {
+            return back()->withErrors(['role' => 'Anda tidak memiliki izin untuk mengubah ke role ini.']);
+        }
+
+        // Supervisor tidak boleh mengedit akun owner atau supervisor lain
+        if ($currentUserRole === 'supervisor' && in_array($user->role, ['supervisor', 'owner'])) {
+            return back()->withErrors(['role' => 'Anda tidak memiliki izin untuk mengedit akun ini.']);
+        }
 
         $oldUsername = $user->username;
 
-        $user->role     = strtolower($request->role);
+        $user->role     = $role;
         $user->username = $request->username;
         $user->name     = $request->name;
         $user->email    = $request->username . '@example.com';
@@ -122,5 +168,42 @@ class UserController extends Controller
         ]);
 
         return redirect()->route('manajemen')->with('success', 'Akun berhasil dihapus.');
+    }
+
+    /**
+     * Update akun sendiri (untuk owner)
+     */
+    public function updateSelf(Request $request)
+    {
+        /** @var User $user */
+        $user = User::findOrFail(Auth::id());
+
+        $request->validate([
+            'username' => 'required|string|min:5|max:255|unique:users,username,' . $user->id,
+            'password' => 'nullable|min:5',
+        ], [
+            'username.min' => 'Username tidak boleh kurang dari 5 karakter.',
+            'password.min' => 'Password tidak boleh kurang dari 5 karakter.',
+        ]);
+
+        $oldUsername = $user->username;
+
+        $user->username = $request->username;
+        $user->email    = $request->username . '@example.com';
+
+        if ($request->filled('password')) {
+            $user->password = bcrypt($request->password);
+        }
+
+        $user->save();
+
+        // LOG AKTIVITAS
+        ActivityLog::create([
+            'user_id'     => Auth::id(),
+            'activity'    => 'Update Akun Sendiri',
+            'description' => "Mengupdate akun sendiri dari '{$oldUsername}' ke '{$user->username}'."
+        ]);
+
+        return redirect()->route('manajemen')->with('success', 'Akun Anda berhasil diperbarui.');
     }
 }

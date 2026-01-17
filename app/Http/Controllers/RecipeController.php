@@ -21,8 +21,8 @@ class RecipeController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        if ($user->role === 'bar' || $user->role === 'kitchen') {
-            $division = $user->role === 'kitchen' ? 'dapur' : 'bar';
+        if ($user->role === 'bar' || $user->role === 'dapur') {
+            $division = $user->role === 'dapur' ? 'dapur' : 'bar';
         } else {
             $division = $request->input('division', 'bar');
         }
@@ -39,6 +39,7 @@ class RecipeController extends Controller
             ]);
 
         $targetDivisions = [$division];
+        // Backward compatibility: include old 'kitchen' data
         if ($division === 'dapur') {
             $targetDivisions[] = 'kitchen';
         }
@@ -76,7 +77,7 @@ class RecipeController extends Controller
         ]);
 
         if (($user->role === 'bar' && $validated['division'] !== 'bar') ||
-            ($user->role === 'kitchen' && $validated['division'] !== 'dapur')) {
+            ($user->role === 'dapur' && $validated['division'] !== 'dapur')) {
             abort(403, 'Anda tidak memiliki akses untuk divisi ini.');
         }
 
@@ -147,7 +148,7 @@ class RecipeController extends Controller
         ]);
 
         if (($user->role === 'bar' && $validated['division'] !== 'bar') ||
-            ($user->role === 'kitchen' && $validated['division'] !== 'dapur')) {
+            ($user->role === 'dapur' && $validated['division'] !== 'dapur')) {
             abort(403, 'Anda tidak memiliki akses.');
         }
 

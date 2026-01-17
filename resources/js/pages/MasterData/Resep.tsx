@@ -52,7 +52,7 @@ const Resep: React.FC = () => {
   } = usePage<PageProps>().props;
 
   const role = auth.user.role;
-  const isStaff = role === "bar" || role === "kitchen";
+  const isStaff = role === "bar" || role === "dapur";
 
   // State
   const [selectedDivision, setSelectedDivision] = useState<"bar" | "dapur">(

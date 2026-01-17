@@ -22,11 +22,11 @@ class ItemController extends Controller
     {
         $user = $request->user();
 
-        if (in_array($user->role, ['bar', 'kitchen'])) {
+        if (in_array($user->role, ['bar', 'dapur'])) {
             $division = $user->role;
         } else {
             $division = $request->query('division', 'bar');
-            if (!in_array($division, ['bar', 'kitchen'])) {
+            if (!in_array($division, ['bar', 'dapur'])) {
                 $division = 'bar';
             }
         }
@@ -58,7 +58,7 @@ class ItemController extends Controller
     {
         $division = $request->query('division', 'bar');
 
-        if (!in_array($division, ['bar', 'kitchen'])) {
+        if (!in_array($division, ['bar', 'dapur'])) {
             $division = 'bar';
         }
 
@@ -90,7 +90,7 @@ class ItemController extends Controller
     {
         $data = $request->validate([
             'name'     => 'required|string|max:100',
-            'division' => 'required|in:bar,kitchen',
+            'division' => 'required|in:bar,dapur',
         ]);
 
         $exists = ItemCategory::where('division', $data['division'])
@@ -119,7 +119,7 @@ class ItemController extends Controller
         $data = $request->validate([
             'nama'             => 'required|string|max:255',
             'item_category_id' => 'required|exists:item_categories,id',
-            'division'         => 'required|in:bar,kitchen',
+            'division'         => 'required|in:bar,dapur',
             'satuan'           => 'nullable|string|max:50',
         ]);
 
@@ -152,7 +152,7 @@ class ItemController extends Controller
         $data = $request->validate([
             'nama'             => 'required|string|max:255',
             'item_category_id' => 'required|exists:item_categories,id',
-            'division'         => 'required|in:bar,kitchen',
+            'division'         => 'required|in:bar,dapur',
             'satuan'           => 'nullable|string|max:50',
         ]);
 

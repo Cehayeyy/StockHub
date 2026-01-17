@@ -57,19 +57,26 @@ Route::get('/users', [UserController::class, 'index'])->name('users.index'); // 
 
 
     // ===========================
-    // MANAJEMEN AKUN
+    // MANAJEMEN AKUN (Owner & Supervisor only)
     // ===========================
-    Route::get('/manajemen-akun', [UserController::class, 'index'])
-        ->name('manajemen');
+    Route::middleware(['role:owner,supervisor'])->group(function () {
+        Route::get('/manajemen-akun', [UserController::class, 'index'])
+            ->name('manajemen');
 
-    Route::post('/users', [UserController::class, 'store'])
-        ->name('users.store');
+        Route::post('/users', [UserController::class, 'store'])
+            ->name('users.store');
 
-    Route::put('/manajemen/{id}', [UserController::class, 'update'])
-        ->name('manajemen.update');
+        Route::put('/manajemen/{id}', [UserController::class, 'update'])
+            ->name('manajemen.update');
 
-    Route::delete('/manajemen-akun/{id}', [UserController::class, 'destroy'])
-        ->name('manajemen.destroy');
+        Route::delete('/manajemen-akun/{id}', [UserController::class, 'destroy'])
+            ->name('manajemen.destroy');
+
+        // Update akun sendiri (owner only)
+        Route::put('/manajemen/self/update', [UserController::class, 'updateSelf'])
+            ->name('manajemen.updateSelf')
+            ->middleware('role:owner');
+    });
 
     // ===========================
     // MASTER DATA (INDEX)
@@ -159,7 +166,7 @@ Route::get('/users', [UserController::class, 'index'])->name('users.index'); // 
     Route::get('/stok-harian/dapur', [StokHarianDapurController::class, 'dapur'])
         ->name('stok-harian.dapur');
 
-    Route::middleware(['role:owner,supervisor,dapur,kitchen,staff_kitchen'])->group(function () {
+    Route::middleware(['role:owner,supervisor,dapur,staff_kitchen'])->group(function () {
 
 
         Route::post('/stok-harian-dapur/menu', [StokHarianDapurController::class, 'storeMenu'])
