@@ -10,7 +10,7 @@ class Recipe extends Model
     use HasFactory;
 
     protected $fillable = [
-        'item_id',          // 🔥 WAJIB
+        'item_id',
         'name',
         'division',
         'ingredients',

@@ -17,16 +17,16 @@ export default {
                 '100%': { opacity: 1, transform: 'translateY(0)' },
               },
             },
-          
+
 
         fontFamily: {
             sans: ['Poppins',defaultTheme.fontFamily.sans],
           },
         colors: {
-          'theme-sidebar': '#5D4037',     // Coklat tua untuk sidebar
-          'theme-background': '#F5EFE6', // Krem muda untuk background
+          'theme-sidebar': '#5D4037',
+          'theme-background': '#F5EFE6',
         }
-        // --- BATAS TAMBAHAN ---
+        
       },
     },
     plugins: [],

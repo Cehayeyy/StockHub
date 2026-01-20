@@ -46,9 +46,9 @@ interface PageProps {
   canInput: boolean;
 }
 
-// --- MODAL INPUT ---
+// --- MODAL INPUT (CREATE) ---
 const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess }: any) => {
-  const { data, setData, post, processing, reset, errors, transform } = useForm({
+  const { data, setData, post, processing, reset, transform } = useForm({
     target_id: "",
     tanggal: tanggal,
     stok_awal: "",
@@ -146,7 +146,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nama Item</label>
             <div className="relative">
-              {/* FIX DROPDOWN STYLE */}
               <select
                 value={data.target_id}
                 onChange={handleItemChange}
@@ -193,17 +192,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
             )}
           </div>
 
-          {tab === "menu" && (
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Sisa Stok Saat Ini</label>
-              <input
-                type="text"
-                value={selectedItemInfo?.tersisa ?? "0"}
-                disabled
-                className="w-full bg-gray-200 border-none rounded-xl px-4 py-3 text-sm font-bold text-gray-700"
-              />
-            </div>
-          )}
+          {/* FIELD SISA STOK SAAT INI SUDAH DIHAPUS DARI SINI */}
 
           {tab === "mentah" && (
             <div>
@@ -269,7 +258,10 @@ export default function Dapur() {
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
   const [formStokAwal, setFormStokAwal] = useState<number | "">("");
+
+  // 🔥 TAMBAHAN: State untuk Sisa Stok di Edit Modal
   const [formStokTersisa, setFormStokTersisa] = useState<number | "">("");
+
   const [formStokMasuk, setFormStokMasuk] = useState<number | "">("");
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
@@ -313,7 +305,7 @@ export default function Dapur() {
     setFormItemId("");
     setFormItemName("");
     setFormStokAwal("");
-    setFormStokTersisa("");
+    setFormStokTersisa(""); // 🔥 Reset Tersisa
     setFormStokMasuk("");
     setFormPemakaian("");
     setFormSatuan("porsi");
@@ -324,7 +316,7 @@ export default function Dapur() {
     setFormItemId(item.recipe_id ?? item.item_id ?? "");
     setFormItemName(item.nama);
     setFormStokAwal(item.stok_awal);
-    setFormStokTersisa(item.tersisa);
+    setFormStokTersisa(item.tersisa); // 🔥 Set Tersisa dari Item
     setFormStokMasuk(item.stok_masuk ?? "");
     setFormPemakaian(item.pemakaian);
     setFormSatuan(item.satuan || "porsi");
@@ -592,7 +584,7 @@ export default function Dapur() {
           </h3>
           {lowStockItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lowStockItems.map((item: LowStockItem, idx: number) => (
+              {lowStockItems.map((item, idx) => (
                 <div
                   key={idx}
                   className="flex flex-col gap-1 p-3 border border-gray-100 rounded-xl hover:shadow-sm"
@@ -657,6 +649,20 @@ export default function Dapur() {
                   }`}
                 />
               </div>
+
+              {/* 🔥 NEW FIELD: Sisa Stok Saat Ini (Hanya Tampil di Tab Mentah) */}
+              {tab === "mentah" && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Sisa Stok Saat Ini</label>
+                  <input
+                    type="text"
+                    value={formStokTersisa}
+                    disabled
+                    className="w-full bg-gray-200 border border-gray-300 text-gray-600 rounded-xl px-4 py-2.5 text-sm font-bold"
+                  />
+                </div>
+              )}
+
               {tab === "mentah" ? (
                 <div>
                   <label className="block text-sm font-medium mb-1">Stok Masuk</label>
