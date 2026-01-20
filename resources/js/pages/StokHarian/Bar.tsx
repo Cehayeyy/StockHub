@@ -181,17 +181,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
             )}
           </div>
 
-          {tab === "menu" && (
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Sisa Stok Saat Ini</label>
-              <input
-                type="text"
-                value={selectedItemInfo?.tersisa ?? "0"}
-                disabled
-                className="w-full bg-gray-200 border-none rounded-xl px-4 py-3 text-sm font-bold text-gray-700"
-              />
-            </div>
-          )}
+          {/* FIELD SISA STOK SAAT INI SUDAH DIHAPUS DARI SINI */}
 
           {tab === "mentah" && (
             <div>
@@ -623,6 +613,20 @@ export default function Bar() {
                   }`}
                 />
               </div>
+
+              {/* 🔥 NEW FIELD: Sisa Stok Saat Ini (Hanya Tampil di Tab Mentah) */}
+              {tab === "mentah" && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Sisa Stok Saat Ini</label>
+                  <input
+                    type="text"
+                    value={formStokTersisa}
+                    disabled
+                    className="w-full bg-gray-200 border border-gray-300 text-gray-600 rounded-xl px-4 py-2.5 text-sm font-bold"
+                  />
+                </div>
+              )}
+
               {tab === "mentah" ? (
                 <div>
                   <label className="block text-sm font-medium mb-1">Stok Masuk</label>

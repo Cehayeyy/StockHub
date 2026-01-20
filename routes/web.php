@@ -188,12 +188,7 @@ Route::get('/users', [UserController::class, 'index'])->name('users.index'); // 
             ->name('stok-harian-dapur-mentah.destroy');
     });
 
-    // ===========================
-    // 🔥 VERIFIKASI STOK (BARU)
-    // ===========================
-    // ===========================
-// 🔥 VERIFIKASI STOK
-// ===========================
+
 Route::get('/verifikasi-stok', [VerifikasiStokController::class, 'index'])
     ->name('verifikasi-stok.index');
 
@@ -203,9 +198,7 @@ Route::get('/verifikasi-stok/export', [VerifikasiStokController::class, 'export'
 
 
 
-    // ===========================
-    // LAPORAN AKTIVITAS
-    // ===========================
+    
     Route::get('/laporan-aktivitas', [ActivityLogController::class, 'index'])
         ->name('laporan-aktivitas');
 

@@ -17,19 +17,11 @@ class Item extends Model
         'kategori_item',
     ];
 
-    /**
-     * Relasi ke kategori.
-     * Setiap item punya satu kategori.
-     */
     public function itemCategory()
     {
         return $this->belongsTo(ItemCategory::class, 'item_category_id');
     }
 
-    /**
-     * Relasi ke resep.
-     * Satu item bisa punya banyak resep.
-     */
     public function resep()
     {
         return $this->hasMany(Recipe::class, 'item_id');

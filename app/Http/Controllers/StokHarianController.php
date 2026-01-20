@@ -23,14 +23,12 @@ class StokHarianController extends Controller
         $search  = $request->search;
         $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
-        // 1. Generate/Pastikan Data Harian Ada (Shared Data)
+        // 1. Generate Data Harian (dengan Logika Carry Over)
         $this->ensureStokExists($tanggal);
 
-        // 2. Query Data Tabel (TANPA Filter User ID agar Sinkron)
         if ($tab === 'menu') {
             $query = StokHarianMenu::with('item')
                 ->whereDate('tanggal', $tanggal);
-                // 🔥 HAPUS: where('user_id', Auth::id()) agar semua melihat data yang sama
 
             if ($search) {
                 $query->whereHas('item', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
@@ -145,14 +143,21 @@ class StokHarianController extends Controller
         ]);
     }
 
-    // --- AUTO GENERATE DATA (SHARED / GLOBAL) ---
+    // --- AUTO GENERATE DATA (SHARED LOGIC + CARRY OVER) ---
     private function ensureStokExists($tanggal)
     {
-        $userId = Auth::id(); // User ID hanya untuk 'creator', bukan pembeda data
+        $userId = Auth::id();
 
-        // 1. Generate Mentah (Shared)
+        // 1. Tentukan Tanggal Kemarin (H-1)
+        $kemarin = Carbon::parse($tanggal)->subDay()->toDateString();
+
+        // ====================================================
+        // A. GENERATE UNTUK BAHAN MENTAH (BAHAN BAKU)
+        // ====================================================
         $existsMentah = StokHarianMentah::whereDate('tanggal', $tanggal)->exists();
+
         if (!$existsMentah) {
+            // Ambil semua item yang harus di-tracking
             $recipes = Recipe::where('division', 'bar')->get();
             $ingredientIds = collect();
             foreach($recipes as $r) {
@@ -165,16 +170,33 @@ class StokHarianController extends Controller
             foreach ($targetMentahIds as $itemId) {
                 $itemInfo = Item::find($itemId);
                 if($itemInfo) {
+
+
+                    $stokKemarin = StokHarianMentah::where('item_id', $itemId)
+                        ->where('tanggal', $kemarin)
+                        ->value('stok_akhir');
+
+
+                    $stokAwalHariIni = $stokKemarin ?? 0;
+
                     StokHarianMentah::firstOrCreate(
-                        ['item_id' => $itemId, 'tanggal' => $tanggal], // 🔥 Cek unik berdasarkan Item + Tanggal saja
-                        ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => $itemInfo->satuan ?? 'unit']
+                        ['item_id' => $itemId, 'tanggal' => $tanggal],
+                        [
+                            'stok_awal'   => $stokAwalHariIni, 
+                            'stok_masuk'  => 0,
+                            'stok_keluar' => 0,
+                            'stok_akhir'  => $stokAwalHariIni,
+                            'unit'        => $itemInfo->satuan ?? 'unit'
+                        ]
                     );
                 }
             }
         }
 
-        // 2. Generate Menu (Shared)
-        // 🔥 HAPUS pengecekan user_id disini
+        // ====================================================
+        // B. GENERATE UNTUK MENU (BARANG JADI)
+        // ====================================================
+        // Menu fresh (dibuat dadakan) stok awalnya 0
         $existsMenu = StokHarianMenu::whereDate('tanggal', $tanggal)->exists();
 
         if (!$existsMenu) {
@@ -183,7 +205,7 @@ class StokHarianController extends Controller
 
             foreach ($menuItems as $item) {
                 StokHarianMenu::firstOrCreate(
-                    ['item_id' => $item->id, 'tanggal' => $tanggal], // 🔥 Cek unik berdasarkan Item + Tanggal saja
+                    ['item_id' => $item->id, 'tanggal' => $tanggal],
                     [
                         'stok_awal'    => 0,
                         'stok_masuk'   => 0,
@@ -191,7 +213,7 @@ class StokHarianController extends Controller
                         'stok_akhir'   => 0,
                         'unit'         => $item->satuan ?? 'porsi',
                         'is_submitted' => 0,
-                        'user_id'      => $userId // Simpan user pembuat, tapi jangan jadikan kunci pencarian
+                        'user_id'      => $userId
                     ]
                 );
             }
@@ -210,12 +232,10 @@ class StokHarianController extends Controller
         $item = Item::find($data['item_id']);
 
         DB::transaction(function () use ($data, $item) {
-            // 1. Ambil Menu (Tanpa Filter User)
             $menu = StokHarianMenu::where('item_id', $data['item_id'])
                 ->whereDate('tanggal', $data['tanggal'])
                 ->first();
 
-            // Jika belum ada (sangat jarang terjadi karena ensureStokExists), buat baru
             if (!$menu) {
                 $menu = new StokHarianMenu();
                 $menu->item_id = $data['item_id'];
@@ -231,7 +251,7 @@ class StokHarianController extends Controller
             $menu->stok_keluar  = $newUsage;
             $menu->stok_akhir   = max(0, ($menu->stok_awal + $menu->stok_masuk) - $newUsage);
             $menu->is_submitted = 1;
-            $menu->user_id      = Auth::id(); // 🔥 Update user terakhir yg edit
+            $menu->user_id      = Auth::id();
             $menu->save();
 
             // 3. Update Bahan Mentah
@@ -325,7 +345,7 @@ class StokHarianController extends Controller
             $menu->stok_keluar = $newKeluar;
             $menu->stok_akhir = max(0, ($menu->stok_awal + $menu->stok_masuk) - $newKeluar);
             $menu->is_submitted = 1;
-            $menu->user_id = Auth::id(); // Update kepemilikan terakhir
+            $menu->user_id = Auth::id();
             $menu->save();
 
             $recipe = Recipe::where('name', $menu->item->nama)->first();
@@ -369,28 +389,78 @@ class StokHarianController extends Controller
         return back()->with('success', 'Stok diperbarui.');
     }
 
-    // --- HELPER: DISTRIBUTE KEPADA SEMUA MENU (SHARED) ---
+    // --- REVISI FINAL: DISTRIBUTE DENGAN LOGIKA "REBUTAN" (SHARED SPLIT) ---
     private function distributeStockToMenus($rawItemId, $totalStokMentah, $date)
     {
+        // 1. Cari Resep yang mengandung bahan yang baru saja diupdate (Trigger)
         $recipes = Recipe::whereJsonContains('ingredients', [['item_id' => (int)$rawItemId]])->get();
         $recipeNames = $recipes->pluck('name');
         if ($recipeNames->isEmpty()) return;
 
         $menuItems = Item::whereIn('nama', $recipeNames)->get();
 
-        // Cari semua menu terkait di tanggal tersebut (Tanpa filter user_id)
+        // 2. Ambil Menu yang terpengaruh di tanggal tersebut
         $targetMenus = StokHarianMenu::whereIn('item_id', $menuItems->pluck('id'))
             ->where('tanggal', $date)
             ->get();
 
-        if ($targetMenus->count() > 0) {
-            $allocatedStock = floor($totalStokMentah / $targetMenus->count());
-            foreach ($targetMenus as $menu) {
-                $menu->stok_awal = $allocatedStock + $menu->stok_keluar;
-                $menu->stok_masuk = 0;
-                $menu->stok_akhir = $allocatedStock;
-                $menu->save();
+        // 3. Loop setiap menu untuk hitung ulang stoknya secara independen
+        foreach ($targetMenus as $menu) {
+            // Load Resep untuk menu ini
+            $recipe = Recipe::where('name', $menu->item->nama)->first();
+            // Fallback: jika tidak ketemu by name, coba by item_id
+            if (!$recipe) $recipe = Recipe::where('item_id', $menu->item_id)->first();
+
+            if (!$recipe || !is_array($recipe->ingredients)) continue;
+
+            $maxPossiblePortions = 999999; // Angka awal sangat besar
+
+            // 4. Cek SETIAP BAHAN dalam resep (Bukan cuma yang diupdate)
+            foreach ($recipe->ingredients as $ing) {
+                $ingId = $ing['item_id'] ?? null;
+                $amountNeeded = $ing['amount'] ?? 0;
+
+                if (!$ingId || $amountNeeded == 0) continue;
+
+                // A. Ambil Total Stok Fisik Bahan Ini di Gudang
+                // Kita query ulang agar selalu dapat data terbaru untuk semua bahan pendamping
+                $stokFisikMentah = StokHarianMentah::where('item_id', $ingId)
+                    ->where('tanggal', $date)
+                    ->value('stok_akhir');
+
+                $stokFisikMentah = $stokFisikMentah ?? 0;
+
+                // B. Hitung berapa menu yang "Rebutan" bahan ini hari ini
+                // Contoh: Espresso diperebutkan oleh Nutella Latte, Caramel Latte, Cappucino (Total 3)
+                $recipesUsingThisIngredient = Recipe::whereJsonContains('ingredients', [['item_id' => (int)$ingId]])->pluck('name');
+                $itemIdsUsingThis = Item::whereIn('nama', $recipesUsingThisIngredient)->pluck('id');
+
+                $countCompetitors = StokHarianMenu::whereIn('item_id', $itemIdsUsingThis)
+                    ->where('tanggal', $date)
+                    ->count();
+
+                // C. Hitung Jatah per Menu (Share)
+                // Rumus: Total Fisik / Jumlah Pesaing
+                $myShare = ($countCompetitors > 0) ? floor($stokFisikMentah / $countCompetitors) : 0;
+
+                // D. Hitung Kapasitas Resep
+                // Rumus: Jatah Saya / Takaran Resep
+                $capacity = floor($myShare / $amountNeeded);
+
+                // E. Update Bottleneck (Ambil yang terkecil)
+                // Contoh: Min(Nutella Capacity, Espresso Capacity)
+                $maxPossiblePortions = min($maxPossiblePortions, $capacity);
             }
+
+            // Safety jika loop tidak jalan
+            if ($maxPossiblePortions === 999999) $maxPossiblePortions = 0;
+
+            // 5. Simpan ke Database
+            $menu->stok_akhir = $maxPossiblePortions;
+            // Recalculate stok awal agar konsisten (Akhir + Keluar)
+            $menu->stok_awal = $maxPossiblePortions + $menu->stok_keluar;
+            $menu->stok_masuk = 0;
+            $menu->save();
         }
     }
 

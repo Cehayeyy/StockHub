@@ -17,7 +17,6 @@ use Carbon\Carbon;
 
 class RecipeController extends Controller
 {
-    // ... index method (sama seperti sebelumnya) ...
     public function index(Request $request)
     {
         $user = $request->user();
@@ -47,6 +46,8 @@ class RecipeController extends Controller
         $items = Item::with('itemCategory')
             ->whereIn('division', $targetDivisions)
             ->get()
+            // 🔥 FIX: Filter nama unik untuk mencegah duplikasi (Dapur + Kitchen)
+            ->unique('nama')
             ->map(fn ($i) => [
                 'id'       => $i->id,
                 'name'     => $i->nama,
@@ -178,7 +179,7 @@ class RecipeController extends Controller
                 }
             }
 
-            // 🔥 2. LOGIKA BARU: RE-INSERT MENU KE STOK HARIAN (Jika Hilang)
+            // 2. LOGIKA BARU: RE-INSERT MENU KE STOK HARIAN (Jika Hilang)
             if ($validated['division'] === 'bar') {
                 $this->syncToStokHarianBar($recipe, $tanggal);
             } else {
@@ -278,7 +279,6 @@ class RecipeController extends Controller
             $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'bar', $tanggal);
 
             if (!$stokMenu) {
-                // 🔥 Buat ulang jika tidak ada
                 StokHarianMenu::create([
                     'item_id'     => $menuItem->id,
                     'tanggal'     => $tanggal,
@@ -302,7 +302,6 @@ class RecipeController extends Controller
         $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'dapur', $tanggal);
 
         if (!$stokMenu) {
-             // 🔥 Buat ulang jika tidak ada
             StokHarianDapurMenu::create([
                 'recipe_id'   => $recipe->id,
                 'tanggal'     => $tanggal,
