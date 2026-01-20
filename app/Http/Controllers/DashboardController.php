@@ -267,8 +267,8 @@ class DashboardController extends Controller
             ],
         ];
 
-        // ================= 7. DATA KHUSUS OWNER =================
-        if ($user->role === 'owner') {
+        // ================= 7. DATA KHUSUS OWNER & SUPERVISOR =================
+        if (in_array($user->role, ['owner', 'supervisor'])) {
             // Executive Statistics
             $weekAgo = Carbon::now()->subDays(7);
             $monthAgo = Carbon::now()->subDays(30);
@@ -356,10 +356,44 @@ class DashboardController extends Controller
             $totalBarStaff = User::where('role', 'bar')->count();
             $totalDapurStaff = User::whereIn('role', ['kitchen', 'dapur', 'staff_kitchen'])->count();
 
+            // Daftar supervisor untuk detail
+            $supervisorList = User::where('role', 'supervisor')
+                ->select('id', 'name', 'username', 'email', 'created_at')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'username' => $user->username,
+                        'email' => $user->email,
+                        'created_at' => $user->created_at->toIso8601String(),
+                    ];
+                });
+
             // Izin revisi yang diproses bulan ini
             $izinProcessedThisMonth = IzinRevisi::whereMonth('updated_at', Carbon::now()->month)
                 ->whereIn('status', ['approved', 'rejected'])
                 ->count();
+
+            // Daftar izin yang diproses bulan ini untuk detail
+            $izinProcessedList = IzinRevisi::with('user:id,name,username,role')
+                ->whereMonth('updated_at', Carbon::now()->month)
+                ->whereIn('status', ['approved', 'rejected'])
+                ->latest('updated_at')
+                ->get()
+                ->map(function ($izin) {
+                    return [
+                        'id' => $izin->id,
+                        'user_name' => $izin->user->name ?? 'Unknown',
+                        'user_username' => $izin->user->username ?? '-',
+                        'user_role' => $izin->user->role ?? 'unknown',
+                        'status' => $izin->status,
+                        'reason' => $izin->reason ?? '-',
+                        'start_time' => $izin->start_time ? $izin->start_time->toIso8601String() : null,
+                        'end_time' => $izin->end_time ? $izin->end_time->toIso8601String() : null,
+                        'updated_at' => $izin->updated_at->toIso8601String(),
+                    ];
+                });
 
             $data['ownerData'] = [
                 'activityThisWeek' => $activityThisWeek,
@@ -379,7 +413,9 @@ class DashboardController extends Controller
                 'totalSupervisor' => $totalSupervisor,
                 'totalBarStaff' => $totalBarStaff,
                 'totalDapurStaff' => $totalDapurStaff,
+                'supervisorList' => $supervisorList,
                 'izinProcessedThisMonth' => $izinProcessedThisMonth,
+                'izinProcessedList' => $izinProcessedList,
             ];
         }
 
@@ -398,10 +434,43 @@ class DashboardController extends Controller
                     'start_time' => $izinApproved->start_time->toIso8601String(),
                     'end_time' => $izinApproved->end_time->toIso8601String(),
                 ] : null,
+                'canInput' => $this->canUserInput(),
             ]));
         }
 
         // Fallback View
         return Inertia::render('DashboardStaff', $data);
+    }
+
+    /**
+     * Cek apakah user bisa melakukan input stok harian
+     * (untuk staff, cek apakah sudah lewat jam 8 malam dan punya izin revisi)
+     */
+    private function canUserInput()
+    {
+        $user = Auth::user();
+
+        // Owner dan Supervisor selalu bisa input
+        if (in_array($user->role, ['owner', 'supervisor'])) {
+            return true;
+        }
+
+        // Cek waktu sekarang
+        $now = Carbon::now();
+        $cutoffTime = Carbon::today()->setTime(20, 0, 0); // 20:00 = 8 malam
+
+        // Jika belum jam 8 malam, bisa input
+        if ($now->lessThan($cutoffTime)) {
+            return true;
+        }
+
+        // Jika sudah lewat jam 8 malam, cek izin revisi
+        $hasActivePermission = IzinRevisi::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
+            ->exists();
+
+        return $hasActivePermission;
     }
 }

@@ -108,6 +108,9 @@ class StokHarianDapurController extends Controller
 
         $lowStockItems = $lowMentah->merge($lowMenu);
 
+        // Cek apakah user bisa input (untuk disable button di frontend)
+        $canInput = $this->canUserInput();
+
         return Inertia::render('StokHarian/Dapur', [
             'items'          => $items,
             'tab'            => $tab,
@@ -115,6 +118,7 @@ class StokHarianDapurController extends Controller
             'availableMenus' => [],
             'inputableMenus' => $inputableMenus,
             'lowStockItems'  => $lowStockItems,
+            'canInput'       => $canInput,
         ]);
     }
 
@@ -388,4 +392,31 @@ class StokHarianDapurController extends Controller
         ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Mentah Dapur', 'description' => "Menghapus stok mentah '{$nama}'."]);
         return back()->with('success', 'Stok bahan mentah dihapus.');
     }
-}
+    // Helper: cek apakah user bisa input berdasarkan waktu dan izin revisi
+    private function canUserInput()
+    {
+        $user = Auth::user();
+
+        // Owner dan Supervisor selalu bisa input
+        if (in_array($user->role, ['owner', 'supervisor'])) {
+            return true;
+        }
+
+        // Cek waktu sekarang
+        $now = Carbon::now();
+        $cutoffTime = Carbon::today()->setTime(20, 0, 0); // 20:00 = 8 malam
+
+        // Jika belum jam 8 malam, bisa input
+        if ($now->lessThan($cutoffTime)) {
+            return true;
+        }
+
+        // Jika sudah lewat jam 8 malam, cek izin revisi
+        $hasActivePermission = IzinRevisi::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
+            ->exists();
+
+        return $hasActivePermission;
+    }}

@@ -76,6 +76,14 @@ export default function Dashboard() {
   const [selectedIzin, setSelectedIzin] = useState<any>(null);
   const [showActivityDetail, setShowActivityDetail] = useState(false);
   const [selectedDayActivity, setSelectedDayActivity] = useState<any>(null);
+  const [showExecSummaryDetail, setShowExecSummaryDetail] = useState(false);
+  const [execDetailTab, setExecDetailTab] = useState<'activity' | 'login'>('activity');
+
+  // State untuk modal detail card executive
+  const [showWeeklyActivityDetail, setShowWeeklyActivityDetail] = useState(false);
+  const [showWeeklyLoginDetail, setShowWeeklyLoginDetail] = useState(false);
+  const [showSupervisorDetail, setShowSupervisorDetail] = useState(false);
+  const [showIzinProcessedDetail, setShowIzinProcessedDetail] = useState(false);
 
   const [formRevisi, setFormRevisi] = useState({
     tanggalMulai: "",
@@ -488,10 +496,16 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
 
               {/* Executive Stats Cards - RESPONSIVE */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mt-4">
-                <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                    <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
-                    <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Aktivitas Minggu Ini</span>
+                <div
+                  onClick={() => setShowWeeklyActivityDetail(true)}
+                  className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm cursor-pointer hover:bg-gray-50 hover:border-[#8B5E3C]/30 transition group"
+                >
+                  <div className="flex items-center justify-between mb-1 sm:mb-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <Activity className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
+                      <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Aktivitas Minggu Ini</span>
+                    </div>
+                    <Eye className="w-3 h-3 text-gray-400 group-hover:text-[#8B5E3C] transition" />
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-gray-800">{ownerData.activityThisWeek}</p>
                   <p className={`text-[10px] sm:text-xs ${ownerData.activityGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -499,10 +513,16 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
                   </p>
                 </div>
 
-                <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                    <LogIn className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
-                    <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Masuk Minggu Ini</span>
+                <div
+                  onClick={() => setShowWeeklyLoginDetail(true)}
+                  className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm cursor-pointer hover:bg-gray-50 hover:border-[#8B5E3C]/30 transition group"
+                >
+                  <div className="flex items-center justify-between mb-1 sm:mb-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <LogIn className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
+                      <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Masuk Minggu Ini</span>
+                    </div>
+                    <Eye className="w-3 h-3 text-gray-400 group-hover:text-[#8B5E3C] transition" />
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-gray-800">{ownerData.loginThisWeek}</p>
                   <p className={`text-[10px] sm:text-xs ${ownerData.loginGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -510,19 +530,31 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
                   </p>
                 </div>
 
-                <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                    <UserCog className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
-                    <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Total Supervisor</span>
+                <div
+                  onClick={() => setShowSupervisorDetail(true)}
+                  className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm cursor-pointer hover:bg-gray-50 hover:border-[#8B5E3C]/30 transition group"
+                >
+                  <div className="flex items-center justify-between mb-1 sm:mb-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <UserCog className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
+                      <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Total Supervisor</span>
+                    </div>
+                    <Eye className="w-3 h-3 text-gray-400 group-hover:text-[#8B5E3C] transition" />
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-gray-800">{ownerData.totalSupervisor}</p>
                   <p className="text-[10px] sm:text-xs text-gray-500">Pengawas</p>
                 </div>
 
-                <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                    <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
-                    <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Izin Diproses</span>
+                <div
+                  onClick={() => setShowIzinProcessedDetail(true)}
+                  className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 shadow-sm cursor-pointer hover:bg-gray-50 hover:border-[#8B5E3C]/30 transition group"
+                >
+                  <div className="flex items-center justify-between mb-1 sm:mb-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4 text-[#8B5E3C]" />
+                      <span className="text-gray-500 text-[10px] sm:text-xs font-medium truncate">Izin Diproses</span>
+                    </div>
+                    <Eye className="w-3 h-3 text-gray-400 group-hover:text-[#8B5E3C] transition" />
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-gray-800">{ownerData.izinProcessedThisMonth}</p>
                   <p className="text-[10px] sm:text-xs text-gray-500">Bulan ini</p>
@@ -947,6 +979,619 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
                     setSelectedDayActivity(null);
                   }}
                   className={`${selectedDayActivity ? 'flex-1' : 'w-full'} bg-[#8B5E3C] text-white py-2.5 rounded-lg hover:bg-[#7A5235] font-semibold transition`}
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DETAIL RINGKASAN EKSEKUTIF */}
+      <AnimatePresence>
+        {showExecSummaryDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-xl max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#8B5E3C] rounded-xl flex items-center justify-center">
+                    <Crown size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">Detail Ringkasan Eksekutif</h3>
+                    <p className="text-sm text-gray-500">Aktivitas & Riwayat Login Terbaru</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowExecSummaryDetail(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              {/* Tab Navigation */}
+              <div className="flex gap-2 mb-4 border-b border-gray-200">
+                <button
+                  onClick={() => setExecDetailTab('activity')}
+                  className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
+                    execDetailTab === 'activity'
+                      ? 'border-[#8B5E3C] text-[#8B5E3C]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Activity className="w-4 h-4 inline mr-2" />
+                  Aktivitas Terbaru
+                </button>
+                <button
+                  onClick={() => setExecDetailTab('login')}
+                  className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
+                    execDetailTab === 'login'
+                      ? 'border-[#8B5E3C] text-[#8B5E3C]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <LogIn className="w-4 h-4 inline mr-2" />
+                  Riwayat Login
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="overflow-y-auto flex-1">
+                {execDetailTab === 'activity' ? (
+                  // Aktivitas Terbaru
+                  <div className="space-y-3">
+                    {ownerData?.recentActivities?.length > 0 ? (
+                      ownerData.recentActivities.map((activity: any, index: number) => (
+                        <div key={index} className="p-3 bg-[#F9F6F3] rounded-xl border border-gray-100">
+                          <div className="flex items-start gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                              activity.activity === 'Login' ? 'bg-green-500' :
+                              activity.activity === 'Logout' ? 'bg-red-500' :
+                              activity.activity?.includes('Tambah') ? 'bg-blue-500' :
+                              activity.activity?.includes('Update') ? 'bg-amber-500' :
+                              activity.activity?.includes('Hapus') ? 'bg-red-500' :
+                              'bg-gray-500'
+                            }`}>
+                              {activity.user_name?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-gray-800 text-sm">{activity.user_name}</span>
+                                <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                                  activity.user_role === 'owner' ? 'bg-[#8B5E3C]/20 text-[#8B5E3C]' :
+                                  activity.user_role === 'supervisor' ? 'bg-blue-100 text-blue-700' :
+                                  activity.user_role === 'bar' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {activity.user_role}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-0.5">{activity.activity}</p>
+                              {activity.description && (
+                                <p className="text-xs text-gray-400 mt-1">{activity.description}</p>
+                              )}
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(activity.created_at).toLocaleString('id-ID', {
+                                  day: 'numeric', month: 'short', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Activity size={32} className="mx-auto mb-2 text-gray-300" />
+                        <p>Belum ada aktivitas terbaru</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Riwayat Login
+                  <div className="space-y-3">
+                    {ownerData?.recentLogins?.length > 0 ? (
+                      ownerData.recentLogins.map((login: any, index: number) => (
+                        <div key={index} className="p-3 bg-[#F9F6F3] rounded-xl border border-gray-100">
+                          <div className="flex items-start gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                              login.is_online ? 'bg-green-500' : 'bg-gray-400'
+                            }`}>
+                              {login.user_name?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-gray-800 text-sm">{login.user_name}</span>
+                                <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                                  login.user_role === 'owner' ? 'bg-[#8B5E3C]/20 text-[#8B5E3C]' :
+                                  login.user_role === 'supervisor' ? 'bg-blue-100 text-blue-700' :
+                                  login.user_role === 'bar' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {login.user_role}
+                                </span>
+                                {login.is_online && (
+                                  <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700">
+                                    Online
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  {login.device_type === 'mobile' ? (
+                                    <Smartphone className="w-3 h-3" />
+                                  ) : (
+                                    <Monitor className="w-3 h-3" />
+                                  )}
+                                  {login.device_type}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Globe className="w-3 h-3" />
+                                  {login.browser}
+                                </span>
+                                <span>{login.platform}</span>
+                              </div>
+                              <div className="flex items-center gap-4 mt-1 text-xs">
+                                <span className="text-green-600 flex items-center gap-1">
+                                  <LogIn className="w-3 h-3" />
+                                  {new Date(login.login_at).toLocaleString('id-ID', {
+                                    day: 'numeric', month: 'short',
+                                    hour: '2-digit', minute: '2-digit'
+                                  })}
+                                </span>
+                                {login.logout_at && (
+                                  <span className="text-red-600 flex items-center gap-1">
+                                    <LogOut className="w-3 h-3" />
+                                    {new Date(login.logout_at).toLocaleString('id-ID', {
+                                      day: 'numeric', month: 'short',
+                                      hour: '2-digit', minute: '2-digit'
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1">IP: {login.ip_address}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <LogIn size={32} className="mx-auto mb-2 text-gray-300" />
+                        <p>Belum ada riwayat login</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowExecSummaryDetail(false)}
+                  className="w-full bg-[#8B5E3C] text-white py-2.5 rounded-lg hover:bg-[#7A5235] font-semibold transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DETAIL AKTIVITAS MINGGU INI */}
+      <AnimatePresence>
+        {showWeeklyActivityDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#8B5E3C] rounded-xl flex items-center justify-center">
+                    <Activity size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">Aktivitas Minggu Ini</h3>
+                    <p className="text-sm text-gray-500">Total {ownerData?.activityThisWeek || 0} aktivitas dalam 7 hari terakhir</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWeeklyActivityDetail(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1">
+                <div className="space-y-3">
+                  {ownerData?.recentActivities?.length > 0 ? (
+                    ownerData.recentActivities.map((activity: any, index: number) => (
+                      <div key={index} className="p-3 bg-[#F9F6F3] rounded-xl border border-gray-100">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                            activity.activity === 'Login' ? 'bg-green-500' :
+                            activity.activity === 'Logout' ? 'bg-red-500' :
+                            activity.activity?.includes('Tambah') ? 'bg-blue-500' :
+                            activity.activity?.includes('Update') ? 'bg-amber-500' :
+                            activity.activity?.includes('Hapus') ? 'bg-red-500' :
+                            'bg-gray-500'
+                          }`}>
+                            {activity.user_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-800 text-sm">{activity.user_name}</span>
+                              <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                                activity.user_role === 'owner' ? 'bg-[#8B5E3C]/20 text-[#8B5E3C]' :
+                                activity.user_role === 'supervisor' ? 'bg-blue-100 text-blue-700' :
+                                activity.user_role === 'bar' ? 'bg-purple-100 text-purple-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {activity.user_role}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-0.5">{activity.activity}</p>
+                            {activity.description && (
+                              <p className="text-xs text-gray-400 mt-1">{activity.description}</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              {new Date(activity.created_at).toLocaleString('id-ID', {
+                                day: 'numeric', month: 'short', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Activity size={32} className="mx-auto mb-2 text-gray-300" />
+                      <p>Belum ada aktivitas minggu ini</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowWeeklyActivityDetail(false)}
+                  className="w-full bg-[#8B5E3C] text-white py-2.5 rounded-lg hover:bg-[#7A5235] font-semibold transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DETAIL LOGIN MINGGU INI */}
+      <AnimatePresence>
+        {showWeeklyLoginDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#8B5E3C] rounded-xl flex items-center justify-center">
+                    <LogIn size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">Login Minggu Ini</h3>
+                    <p className="text-sm text-gray-500">Total {ownerData?.loginThisWeek || 0} login dalam 7 hari terakhir</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWeeklyLoginDetail(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1">
+                <div className="space-y-3">
+                  {ownerData?.recentLogins?.length > 0 ? (
+                    ownerData.recentLogins.map((login: any, index: number) => (
+                      <div key={index} className="p-3 bg-[#F9F6F3] rounded-xl border border-gray-100">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                            login.is_online ? 'bg-green-500' : 'bg-gray-400'
+                          }`}>
+                            {login.user_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-800 text-sm">{login.user_name}</span>
+                              <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                                login.user_role === 'owner' ? 'bg-[#8B5E3C]/20 text-[#8B5E3C]' :
+                                login.user_role === 'supervisor' ? 'bg-blue-100 text-blue-700' :
+                                login.user_role === 'bar' ? 'bg-purple-100 text-purple-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {login.user_role}
+                              </span>
+                              {login.is_online && (
+                                <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700">
+                                  Online
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                              <span className="flex items-center gap-1">
+                                {login.device_type === 'mobile' ? (
+                                  <Smartphone className="w-3 h-3" />
+                                ) : (
+                                  <Monitor className="w-3 h-3" />
+                                )}
+                                {login.device_type}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Globe className="w-3 h-3" />
+                                {login.browser}
+                              </span>
+                              <span>{login.platform}</span>
+                            </div>
+                            <div className="flex items-center gap-4 mt-1 text-xs">
+                              <span className="text-green-600 flex items-center gap-1">
+                                <LogIn className="w-3 h-3" />
+                                {new Date(login.login_at).toLocaleString('id-ID', {
+                                  day: 'numeric', month: 'short',
+                                  hour: '2-digit', minute: '2-digit'
+                                })}
+                              </span>
+                              {login.logout_at && (
+                                <span className="text-red-600 flex items-center gap-1">
+                                  <LogOut className="w-3 h-3" />
+                                  {new Date(login.logout_at).toLocaleString('id-ID', {
+                                    day: 'numeric', month: 'short',
+                                    hour: '2-digit', minute: '2-digit'
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">IP: {login.ip_address}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <LogIn size={32} className="mx-auto mb-2 text-gray-300" />
+                      <p>Belum ada login minggu ini</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowWeeklyLoginDetail(false)}
+                  className="w-full bg-[#8B5E3C] text-white py-2.5 rounded-lg hover:bg-[#7A5235] font-semibold transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DETAIL SUPERVISOR */}
+      <AnimatePresence>
+        {showSupervisorDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#8B5E3C] rounded-xl flex items-center justify-center">
+                    <UserCog size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">Daftar Supervisor</h3>
+                    <p className="text-sm text-gray-500">Total {ownerData?.totalSupervisor || 0} supervisor aktif</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSupervisorDetail(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1">
+                <div className="space-y-3">
+                  {ownerData?.supervisorList?.length > 0 ? (
+                    ownerData.supervisorList.map((supervisor: any, index: number) => (
+                      <div key={index} className="p-4 bg-[#F9F6F3] rounded-xl border border-gray-100">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                            {supervisor.name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-800">{supervisor.name}</span>
+                              <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-700">
+                                Supervisor
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">@{supervisor.username || '-'}</p>
+                            <p className="text-sm text-gray-500">{supervisor.email}</p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              Bergabung: {new Date(supervisor.created_at).toLocaleDateString('id-ID', {
+                                day: 'numeric', month: 'long', year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <UserCog size={32} className="mx-auto mb-2 text-gray-300" />
+                      <p>Belum ada supervisor terdaftar</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowSupervisorDetail(false)}
+                  className="w-full bg-[#8B5E3C] text-white py-2.5 rounded-lg hover:bg-[#7A5235] font-semibold transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DETAIL IZIN DIPROSES */}
+      <AnimatePresence>
+        {showIzinProcessedDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#8B5E3C] rounded-xl flex items-center justify-center">
+                    <ShieldCheck size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">Izin Revisi Diproses</h3>
+                    <p className="text-sm text-gray-500">Total {ownerData?.izinProcessedThisMonth || 0} izin diproses bulan ini</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowIzinProcessedDetail(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition"
+                >
+                  <X size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1">
+                <div className="space-y-3">
+                  {ownerData?.izinProcessedList?.length > 0 ? (
+                    ownerData.izinProcessedList.map((izin: any, index: number) => (
+                      <div key={index} className="p-4 bg-[#F9F6F3] rounded-xl border border-gray-100">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                            izin.status === 'approved' ? 'bg-green-500' : 'bg-red-500'
+                          }`}>
+                            {izin.status === 'approved' ? (
+                              <CheckCircle2 size={20} />
+                            ) : (
+                              <XCircle size={20} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-800">{izin.user_name}</span>
+                              <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                                izin.user_role === 'bar' ? 'bg-purple-100 text-purple-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {izin.user_role}
+                              </span>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                izin.status === 'approved'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}>
+                                {izin.status === 'approved' ? 'Disetujui' : 'Ditolak'}
+                              </span>
+                            </div>
+                            {izin.reason && (
+                              <p className="text-sm text-gray-600 mt-1">{izin.reason}</p>
+                            )}
+                            {izin.start_time && izin.end_time && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Waktu: {new Date(izin.start_time).toLocaleString('id-ID', {
+                                  day: 'numeric', month: 'short',
+                                  hour: '2-digit', minute: '2-digit'
+                                })} - {new Date(izin.end_time).toLocaleString('id-ID', {
+                                  hour: '2-digit', minute: '2-digit'
+                                })}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              Diproses: {new Date(izin.updated_at).toLocaleDateString('id-ID', {
+                                day: 'numeric', month: 'long', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <ShieldCheck size={32} className="mx-auto mb-2 text-gray-300" />
+                      <p>Belum ada izin diproses bulan ini</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowIzinProcessedDetail(false)}
+                  className="w-full bg-[#8B5E3C] text-white py-2.5 rounded-lg hover:bg-[#7A5235] font-semibold transition"
                 >
                   Tutup
                 </button>

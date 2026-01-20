@@ -221,10 +221,10 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1, duration: 0.6 }}
             >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
                 <Link
                   href="/login"
-                  className="relative px-8 py-4 bg-gradient-to-r from-[#8B5E3C] to-[#D9A978] text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 text-center overflow-hidden group"
+                  className="relative inline-flex items-center justify-center w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#8B5E3C] to-[#D9A978] text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 text-center overflow-hidden group"
                 >
                   <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-[#D9A978] to-[#8B5E3C] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
                   <span className="relative">Mulai Sekarang</span>
@@ -234,7 +234,7 @@ export default function LandingPage() {
                 href="#features"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:border-[#8B5E3C] hover:text-[#8B5E3C] transition-all duration-300 text-center relative overflow-hidden group"
+                className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:border-[#8B5E3C] hover:text-[#8B5E3C] transition-all duration-300 text-center relative overflow-hidden group"
               >
                 <span className="absolute inset-0 w-0 bg-gradient-to-r from-[#8B5E3C]/5 to-[#D9A978]/5 group-hover:w-full transition-all duration-500"></span>
                 <span className="relative">Pelajari Lebih Lanjut</span>

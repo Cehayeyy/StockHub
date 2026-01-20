@@ -120,8 +120,12 @@ export default function Manajemen() {
 
         // Validasi frontend
         const errs: {[key: string]: string} = {};
-        if (username && username.length < 5) {
-            errs.username = 'Username tidak boleh kurang dari 5 karakter.';
+
+        if (!role) {
+            errs.role = 'Bagian harus dipilih.';
+        }
+        if (!name || name.trim().length < 3) {
+            errs.name = 'Username harus diisi minimal 3 karakter.';
         }
         if (!password || password.length < 5) {
             errs.password = 'Password tidak boleh kurang dari 5 karakter.';
@@ -229,11 +233,16 @@ export default function Manajemen() {
     };
 
     // Helper: cek apakah user bisa diedit/dihapus oleh current user
-    const canManageUser = (userRole: string) => {
+    const canManageUser = (user: any) => {
+        // Owner tidak bisa mengedit/hapus diri sendiri
+        if (currentUserRole === 'owner' && user.id === auth?.user?.id) {
+            return false;
+        }
+
         if (currentUserRole === 'owner') return true;
         if (currentUserRole === 'supervisor') {
             // Supervisor tidak bisa mengelola owner atau supervisor lain
-            return !['owner', 'supervisor'].includes(userRole.toLowerCase());
+            return !['owner', 'supervisor'].includes(user.role.toLowerCase());
         }
         return false;
     };
@@ -285,7 +294,7 @@ export default function Manajemen() {
                                 <div key={u.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
                                     <div className="flex justify-between items-start mb-3">
                                         <div>
-                                            <div className="font-bold text-gray-800">{u.username}</div>
+                                            <div className="font-bold text-gray-800">{u.username || '-'}</div>
                                             <div className="text-sm text-gray-500">{u.name || '-'}</div>
                                         </div>
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
@@ -299,7 +308,7 @@ export default function Manajemen() {
                                     </div>
 
                                     <div className="flex gap-2 border-t pt-3">
-                                        {canManageUser(u.role) && (
+                                        {canManageUser(u) && (
                                             <>
                                                 <button
                                                     onClick={() => openEditModal(u)}
@@ -315,7 +324,7 @@ export default function Manajemen() {
                                                 </button>
                                             </>
                                         )}
-                                        {!canManageUser(u.role) && (
+                                        {!canManageUser(u) && (
                                             <span className="flex-1 text-center text-xs text-gray-400 py-2">Tidak dapat dikelola</span>
                                         )}
                                     </div>
@@ -333,7 +342,7 @@ export default function Manajemen() {
                                     <tr>
                                         <th className="px-6 py-4 w-16 text-center">No</th>
                                         <th className="px-6 py-4">Username</th>
-                                        <th className="px-6 py-4">Nama</th>
+                                        <th className="px-6 py-4">Kode Username</th>
                                         <th className="px-6 py-4 text-center">Role</th>
                                         <th className="px-6 py-4 text-center">Dibuat</th>
                                         <th className="px-6 py-4 text-center w-32">Aksi</th>
@@ -355,10 +364,10 @@ export default function Manajemen() {
                                                         : index + 1}
                                                 </td>
                                                 <td className="px-6 py-4 font-medium text-gray-800">
-                                                    {u.username || '-'}
+                                                    {u.name || '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-gray-600">
-                                                    {u.name || '-'}
+                                                    {u.username || '-'}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
@@ -369,7 +378,7 @@ export default function Manajemen() {
                                                     {new Date(u.created_at).toLocaleDateString('id-ID')}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    {canManageUser(u.role) ? (
+                                                    {canManageUser(u) ? (
                                                         <div className="flex justify-center gap-2">
                                                             <button
                                                                 onClick={() => openEditModal(u)}
@@ -454,14 +463,18 @@ export default function Manajemen() {
                                         setRole(value);
                                         setUsername(value ? getNextUsername(value) : '');
                                     }}
-                                    className="w-full bg-gray-50 rounded-xl px-4 py-2 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none"
+                                    className={`w-full bg-gray-50 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-[#D9A978] outline-none ${validationErrors.role ? 'border-red-500' : 'border-gray-200'}`}
                                     required
                                 >
                                     <option value="">-- Pilih Bagian --</option>
+                                    {allowedRoles?.includes('owner') && <option value="owner">Owner</option>}
+                                    {allowedRoles?.includes('supervisor') && <option value="supervisor">Supervisor</option>}
                                     {allowedRoles?.includes('bar') && <option value="bar">Bar</option>}
                                     {allowedRoles?.includes('dapur') && <option value="dapur">Dapur</option>}
-                                    {allowedRoles?.includes('supervisor') && <option value="supervisor">Supervisor</option>}
                                 </select>
+                                {validationErrors.role && (
+                                    <p className="text-red-500 text-xs mt-1">{validationErrors.role}</p>
+                                )}
                             </div>
 
                             <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -478,15 +491,18 @@ export default function Manajemen() {
 
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-1">
-                                    Nama Lengkap
+                                    Username
                                 </label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-gray-50 rounded-xl px-4 py-2 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none"
+                                    className={`w-full bg-gray-50 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-[#D9A978] outline-none ${validationErrors.name ? 'border-red-500' : 'border-gray-200'}`}
                                     required
                                 />
+                                {validationErrors.name && (
+                                    <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>
+                                )}
                             </div>
 
                             <div>
@@ -514,7 +530,8 @@ export default function Manajemen() {
                                     Batal
                                 </button>
                                 <button
-                                    type="submit"
+                                    type="button"
+                                    onClick={handleSave}
                                     className="flex-1 px-4 py-2 rounded-xl bg-[#D9A978] text-white font-bold hover:bg-[#c4925e] transition"
                                 >
                                     Simpan

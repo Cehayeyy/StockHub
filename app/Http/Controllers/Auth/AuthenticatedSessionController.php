@@ -50,9 +50,7 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        session()->flash('login_success', 'Berhasil! anda berhasil login');
-
-        return redirect()->intended('/dashboard');
+        return redirect()->intended('/dashboard')->with('login_success', 'Selamat datang, ' . Auth::user()->name . '!');
     }
 
     public function destroy(Request $request): RedirectResponse

@@ -139,7 +139,7 @@ Route::get('/users', [UserController::class, 'index'])->name('users.index'); // 
     Route::get('/stok-harian/bar', [StokHarianController::class, 'bar'])
         ->name('stok-harian.bar');
 
-    Route::middleware(['role:owner,supervisor,bar'])->group(function () {
+    Route::middleware(['role:owner,supervisor,bar', 'checkInputTime'])->group(function () {
 
         Route::post('/stok-harian/menu', [StokHarianController::class, 'storeMenu'])
             ->name('stok-harian-menu.store');
@@ -166,7 +166,7 @@ Route::get('/users', [UserController::class, 'index'])->name('users.index'); // 
     Route::get('/stok-harian/dapur', [StokHarianDapurController::class, 'dapur'])
         ->name('stok-harian.dapur');
 
-    Route::middleware(['role:owner,supervisor,dapur,staff_kitchen'])->group(function () {
+    Route::middleware(['role:owner,supervisor,dapur,staff_kitchen', 'checkInputTime'])->group(function () {
 
 
         Route::post('/stok-harian-dapur/menu', [StokHarianDapurController::class, 'storeMenu'])

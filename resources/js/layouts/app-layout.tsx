@@ -24,6 +24,7 @@ interface PageProps {
   auth: {
     user: {
       name: string;
+      username?: string;
       email: string;
       role?: string;
       division?: 'bar' | 'dapur';
@@ -222,14 +223,14 @@ export default function AppLayout({ header, children }: LayoutProps) {
       <div className="flex items-center mb-8 flex-shrink-0">
         <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
           <span className="text-xl font-bold text-theme-sidebar">
-            {auth.user.name.charAt(0)}
+            {(auth.user.name || auth.user.username).charAt(0).toUpperCase()}
           </span>
         </div>
         <div>
           <div className="font-bold text-lg text-white">Warung Cangkruk</div>
           <div className="text-xs text-white/70">
-            {auth.user.name}
-            {auth.user.role ? ` (${auth.user.role})` : ''}
+            {auth.user.name || auth.user.username}
+            {auth.user.username ? ` (${auth.user.username})` : ''}
           </div>
         </div>
       </div>
@@ -363,14 +364,14 @@ export default function AppLayout({ header, children }: LayoutProps) {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Sidebar Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#502A07] text-white/90 p-5 flex flex-col transform transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#502A07] text-white/90 p-5 flex flex-col transform transition-transform duration-300 ease-in-out lg:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -404,7 +405,8 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
       {/* Desktop Sidebar */}
       {/* FIX SCROLL: flex-shrink-0 (agar lebar tetap), overflow-y-auto (agar menu bisa discroll sendiri) */}
-      <aside className="w-64 bg-[#502A07] text-white/90 p-5 flex-col flex-shrink-0 h-full overflow-y-auto hidden md:flex">
+      {/* Changed md:flex to lg:flex so tablet (iPad) uses hamburger menu */}
+      <aside className="w-64 bg-[#502A07] text-white/90 p-5 flex-col flex-shrink-0 h-full overflow-y-auto hidden lg:flex">
         <SidebarContent />
       </aside>
 
@@ -416,10 +418,10 @@ export default function AppLayout({ header, children }: LayoutProps) {
         <header className="bg-white shadow-sm p-3 sm:p-4 md:p-6 flex-shrink-0 z-10 w-full">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Hamburger Menu Button (Mobile Only) */}
+              {/* Hamburger Menu Button (Mobile & Tablet) */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#502A07] text-white md:hidden"
+                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#502A07] text-white lg:hidden"
               >
                 <Menu size={22} />
               </button>
@@ -439,9 +441,9 @@ export default function AppLayout({ header, children }: LayoutProps) {
             <div className="flex items-center">
               <div className="text-right">
                 <div className="font-semibold text-gray-800 text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">
-                  {auth.user.name}
+                  {auth.user.name || auth.user.username}
                   <span className="hidden sm:inline">
-                    {auth.user.role ? ` (${auth.user.role})` : ''}
+                    {auth.user.username ? ` (${auth.user.username})` : ''}
                   </span>
                 </div>
                 <div className="text-xs sm:text-sm text-gray-500 hidden sm:block">{formattedDate}</div>

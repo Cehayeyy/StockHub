@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\CheckInputTime;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // ⬇️ ALIAS MIDDLEWARE (INI YANG PENTING)
         $middleware->alias([
             'role' => CheckRole::class,
+            'checkInputTime' => CheckInputTime::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
