@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Box, Layers, BookOpen, ShieldCheck, Clock, TrendingUp } from "lucide-react";
+import { Box, Layers, BookOpen, ShieldCheck, Clock, TrendingUp, AlertTriangle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { motion } from "framer-motion";
 import CountUp from "react-countup";
@@ -126,6 +126,7 @@ export default function DashboardStaff() {
     flash,
     alreadyRequestedRevision,
     izinApproved, // Data izin yang sudah disetujui dengan waktu
+    canInput, // Cek apakah user bisa input (sebelum jam 8 malam atau punya izin revisi)
   } = usePage<any>().props;
 
   // Data untuk pie chart dengan 3 kategori
@@ -350,8 +351,23 @@ export default function DashboardStaff() {
                 </div>
               </div>
 
+              {!canInput && (
+                <div className="mb-3 bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-start gap-2">
+                  <div className="p-1.5 bg-yellow-100 rounded-full text-yellow-600 flex-shrink-0">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-yellow-800 font-bold text-xs">Waktu Input Ditutup</h3>
+                    <p className="text-yellow-700 text-xs mt-0.5">
+                      Input harian ditutup setelah jam 20:00. Ajukan izin revisi untuk input.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => {
+                  if (!canInput) return;
                   const role = auth.user.role;
                   if (role === "bar") {
                     router.visit("/stok-harian/bar?tab=menu&autoInput=1");
@@ -359,7 +375,12 @@ export default function DashboardStaff() {
                     router.visit("/stok-harian/dapur?tab=menu&autoInput=1");
                   }
                 }}
-                className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-[#8B5E3C] text-white rounded-lg sm:rounded-xl hover:bg-[#6F4E37] transition font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95"
+                disabled={!canInput}
+                className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl transition font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95 ${
+                  canInput
+                    ? 'bg-[#8B5E3C] text-white hover:bg-[#6F4E37]'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />

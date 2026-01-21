@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\ActivityLog; // Import
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -13,16 +13,12 @@ class UserController extends Controller
     public function index()
     {
         $users = User::select('id', 'username', 'name', 'email', 'role', 'created_at')->get();
-
-        // Tentukan role yang boleh dibuat berdasarkan role user yang login
         $currentUserRole = Auth::user()->role;
         $allowedRoles = [];
 
         if ($currentUserRole === 'owner') {
-            // Owner bisa membuat semua role kecuali owner
-            $allowedRoles = ['supervisor', 'bar', 'dapur'];
+            $allowedRoles = ['owner', 'supervisor', 'bar', 'dapur'];
         } elseif ($currentUserRole === 'supervisor') {
-            // Supervisor hanya bisa membuat bar dan dapur
             $allowedRoles = ['bar', 'dapur'];
         }
 
@@ -62,10 +58,9 @@ class UserController extends Controller
         $request->validate([
             'role'     => 'required|in:bar,dapur,supervisor,owner',
             'name'     => 'required|string|max:255',
-            'username' => 'nullable|string|min:5|max:255',
+            'username' => 'nullable|string|max:255',
             'password' => 'required|min:5',
         ], [
-            'username.min' => 'Username tidak boleh kurang dari 5 karakter.',
             'password.min' => 'Password tidak boleh kurang dari 5 karakter.',
             'password.required' => 'Password wajib diisi.',
         ]);
@@ -73,7 +68,6 @@ class UserController extends Controller
         $role = strtolower($request->role);
         $currentUserRole = Auth::user()->role;
 
-        // Validasi permission: supervisor tidak boleh membuat supervisor/owner
         if ($currentUserRole === 'supervisor' && in_array($role, ['supervisor', 'owner'])) {
             return back()->withErrors(['role' => 'Anda tidak memiliki izin untuk membuat akun dengan role ini.']);
         }
