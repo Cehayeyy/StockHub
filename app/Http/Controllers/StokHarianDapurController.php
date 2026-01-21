@@ -50,7 +50,7 @@ class StokHarianDapurController extends Controller
         } else {
             $query = StokHarianDapurMentah::with('item')->whereDate('tanggal', $tanggal);
             if ($search) {
-                $query->whereHas('item', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+                $query->whereHas('item', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
             }
             $items = $query->orderBy('id')->paginate(10)->through(fn ($s) => [
                 'id'         => $s->id,
@@ -433,8 +433,10 @@ class StokHarianDapurController extends Controller
             if ($maxPossiblePortions === 999999) $maxPossiblePortions = 0;
 
             // 5. Simpan ke Database
+            // Untuk MENU: stok_awal = kapasitas total (tersisa + yang sudah dipakai)
+            // Rumus: stok_awal = stok_akhir + stok_keluar
+            // Ini berbeda dengan MENTAH yang pakai carry-over
             $menu->stok_akhir = $maxPossiblePortions;
-            // Recalculate stok awal agar konsisten (Akhir + Keluar)
             $menu->stok_awal = $maxPossiblePortions + $menu->stok_keluar;
             $menu->stok_masuk = 0;
             $menu->save();

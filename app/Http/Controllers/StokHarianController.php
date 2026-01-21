@@ -186,7 +186,7 @@ class StokHarianController extends Controller
                     StokHarianMentah::firstOrCreate(
                         ['item_id' => $itemId, 'tanggal' => $tanggal],
                         [
-                            'stok_awal'   => $stokAwalHariIni, 
+                            'stok_awal'   => $stokAwalHariIni,
                             'stok_masuk'  => 0,
                             'stok_keluar' => 0,
                             'stok_akhir'  => $stokAwalHariIni,
@@ -460,8 +460,10 @@ class StokHarianController extends Controller
             if ($maxPossiblePortions === 999999) $maxPossiblePortions = 0;
 
             // 5. Simpan ke Database
+            // Untuk MENU: stok_awal = kapasitas total (tersisa + yang sudah dipakai)
+            // Rumus: stok_awal = stok_akhir + stok_keluar
+            // Ini berbeda dengan MENTAH yang pakai carry-over
             $menu->stok_akhir = $maxPossiblePortions;
-            // Recalculate stok awal agar konsisten (Akhir + Keluar)
             $menu->stok_awal = $maxPossiblePortions + $menu->stok_keluar;
             $menu->stok_masuk = 0;
             $menu->save();
