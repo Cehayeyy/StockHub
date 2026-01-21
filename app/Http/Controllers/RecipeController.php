@@ -37,17 +37,14 @@ class RecipeController extends Controller
                 'created_at'        => $r->created_at?->format('d/m/Y'),
             ]);
 
-        $targetDivisions = [$division];
-        // Backward compatibility: include old 'kitchen' data
-        if ($division === 'dapur') {
-            $targetDivisions[] = 'kitchen';
-        }
+        // 🔥 REVISI: HAPUS LOGIKA 'kitchen' (Backward Compatibility)
+        // Kita buat strict agar dropdown SAMA PERSIS dengan Master Data Item
 
         $items = Item::with('itemCategory')
-            ->whereIn('division', $targetDivisions)
+            ->where('division', $division) // Hanya ambil sesuai divisi aktif (dapur/bar)
             ->get()
-            // 🔥 FIX: Filter nama unik untuk mencegah duplikasi (Dapur + Kitchen)
-            ->unique('nama')
+            ->unique('nama') // Tetap pakai unique jaga-jaga ada duplikat nama
+            ->values()
             ->map(fn ($i) => [
                 'id'       => $i->id,
                 'name'     => $i->nama,
@@ -63,6 +60,10 @@ class RecipeController extends Controller
             'userRole'     => $user->role,
         ]);
     }
+
+    // ... (Fungsi store, update, destroy, helpers biarkan tetap sama seperti sebelumnya)
+    // Silakan copy-paste sisa fungsinya dari kode sebelumnya jika perlu,
+    // tapi yang krusial diubah hanya method index() di atas.
 
     public function store(Request $request)
     {
@@ -122,7 +123,6 @@ class RecipeController extends Controller
                 }
             }
 
-            // LOG AKTIVITAS
             ActivityLog::create([
                 'user_id'     => $user->id,
                 'activity'    => 'Tambah Resep',
@@ -164,7 +164,6 @@ class RecipeController extends Controller
 
             $tanggal = session('stok_tanggal') ?? now()->toDateString();
 
-            // 1. Pastikan BAHAN MENTAH ada di stok harian
             foreach ($validated['ingredients'] as $ing) {
                 if ($validated['division'] === 'dapur') {
                     StokHarianDapurMentah::firstOrCreate(
@@ -179,14 +178,12 @@ class RecipeController extends Controller
                 }
             }
 
-            // 2. LOGIKA BARU: RE-INSERT MENU KE STOK HARIAN (Jika Hilang)
             if ($validated['division'] === 'bar') {
                 $this->syncToStokHarianBar($recipe, $tanggal);
             } else {
                 $this->syncToStokHarianDapur($recipe, $tanggal);
             }
 
-            // LOG AKTIVITAS
             ActivityLog::create([
                 'user_id'     => $user->id,
                 'activity'    => 'Update Resep',
@@ -250,7 +247,6 @@ class RecipeController extends Controller
 
             $recipe->delete();
 
-            // LOG AKTIVITAS
             ActivityLog::create([
                 'user_id'     => $user->id,
                 'activity'    => 'Hapus Resep',
@@ -263,11 +259,8 @@ class RecipeController extends Controller
         ])->with('success', 'Resep berhasil dihapus.');
     }
 
-    // --- HELPERS UNTUK SINKRONISASI STOK MENU ---
-
     private function syncToStokHarianBar($recipe, $tanggal)
     {
-        // Cari Item ID berdasarkan nama resep (karena Bar pakai Item ID)
         $menuItem = Item::where('nama', $recipe->name)->first();
 
         if ($menuItem) {
@@ -275,7 +268,6 @@ class RecipeController extends Controller
                                       ->whereDate('tanggal', $tanggal)
                                       ->first();
 
-            // Hitung kapasitas
             $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'bar', $tanggal);
 
             if (!$stokMenu) {
@@ -286,7 +278,7 @@ class RecipeController extends Controller
                     'stok_masuk'  => 0,
                     'stok_keluar' => 0,
                     'stok_akhir'  => $stokAwalBaru,
-                    'unit'        => 'porsi' // Default unit
+                    'unit'        => 'porsi'
                 ]);
             }
         }
@@ -298,7 +290,6 @@ class RecipeController extends Controller
                                        ->whereDate('tanggal', $tanggal)
                                        ->first();
 
-        // Hitung kapasitas
         $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'dapur', $tanggal);
 
         if (!$stokMenu) {
@@ -337,7 +328,7 @@ class RecipeController extends Controller
                     $minCapacity = $capacity;
                 }
             } else {
-                return 0; // Bahan tidak ada, kapasitas 0
+                return 0;
             }
         }
 

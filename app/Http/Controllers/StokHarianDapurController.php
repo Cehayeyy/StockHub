@@ -23,7 +23,7 @@ class StokHarianDapurController extends Controller
         $search  = $request->search;
         $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
-        // 1. Generate Data Harian (Shared + Carry Over Logic)
+        // 1. Generate Data Harian (Shared + Carry Over Logic Menu & Mentah)
         $this->ensureStokExists($tanggal);
 
         // 2. Query Data (Tanpa Filter User ID agar Sinkron)
@@ -117,7 +117,7 @@ class StokHarianDapurController extends Controller
         ]);
     }
 
-    // --- AUTO GENERATE DATA (CARRY OVER: SISA KEMARIN JADI AWAL HARI INI) ---
+    // --- AUTO GENERATE DATA (CARRY OVER MENU & MENTAH) ---
     private function ensureStokExists($tanggal)
     {
         $userId = Auth::id();
@@ -126,16 +126,14 @@ class StokHarianDapurController extends Controller
         $kemarin = Carbon::parse($tanggal)->subDay()->toDateString();
 
         // ====================================================
-        // A. GENERATE UNTUK BAHAN MENTAH DAPUR
+        // A. GENERATE UNTUK BAHAN MENTAH DAPUR - CARRY OVER
         // ====================================================
         $existsMentah = StokHarianDapurMentah::whereDate('tanggal', $tanggal)->exists();
 
         if (!$existsMentah) {
-            // Ambil Resep Dapur
             $recipes = Recipe::where('division', 'dapur')->get();
             $ingredientIds = collect();
 
-            // Kumpulkan semua ID bahan mentah yang dipakai di dapur
             foreach($recipes as $r) {
                 if(is_array($r->ingredients)) {
                     foreach($r->ingredients as $ing) {
@@ -149,7 +147,7 @@ class StokHarianDapurController extends Controller
                 $itemInfo = Item::find($itemId);
                 if ($itemInfo) {
 
-
+                    // Carry Over Mentah Dapur
                     $stokKemarin = StokHarianDapurMentah::where('item_id', $itemId)
                         ->where('tanggal', $kemarin)
                         ->value('stok_akhir');
@@ -159,10 +157,9 @@ class StokHarianDapurController extends Controller
                     StokHarianDapurMentah::firstOrCreate(
                         ['item_id' => $itemId, 'tanggal' => $tanggal],
                         [
-                            'stok_awal'   => $stokAwalHariIni, // <--- ISI OTOMATIS
+                            'stok_awal'   => $stokAwalHariIni,
                             'stok_masuk'  => 0,
                             'stok_keluar' => 0,
-                            // Stok akhir = Awal (dari kemarin) karena belum ada transaksi hari ini
                             'stok_akhir'  => $stokAwalHariIni,
                             'unit'        => $itemInfo->satuan ?? 'unit'
                         ]
@@ -172,22 +169,29 @@ class StokHarianDapurController extends Controller
         }
 
         // ====================================================
-        // B. GENERATE UNTUK MENU JADI (Made by Order)
+        // B. GENERATE UNTUK MENU JADI - DENGAN CARRY OVER
         // ====================================================
-        // Menu tetap mulai dari 0 karena dibuat dadakan (tidak ada sisa semalam)
         $existsMenu = StokHarianDapurMenu::whereDate('tanggal', $tanggal)->exists();
 
         if (!$existsMenu) {
             $recipes = Recipe::where('division', 'dapur')->get();
 
             foreach ($recipes as $recipe) {
+
+                // 🔥 LOGIKA CARRY OVER MENU DAPUR 🔥
+                $stokKemarinMenu = StokHarianDapurMenu::where('recipe_id', $recipe->id)
+                    ->where('tanggal', $kemarin)
+                    ->value('stok_akhir');
+
+                $stokAwalMenu = $stokKemarinMenu ?? 0;
+
                 StokHarianDapurMenu::firstOrCreate(
                     ['recipe_id' => $recipe->id, 'tanggal' => $tanggal],
                     [
-                        'stok_awal'    => 0,
+                        'stok_awal'    => $stokAwalMenu, // <-- Carry Over
                         'stok_masuk'   => 0,
                         'stok_keluar'  => 0,
-                        'stok_akhir'   => 0,
+                        'stok_akhir'   => $stokAwalMenu, // Awal + 0 - 0
                         'unit'         => 'porsi',
                         'is_submitted' => 0,
                         'user_id'      => $userId

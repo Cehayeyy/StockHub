@@ -181,7 +181,7 @@ class ItemController extends Controller
             ->with('success', 'Item berhasil diupdate!');
     }
 
-    // --- PERBAIKAN UTAMA DI SINI ---
+    // --- FUNGSI DESTROY YANG DIPERBAIKI ---
     public function destroy($id)
     {
         $item = Item::findOrFail($id);
@@ -190,7 +190,6 @@ class ItemController extends Controller
 
         DB::transaction(function () use ($item, $name) {
             // 1. Hapus Relasi Resep (Jika ada)
-            // Cari resep yang terhubung (bisa via nama atau item_id)
             $relatedRecipes = Recipe::where('name', $item->nama)
                                     ->orWhere('item_id', $item->id)
                                     ->get();
@@ -198,13 +197,6 @@ class ItemController extends Controller
             foreach ($relatedRecipes as $recipe) {
                 // Hapus Stok Dapur Menu (Pakai recipe_id)
                 StokHarianDapurMenu::where('recipe_id', $recipe->id)->delete();
-
-                // HAPUS Stok Menu Bar (Jika ada, Bar biasanya pakai item_id, jadi skip recipe_id disini agar tidak error)
-                // Jika Bar juga pakai recipe_id di tabelnya, baru uncomment ini.
-                // Tapi error Anda bilang kolom recipe_id tidak ada di stok_harian_menu.
-                // StokHarianMenu::where('recipe_id', $recipe->id)->delete(); // <-- INI YANG BIKIN ERROR, DIHAPUS.
-
-                // Hapus Resep
                 $recipe->delete();
             }
 
@@ -217,11 +209,8 @@ class ItemController extends Controller
             // Bar Menu (Tabel stok_harian_menu pakai item_id)
             StokHarianMenu::where('item_id', $item->id)->delete();
 
-            // Dapur Mentah
+            // 🔥 Dapur Mentah (INI YANG DITAMBAHKAN)
             StokHarianDapurMentah::where('item_id', $item->id)->delete();
-
-            // Dapur Menu (Biasanya pakai recipe_id, sudah dihandle di atas.
-            // Jangan hapus by item_id jika kolomnya tidak ada di tabel stok_harian_dapur_menu)
 
             // 3. Hapus Item Utama
             $item->delete();

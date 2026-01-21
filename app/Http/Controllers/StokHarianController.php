@@ -23,7 +23,7 @@ class StokHarianController extends Controller
         $search  = $request->search;
         $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
-        // 1. Generate Data Harian (dengan Logika Carry Over)
+        // 1. Generate Data Harian (dengan Logika Carry Over Menu & Mentah)
         $this->ensureStokExists($tanggal);
 
         if ($tab === 'menu') {
@@ -143,7 +143,7 @@ class StokHarianController extends Controller
         ]);
     }
 
-    // --- AUTO GENERATE DATA (SHARED LOGIC + CARRY OVER) ---
+    // --- AUTO GENERATE DATA (SHARED LOGIC + CARRY OVER MENU & MENTAH) ---
     private function ensureStokExists($tanggal)
     {
         $userId = Auth::id();
@@ -152,12 +152,11 @@ class StokHarianController extends Controller
         $kemarin = Carbon::parse($tanggal)->subDay()->toDateString();
 
         // ====================================================
-        // A. GENERATE UNTUK BAHAN MENTAH (BAHAN BAKU)
+        // A. GENERATE UNTUK BAHAN MENTAH (BAHAN BAKU) - CARRY OVER
         // ====================================================
         $existsMentah = StokHarianMentah::whereDate('tanggal', $tanggal)->exists();
 
         if (!$existsMentah) {
-            // Ambil semua item yang harus di-tracking
             $recipes = Recipe::where('division', 'bar')->get();
             $ingredientIds = collect();
             foreach($recipes as $r) {
@@ -170,19 +169,15 @@ class StokHarianController extends Controller
             foreach ($targetMentahIds as $itemId) {
                 $itemInfo = Item::find($itemId);
                 if($itemInfo) {
-
-
+                    // Carry Over Mentah
                     $stokKemarin = StokHarianMentah::where('item_id', $itemId)
-                        ->where('tanggal', $kemarin)
-                        ->value('stok_akhir');
-
-
+                        ->where('tanggal', $kemarin)->value('stok_akhir');
                     $stokAwalHariIni = $stokKemarin ?? 0;
 
                     StokHarianMentah::firstOrCreate(
                         ['item_id' => $itemId, 'tanggal' => $tanggal],
                         [
-                            'stok_awal'   => $stokAwalHariIni, 
+                            'stok_awal'   => $stokAwalHariIni,
                             'stok_masuk'  => 0,
                             'stok_keluar' => 0,
                             'stok_akhir'  => $stokAwalHariIni,
@@ -194,9 +189,8 @@ class StokHarianController extends Controller
         }
 
         // ====================================================
-        // B. GENERATE UNTUK MENU (BARANG JADI)
+        // B. GENERATE UNTUK MENU (BARANG JADI) - CARRY OVER
         // ====================================================
-        // Menu fresh (dibuat dadakan) stok awalnya 0
         $existsMenu = StokHarianMenu::whereDate('tanggal', $tanggal)->exists();
 
         if (!$existsMenu) {
@@ -204,13 +198,22 @@ class StokHarianController extends Controller
             $menuItems = Item::whereIn('nama', $barRecipeNames)->get();
 
             foreach ($menuItems as $item) {
+
+                // 🔥 LOGIKA CARRY OVER MENU BAR 🔥
+                $stokKemarinMenu = StokHarianMenu::where('item_id', $item->id)
+                    ->where('tanggal', $kemarin)
+                    ->value('stok_akhir'); // Ambil sisa kemarin
+
+                // Jika ada sisa, jadikan stok awal. Jika tidak, 0.
+                $stokAwalMenu = $stokKemarinMenu ?? 0;
+
                 StokHarianMenu::firstOrCreate(
                     ['item_id' => $item->id, 'tanggal' => $tanggal],
                     [
-                        'stok_awal'    => 0,
+                        'stok_awal'    => $stokAwalMenu, // <-- Carry Over
                         'stok_masuk'   => 0,
                         'stok_keluar'  => 0,
-                        'stok_akhir'   => 0,
+                        'stok_akhir'   => $stokAwalMenu, // Awal + 0 - 0
                         'unit'         => $item->satuan ?? 'porsi',
                         'is_submitted' => 0,
                         'user_id'      => $userId
