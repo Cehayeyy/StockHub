@@ -396,10 +396,12 @@ class StokHarianController extends Controller
         return back()->with('success', 'Stok diperbarui.');
     }
 
-    // --- REVISI FINAL: DISTRIBUTE DENGAN LOGIKA "REBUTAN" (SHARED SPLIT) ---
+    // --- REVISI FINAL: DISTRIBUTE DENGAN STOK AWAL DIKUNCI (FIXED) ---
+    // Logika: Perubahan kapasitas (karena stok mentah tambah/kurang)
+    // akan mengubah Stok Masuk Menu, bukan Stok Awal Menu.
     private function distributeStockToMenus($rawItemId, $totalStokMentah, $date)
     {
-        // 1. Cari Resep yang mengandung bahan yang baru saja diupdate (Trigger)
+        // 1. Cari Resep yang mengandung bahan yang baru saja diupdate
         $recipes = Recipe::whereJsonContains('ingredients', [['item_id' => (int)$rawItemId]])->get();
         $recipeNames = $recipes->pluck('name');
         if ($recipeNames->isEmpty()) return;
@@ -422,7 +424,7 @@ class StokHarianController extends Controller
 
             $maxPossiblePortions = 999999; // Angka awal sangat besar
 
-            // 4. Cek SETIAP BAHAN dalam resep (Bukan cuma yang diupdate)
+            // 4. Hitung Kapasitas Real Saat Ini (Tersisa Fisik)
             foreach ($recipe->ingredients as $ing) {
                 $ingId = $ing['item_id'] ?? null;
                 $amountNeeded = $ing['amount'] ?? 0;
@@ -430,7 +432,6 @@ class StokHarianController extends Controller
                 if (!$ingId || $amountNeeded == 0) continue;
 
                 // A. Ambil Total Stok Fisik Bahan Ini di Gudang
-                // Kita query ulang agar selalu dapat data terbaru untuk semua bahan pendamping
                 $stokFisikMentah = StokHarianMentah::where('item_id', $ingId)
                     ->where('tanggal', $date)
                     ->value('stok_akhir');
@@ -438,7 +439,6 @@ class StokHarianController extends Controller
                 $stokFisikMentah = $stokFisikMentah ?? 0;
 
                 // B. Hitung berapa menu yang "Rebutan" bahan ini hari ini
-                // Contoh: Espresso diperebutkan oleh Nutella Latte, Caramel Latte, Cappucino (Total 3)
                 $recipesUsingThisIngredient = Recipe::whereJsonContains('ingredients', [['item_id' => (int)$ingId]])->pluck('name');
                 $itemIdsUsingThis = Item::whereIn('nama', $recipesUsingThisIngredient)->pluck('id');
 
@@ -447,28 +447,28 @@ class StokHarianController extends Controller
                     ->count();
 
                 // C. Hitung Jatah per Menu (Share)
-                // Rumus: Total Fisik / Jumlah Pesaing
                 $myShare = ($countCompetitors > 0) ? floor($stokFisikMentah / $countCompetitors) : 0;
 
-                // D. Hitung Kapasitas Resep
-                // Rumus: Jatah Saya / Takaran Resep
+                // D. Hitung Kapasitas
                 $capacity = floor($myShare / $amountNeeded);
 
-                // E. Update Bottleneck (Ambil yang terkecil)
-                // Contoh: Min(Nutella Capacity, Espresso Capacity)
+                // E. Update Bottleneck
                 $maxPossiblePortions = min($maxPossiblePortions, $capacity);
             }
 
-            // Safety jika loop tidak jalan
             if ($maxPossiblePortions === 999999) $maxPossiblePortions = 0;
 
-            // 5. Simpan ke Database
-            // Untuk MENU: stok_awal = kapasitas total (tersisa + yang sudah dipakai)
-            // Rumus: stok_awal = stok_akhir + stok_keluar
-            // Ini berbeda dengan MENTAH yang pakai carry-over
-            $menu->stok_akhir = $maxPossiblePortions;
-            $menu->stok_awal = $maxPossiblePortions + $menu->stok_keluar;
-            $menu->stok_masuk = 0;
+            // 5. UPDATE DATA (RUMUS BARU: STOK AWAL DIKUNCI)
+            // Rumus Dasar: Akhir = (Awal + Masuk) - Keluar
+            // Kita tahu Akhir (Kapasitas saat ini) dan Awal (Fixed).
+            // Maka: Masuk = Akhir + Keluar - Awal
+
+            $calculatedMasuk = $maxPossiblePortions + $menu->stok_keluar - $menu->stok_awal;
+
+            $menu->stok_akhir = $maxPossiblePortions; // Sesuai realita fisik
+            $menu->stok_masuk = $calculatedMasuk;     // Penyesuaian masuk sini
+            // $menu->stok_awal  = ...; // JANGAN DIUBAH!
+
             $menu->save();
         }
     }
