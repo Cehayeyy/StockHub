@@ -457,7 +457,7 @@ class DashboardController extends Controller
 
         // Cek waktu sekarang
         $now = Carbon::now();
-        $cutoffTime = Carbon::today()->setTime(20, 0, 0); // 20:00 = 8 malam
+        $cutoffTime = Carbon::today()->setTime(21, 0, 0); // 21:00 = 9 malam
 
         // Jika belum jam 8 malam, bisa input
         if ($now->lessThan($cutoffTime)) {

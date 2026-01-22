@@ -359,7 +359,7 @@ export default function DashboardStaff() {
                   <div>
                     <h3 className="text-yellow-800 font-bold text-xs">Waktu Input Ditutup</h3>
                     <p className="text-yellow-700 text-xs mt-0.5">
-                      Input harian ditutup setelah jam 20:00. Ajukan izin revisi untuk input.
+                      Input harian ditutup setelah jam 21:00. Ajukan izin revisi untuk input.
                     </p>
                   </div>
                 </div>

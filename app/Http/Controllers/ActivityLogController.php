@@ -34,6 +34,13 @@ class ActivityLogController extends Controller
             ->whereDate('created_at', $selectedDate)
             ->orderBy('created_at', 'desc');
 
+        // Filter berdasarkan role: supervisor tidak boleh lihat aktivitas owner
+        if (auth()->user()->role === 'supervisor') {
+            $query->whereHas('user', function ($q) {
+                $q->where('role', '!=', 'owner');
+            });
+        }
+
         // 4. Filter Pencarian (Nama, Username, Aktivitas, Keterangan)
         if (!empty($search)) {
             $query->where(function ($q) use ($search) {
@@ -95,6 +102,13 @@ class ActivityLogController extends Controller
         // Query Data (Tanpa Pagination untuk Export)
         $query = ActivityLog::with('user')
             ->whereDate('created_at', $selectedDate);
+
+        // Filter berdasarkan role: supervisor tidak boleh lihat aktivitas owner
+        if (auth()->user()->role === 'supervisor') {
+            $query->whereHas('user', function ($q) {
+                $q->where('role', '!=', 'owner');
+            });
+        }
 
         // Filter Pencarian
         if (!empty($search)) {

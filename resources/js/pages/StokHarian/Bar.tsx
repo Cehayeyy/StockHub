@@ -392,7 +392,7 @@ export default function Bar() {
               <div>
                 <h3 className="text-yellow-800 font-bold text-sm">Waktu Input Ditutup</h3>
                 <p className="text-yellow-700 text-xs mt-1">
-                  Waktu input harian telah ditutup (setelah jam 20:00). Silakan ajukan izin revisi untuk melakukan input.
+                  Waktu input harian telah ditutup (setelah jam 21:00). Silakan ajukan izin revisi untuk melakukan input.
                 </p>
               </div>
             </div>

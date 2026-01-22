@@ -490,7 +490,7 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
                 </div>
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-gray-800">Ringkasan Eksekutif</h3>
-                  <p className="text-gray-500 text-xs sm:text-sm">Pemantauan & Analisis khusus Pemilik</p>
+                  <p className="text-gray-500 text-xs sm:text-sm">Pemantauan & Analisis khusus Owner</p>
                 </div>
               </div>
 
@@ -631,7 +631,7 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
                   <div className="flex items-center justify-between p-2 sm:p-3 bg-white rounded-lg sm:rounded-xl border border-[#8B5E3C]/20">
                     <div className="flex items-center gap-2 sm:gap-3">
                       <Crown className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-[#8B5E3C]" />
-                      <span className="font-medium text-gray-700 text-sm sm:text-base">Pemilik</span>
+                      <span className="font-medium text-gray-700 text-sm sm:text-base">Owner</span>
                     </div>
                     <span className="text-base sm:text-lg font-bold text-[#8B5E3C]">{ownerData.usersByRole?.owner || 1}</span>
                   </div>

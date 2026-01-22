@@ -24,7 +24,7 @@ class CheckInputTime
 
         // Cek waktu sekarang
         $now = Carbon::now();
-        $cutoffTime = Carbon::today()->setTime(20, 0, 0); // 20:00 = 8 malam
+        $cutoffTime = Carbon::today()->setTime(21, 0, 0); // 21:00 = 9 malam
 
         // Jika sudah lewat jam 8 malam
         if ($now->greaterThanOrEqualTo($cutoffTime)) {
@@ -36,7 +36,7 @@ class CheckInputTime
                 ->exists();
 
             if (!$hasActivePermission) {
-                return back()->with('error', 'Waktu input harian telah ditutup (jam 20:00). Silakan ajukan izin revisi terlebih dahulu.');
+                return back()->with('error', 'Waktu input harian telah ditutup (jam 21:00). Silakan ajukan izin revisi terlebih dahulu.');
             }
         }
 
