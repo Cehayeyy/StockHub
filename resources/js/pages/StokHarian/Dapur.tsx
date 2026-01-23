@@ -588,9 +588,25 @@ export default function Dapur() {
                       Sisa: {item.tersisa}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-600 flex justify-between mt-2">
-                    <span>Awal: {item.stok_awal}</span>
-                    <span>Pakai: {item.pemakaian}</span>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mt-2">
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Awal:</span>
+                      <span className="font-semibold ml-1">{item.stok_awal}</span>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Total:</span>
+                      <span className="font-semibold ml-1 text-blue-600">{item.stok_total}</span>
+                    </div>
+                    {tab === "mentah" && (
+                      <div className="bg-gray-50 p-2 rounded">
+                        <span className="text-gray-500">Masuk:</span>
+                        <span className="font-semibold ml-1">{item.stok_masuk ?? 0}</span>
+                      </div>
+                    )}
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Pakai:</span>
+                      <span className="font-semibold ml-1">{item.pemakaian}</span>
+                    </div>
                   </div>
                   <div className="flex gap-2 mt-3 pt-3 border-t">
                     <button

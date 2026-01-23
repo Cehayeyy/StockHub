@@ -247,19 +247,19 @@ class DashboardController extends Controller
         }
 
         $data = [
-            'totalItem'         => $totalItem,
-            'totalResep'        => $totalResep,
-            'totalKategori'     => $totalKategori,
+            'totalItem'         => $totalItem ?? 0,
+            'totalResep'        => $totalResep ?? 0,
+            'totalKategori'     => $totalKategori ?? 0,
             'totalUser'         => User::count(),
-            'izinRevisiPending' => $izinRevisiPending,
-            'totalStokHarian'   => $totalStokHarianFiltered,
-            'stokHampirHabis'   => $stokHampirHabisFiltered,
-            'stokHabis'         => $stokHabisFiltered,
-            'stokAman'          => $stokAmanFiltered,
-            'alreadyInputToday' => $alreadyInputToday, // Variabel penting untuk mengubah tampilan Dashboard
-            'izinPending'       => $izinPending,
-            'staffSudahInput'   => $staffSudahInput,
-            'staffBelumInput'   => $staffBelumInput,
+            'izinRevisiPending' => $izinRevisiPending ?? collect([]),
+            'totalStokHarian'   => $totalStokHarianFiltered ?? 0,
+            'stokHampirHabis'   => $stokHampirHabisFiltered ?? 0,
+            'stokHabis'         => $stokHabisFiltered ?? 0,
+            'stokAman'          => $stokAmanFiltered ?? 0,
+            'alreadyInputToday' => $alreadyInputToday,
+            'izinPending'       => $izinPending ?? false,
+            'staffSudahInput'   => $staffSudahInput ?? [],
+            'staffBelumInput'   => $staffBelumInput ?? [],
             'totalStaff'        => $allStaff->count(),
             'flash'             => [
                 'success' => session('success'),
