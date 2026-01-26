@@ -152,12 +152,8 @@ class StokHarianController extends Controller
     {
         $userId = Auth::id();
 
-        // 1. Tentukan Tanggal Kemarin (H-1)
         $kemarin = Carbon::parse($tanggal)->subDay()->toDateString();
 
-        // ====================================================
-        // A. GENERATE UNTUK BAHAN MENTAH (BAHAN BAKU) - CARRY OVER
-        // ====================================================
         $existsMentah = StokHarianMentah::whereDate('tanggal', $tanggal)->exists();
 
         if (!$existsMentah) {
@@ -401,14 +397,12 @@ class StokHarianController extends Controller
     // akan mengubah Stok Masuk Menu, bukan Stok Awal Menu.
     private function distributeStockToMenus($rawItemId, $totalStokMentah, $date)
     {
-        // 1. Cari Resep yang mengandung bahan yang baru saja diupdate
         $recipes = Recipe::whereJsonContains('ingredients', [['item_id' => (int)$rawItemId]])->get();
         $recipeNames = $recipes->pluck('name');
         if ($recipeNames->isEmpty()) return;
 
         $menuItems = Item::whereIn('nama', $recipeNames)->get();
 
-        // 2. Ambil Menu yang terpengaruh di tanggal tersebut
         $targetMenus = StokHarianMenu::whereIn('item_id', $menuItems->pluck('id'))
             ->where('tanggal', $date)
             ->get();
