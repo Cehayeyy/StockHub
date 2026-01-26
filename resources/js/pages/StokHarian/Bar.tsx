@@ -244,6 +244,7 @@ export default function Bar() {
   // Edit States
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showTimeNotif, setShowTimeNotif] = useState(false);
   const [formRecordId, setFormRecordId] = useState<number | null>(null);
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
@@ -312,6 +313,24 @@ export default function Bar() {
 
   const submitUpdate = () => {
     if (!formRecordId) return;
+
+    // 🔥 Validasi: Cek apakah jam sudah lewat 21:00 (hanya untuk staff, bukan owner/supervisor)
+    if (role !== "owner" && role !== "supervisor") {
+      const currentHour = new Date().getHours();
+      const currentMinute = new Date().getMinutes();
+      const currentTime = currentHour * 60 + currentMinute; // convert to minutes
+      const cutoffTime = 21 * 60; // 21:00 = 1260 menit
+
+      if (currentTime >= cutoffTime) {
+        // Tampilkan notif
+        setShowTimeNotif(true);
+        // Auto hide notif setelah 4 detik
+        setTimeout(() => setShowTimeNotif(false), 4000);
+        // Jangan lanjutkan submit
+        return;
+      }
+    }
+
     const routeName = tab === "menu" ? "stok-harian-menu.update" : "stok-harian-mentah.update";
     const payload: any = { item_id: Number(formItemId), stok_awal: Number(formStokAwal) };
 
@@ -366,6 +385,26 @@ export default function Bar() {
           />
         )}
       </AnimatePresence>
+
+      {/* 🔥 NOTIFIKASI: SIMPAN LEWAT JAM 21:00 */}
+      {showTimeNotif && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[999] bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-lg max-w-md w-full md:w-auto md:max-w-sm"
+        >
+          <div className="p-2 bg-red-100 rounded-full text-red-600 flex-shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-red-800 font-bold text-sm">Waktu Simpan Sudah Tutup</h3>
+            <p className="text-red-700 text-xs mt-1">
+              Jam input sudah lewat jam 21:00. Simpanan tidak akan tersimpan.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       <div className="py-6 space-y-6">
         {lowStockItems && lowStockItems.length > 0 && (
@@ -536,9 +575,25 @@ export default function Bar() {
                       Sisa: {item.tersisa}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-600 flex justify-between mt-2">
-                    <span>Awal: {item.stok_awal}</span>
-                    <span>Pakai: {item.pemakaian}</span>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mt-2">
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Awal:</span>
+                      <span className="font-semibold ml-1">{item.stok_awal}</span>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Total:</span>
+                      <span className="font-semibold ml-1 text-blue-600">{item.stok_total}</span>
+                    </div>
+                    {tab === "mentah" && (
+                      <div className="bg-gray-50 p-2 rounded">
+                        <span className="text-gray-500">Masuk:</span>
+                        <span className="font-semibold ml-1">{item.stok_masuk ?? 0}</span>
+                      </div>
+                    )}
+                    <div className="bg-gray-50 p-2 rounded">
+                      <span className="text-gray-500">Pakai:</span>
+                      <span className="font-semibold ml-1">{item.pemakaian}</span>
+                    </div>
                   </div>
                   <div className="flex gap-2 mt-3 pt-3 border-t">
                     <button

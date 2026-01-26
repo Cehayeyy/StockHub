@@ -223,7 +223,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
       <div className="flex items-center mb-8 flex-shrink-0">
         <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
           <span className="text-xl font-bold text-theme-sidebar">
-            {(auth.user.name || auth.user.username).charAt(0).toUpperCase()}
+            {(auth?.user?.name || auth?.user?.username || 'U').charAt(0).toUpperCase()}
           </span>
         </div>
         <div>

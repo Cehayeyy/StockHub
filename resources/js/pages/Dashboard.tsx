@@ -54,18 +54,18 @@ const InfoCard = ({
 
 export default function Dashboard() {
   const {
-    totalItem,
-    totalResep,
-    totalKategori,
-    totalUser,
-    izinRevisiPending,
-    stokHampirHabis,
-    stokHabis,
-    staffSudahInput,
-    staffBelumInput,
-    totalStaff,
+    totalItem = 0,
+    totalResep = 0,
+    totalKategori = 0,
+    totalUser = 0,
+    izinRevisiPending = [],
+    stokHampirHabis = 0,
+    stokHabis = 0,
+    staffSudahInput = [],
+    staffBelumInput = [],
+    totalStaff = 0,
     ownerData,
-    stokAman,
+    stokAman = 0,
     auth,
   } = usePage<any>().props;
 
@@ -106,24 +106,7 @@ export default function Dashboard() {
   };
 
 
-const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
-  router.post(
-    route('izin-revisi.update', id),
-    { action },
-    {
-      preserveScroll: true,
-      onSuccess: () => {
-        setShowFormRevisi(false);
-        setSelectedIzin(null);
-        router.reload({
-          only: ['izinRevisiPending'],
-        });
-      },
-    }
-  );
-};
-
-  // --- FUNGSI UPDATE IZIN (DIGABUNGKAN) ---
+  // --- FUNGSI UPDATE IZIN ---
   const submitIzinRevisi = (id: number, action: 'approve' | 'reject', extraData: any = {}) => {
     router.post(route('izin-revisi.update', id), { action, ...extraData }, {
         onSuccess: () => {
@@ -222,8 +205,8 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
               </ResponsiveContainer>
               {/* Center text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl sm:text-3xl font-bold text-gray-800">{totalItem}</span>
-                <span className="text-xs text-gray-500">Total Item</span>
+                <span className="text-2xl sm:text-3xl font-bold text-gray-800">{totalStokHarian}</span>
+                <span className="text-xs text-gray-500">Total Stok</span>
               </div>
             </div>
 
@@ -589,7 +572,7 @@ const updateIzinRevisi = (id: number, action: 'approve' | 'reject') => {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={ownerData.activityPerDay}
-                      onClick={(data) => {
+                      onClick={(data: any) => {
                         if (data && data.activePayload && data.activePayload[0]) {
                           setSelectedDayActivity(data.activePayload[0].payload);
                           setShowActivityDetail(true);

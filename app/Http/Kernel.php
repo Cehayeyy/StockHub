@@ -8,4 +8,8 @@ protected $routeMiddleware = [
     'role' => \App\Http\Middleware\CheckRole::class,
 
     'checkInputTime' => \App\Http\Middleware\CheckInputTime::class,
+
+    'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
+
+    'rate.limit.login' => \App\Http\Middleware\RateLimitLogin::class,
 ];
