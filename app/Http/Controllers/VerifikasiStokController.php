@@ -46,7 +46,7 @@ class VerifikasiStokController extends Controller
         ]);
     }
 
-    // ==================== 🔽 EXPORT CSV (SAFE EXCEL) ====================
+    // ==================== 🔽 EXPORT EXCEL (HTML-BASED) ====================
     public function export(Request $request)
     {
         $tab = $request->get('tab', 'bar');
@@ -57,56 +57,97 @@ class VerifikasiStokController extends Controller
             ? StokHarianMentah::with('item')->whereDate('tanggal', $mondayDate)->get()
             : StokHarianDapurMentah::with('item')->whereDate('tanggal', $mondayDate)->get();
 
-        // 🔥 UBAH EKSTENSI JADI .csv
-        $filename = "verifikasi-stok-{$tab}-{$mondayDate}.csv";
+        // Nama file Excel (.xls)
+        $divisionName = $tab === 'bar' ? 'Bar' : 'Dapur';
+        $filename = "verifikasi-stok-{$tab}-{$mondayDate}.xls";
 
-        $headers = [
-            "Content-Type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename={$filename}",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
+        // Generate HTML Table untuk Excel
+        $html = $this->generateExcelHTML($items, $mondayDate, $divisionName);
 
-        $callback = function () use ($items) {
-            $file = fopen('php://output', 'w');
+        return response($html, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ]);
+    }
 
-            // BOM UTF-8 (Penting agar Excel baca karakter dengan benar)
-            fputs($file, "\xEF\xBB\xBF");
+    /**
+     * Generate HTML table untuk Excel
+     */
+    private function generateExcelHTML($items, $date, $division)
+    {
+        $formattedDate = Carbon::parse($date)->locale('id')->isoFormat('D MMMM YYYY');
 
-            // Header CSV
-            fputcsv($file, [
-                'No',
-                'Nama Item',
-                'Satuan',
-                'Stok Sistem (Senin)',
-                'Stok Fisik',
-                'Selisih',
-                'Status'
-            ]); // Default delimiter koma (lebih kompatibel)
+        $html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel">';
+        $html .= '<head>';
+        $html .= '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+        $html .= '<xml>';
+        $html .= '<x:ExcelWorkbook>';
+        $html .= '<x:ExcelWorksheets>';
+        $html .= '<x:ExcelWorksheet>';
+        $html .= '<x:Name>Verifikasi Stok</x:Name>';
+        $html .= '<x:WorksheetOptions>';
+        $html .= '<x:Print><x:ValidPrinterInfo/></x:Print>';
+        $html .= '</x:WorksheetOptions>';
+        $html .= '</x:ExcelWorksheet>';
+        $html .= '</x:ExcelWorksheets>';
+        $html .= '</x:ExcelWorkbook>';
+        $html .= '</xml>';
+        $html .= '<style>';
+        $html .= 'table { border-collapse: collapse; width: 100%; }';
+        $html .= 'th { background-color: #8B5E3C; color: white; font-weight: bold; padding: 10px; text-align: center; border: 1px solid #000; }';
+        $html .= 'td { padding: 8px; border: 1px solid #ddd; }';
+        $html .= '.text-center { text-align: center; }';
+        $html .= '.title { font-size: 16px; font-weight: bold; text-align: center; padding: 10px; }';
+        $html .= '.subtitle { font-size: 12px; text-align: center; padding: 5px; color: #666; }';
+        $html .= '</style>';
+        $html .= '</head>';
+        $html .= '<body>';
 
-            foreach ($items as $i => $item) {
-                $namaItem   = optional($item->item)->nama ?? '-';
-                $satuan     = $item->unit ?? optional($item->item)->satuan ?? '-';
-                $stokSistem = $item->stok_akhir ?? 0;
-                $stokFisik  = ''; // Kosongkan agar bisa diisi manual saat diprint
-                $selisih    = '';
-                $status     = '';
+        // Title
+        $html .= '<div class="title">VERIFIKASI STOK MINGGUAN - ' . strtoupper($division) . '</div>';
+        $html .= '<div class="subtitle">Tanggal Acuan: ' . $formattedDate . ' (Senin)</div>';
+        $html .= '<br/>';
 
-                fputcsv($file, [
-                    $i + 1,
-                    $namaItem,
-                    $satuan,
-                    $stokSistem,
-                    $stokFisik,
-                    $selisih,
-                    $status,
-                ]);
-            }
+        $html .= '<table>';
 
-            fclose($file);
-        };
+        // Header
+        $html .= '<thead>';
+        $html .= '<tr>';
+        $html .= '<th>No</th>';
+        $html .= '<th>Nama Item</th>';
+        $html .= '<th>Satuan</th>';
+        $html .= '<th>Stok Sistem (Senin)</th>';
+        $html .= '<th>Stok Fisik</th>';
+        $html .= '<th>Selisih</th>';
+        $html .= '<th>Status</th>';
+        $html .= '</tr>';
+        $html .= '</thead>';
 
-        return response()->stream($callback, 200, $headers);
+        // Body
+        $html .= '<tbody>';
+        foreach ($items as $index => $item) {
+            $namaItem = htmlspecialchars(optional($item->item)->nama ?? '-');
+            $satuan = htmlspecialchars($item->unit ?? optional($item->item)->satuan ?? '-');
+            $stokSistem = $item->stok_akhir ?? 0;
+
+            $html .= '<tr>';
+            $html .= '<td class="text-center">' . ($index + 1) . '</td>';
+            $html .= '<td>' . $namaItem . '</td>';
+            $html .= '<td class="text-center">' . $satuan . '</td>';
+            $html .= '<td class="text-center">' . $stokSistem . '</td>';
+            $html .= '<td class="text-center"></td>'; // Kosong untuk diisi manual
+            $html .= '<td class="text-center"></td>'; // Kosong untuk diisi manual
+            $html .= '<td class="text-center"></td>'; // Kosong untuk diisi manual
+            $html .= '</tr>';
+        }
+        $html .= '</tbody>';
+        $html .= '</table>';
+        $html .= '</body>';
+        $html .= '</html>';
+
+        return $html;
     }
 }

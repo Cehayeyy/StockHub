@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Exports\ActivityLogExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -80,7 +81,7 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Export laporan aktivitas ke file .csv (Safe Excel).
+     * Export laporan aktivitas ke file Excel (.xlsx) atau CSV.
      */
     public function export(Request $request)
     {
@@ -125,46 +126,82 @@ class ActivityLogController extends Controller
         // Urutkan dari terlama ke terbaru untuk laporan excel
         $logs = $query->orderBy('created_at', 'asc')->get();
 
-        // Nama File (Ganti ekstensi jadi .csv)
-        $fileName = 'laporan_aktivitas_' . $selectedDate . '.csv';
+        // Nama File Excel (.xls format yang kompatibel)
+        $fileName = 'laporan_aktivitas_' . $selectedDate . '.xls';
 
-        // Header HTTP untuk download file CSV
-        $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
+        // Generate HTML Table yang akan dibaca sebagai Excel
+        $html = $this->generateExcelHTML($logs);
 
-        // Callback untuk streaming konten CSV
-        $callback = function () use ($logs) {
-            $file = fopen('php://output', 'w');
+        return response($html, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ]);
+    }
 
-            // Tambahkan BOM agar Excel membaca karakter UTF-8 dengan benar
-            fputs($file, "\xEF\xBB\xBF");
+    /**
+     * Generate HTML table untuk Excel
+     */
+    private function generateExcelHTML($logs)
+    {
+        $html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel">';
+        $html .= '<head>';
+        $html .= '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+        $html .= '<xml>';
+        $html .= '<x:ExcelWorkbook>';
+        $html .= '<x:ExcelWorksheets>';
+        $html .= '<x:ExcelWorksheet>';
+        $html .= '<x:Name>Laporan Aktivitas</x:Name>';
+        $html .= '<x:WorksheetOptions>';
+        $html .= '<x:Print><x:ValidPrinterInfo/></x:Print>';
+        $html .= '</x:WorksheetOptions>';
+        $html .= '</x:ExcelWorksheet>';
+        $html .= '</x:ExcelWorksheets>';
+        $html .= '</x:ExcelWorkbook>';
+        $html .= '</xml>';
+        $html .= '<style>';
+        $html .= 'table { border-collapse: collapse; width: 100%; }';
+        $html .= 'th { background-color: #8B5E3C; color: white; font-weight: bold; padding: 10px; text-align: center; border: 1px solid #000; }';
+        $html .= 'td { padding: 8px; border: 1px solid #ddd; }';
+        $html .= '.text-center { text-align: center; }';
+        $html .= '</style>';
+        $html .= '</head>';
+        $html .= '<body>';
+        $html .= '<table>';
 
-            // Header Kolom di CSV
-            fputcsv($file, ['No', 'Waktu', 'Pengguna', 'Aktivitas', 'Keterangan']);
+        // Header
+        $html .= '<thead>';
+        $html .= '<tr>';
+        $html .= '<th>No</th>';
+        $html .= '<th>Waktu</th>';
+        $html .= '<th>Pengguna</th>';
+        $html .= '<th>Aktivitas</th>';
+        $html .= '<th>Keterangan</th>';
+        $html .= '</tr>';
+        $html .= '</thead>';
 
-            // Isi Data
-            foreach ($logs as $index => $log) {
-                $pengguna = $log->user
-                    ? $log->user->name . ' (' . $log->user->username . ')'
-                    : '-';
+        // Body
+        $html .= '<tbody>';
+        foreach ($logs as $index => $log) {
+            $pengguna = $log->user
+                ? htmlspecialchars($log->user->name . ' (@' . $log->user->username . ')')
+                : '-';
 
-                fputcsv($file, [
-                    $index + 1,
-                    $log->created_at->format('d-m-Y H:i'),
-                    $pengguna,
-                    $log->activity,
-                    $log->description
-                ]);
-            }
+            $html .= '<tr>';
+            $html .= '<td class="text-center">' . ($index + 1) . '</td>';
+            $html .= '<td>' . $log->created_at->format('d-m-Y H:i:s') . '</td>';
+            $html .= '<td>' . $pengguna . '</td>';
+            $html .= '<td>' . htmlspecialchars($log->activity) . '</td>';
+            $html .= '<td>' . htmlspecialchars($log->description) . '</td>';
+            $html .= '</tr>';
+        }
+        $html .= '</tbody>';
+        $html .= '</table>';
+        $html .= '</body>';
+        $html .= '</html>';
 
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return $html;
     }
 }
