@@ -47,81 +47,147 @@ interface PageProps {
 }
 
 // --- MODAL INPUT (CREATE) ---
-const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess }: any) => {
-  const { data, setData, post, processing, reset, transform } = useForm({
-    target_id: "",
-    tanggal: tanggal,
-    stok_awal: "",
-    stok_masuk: "",
-    pemakaian: "",
-  });
+interface FormItem {
+  id: number;
+  target_id: string;
+  satuan: string;
+  stok_awal: string;
+  stok_masuk: string;
+  pemakaian: string;
+  selectedItemInfo: any;
+}
 
-  const [selectedItemInfo, setSelectedItemInfo] = useState<any>(null);
+const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess }: any) => {
+  const [items, setItems] = useState<FormItem[]>([
+    {
+      id: Date.now(),
+      target_id: "",
+      satuan: "porsi",
+      stok_awal: "",
+      stok_masuk: "",
+      pemakaian: "",
+      selectedItemInfo: null,
+    }
+  ]);
+  
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (show) {
-      reset();
-      setData("tanggal", tanggal);
-      setSelectedItemInfo(null);
+      setItems([
+        {
+          id: Date.now(),
+          target_id: "",
+          satuan: "porsi",
+          stok_awal: "",
+          stok_masuk: "",
+          pemakaian: "",
+          selectedItemInfo: null,
+        }
+      ]);
     }
   }, [show, tanggal]);
 
-  const handleItemChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleItemChange = (index: number, e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
-    setData("target_id", id);
+    const newItems = [...items];
+    newItems[index].target_id = id;
+
     if (id) {
       const selected = inputableMenus.find((m: DropdownItem) => m.id === Number(id));
       if (selected) {
-        setSelectedItemInfo(selected);
-        setData((prev) => ({
-          ...prev,
-          stok_awal: selected.stok_awal ?? "",
-        }));
+        newItems[index].selectedItemInfo = selected;
+        newItems[index].stok_awal = selected.stok_awal ?? "";
+        newItems[index].satuan = selected.satuan || "porsi";
       }
     } else {
-      setSelectedItemInfo(null);
+      newItems[index].selectedItemInfo = null;
+    }
+    setItems(newItems);
+  };
+
+  const handleFieldChange = (index: number, field: keyof FormItem, value: any) => {
+    const newItems = [...items];
+    (newItems[index] as any)[field] = value;
+    setItems(newItems);
+  };
+
+  const addNewItem = () => {
+    setItems([...items, {
+      id: Date.now(),
+      target_id: "",
+      satuan: "porsi",
+      stok_awal: "",
+      stok_masuk: "",
+      pemakaian: "",
+      selectedItemInfo: null,
+    }]);
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length > 1) {
+      const newItems = items.filter((_, i) => i !== index);
+      setItems(newItems);
     }
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const routeName =
-      tab === "menu" ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
+    setProcessing(true);
+    
+    const routeName = tab === "menu" ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
+    
+    try {
+      // Submit each item one by one
+      for (const item of items) {
+        if (!item.target_id) continue;
+        
+        let payload: any;
+        if (tab === "menu") {
+          payload = {
+            recipe_id: item.target_id,
+            tanggal: tanggal,
+            pemakaian: item.pemakaian,
+          };
+        } else {
+          payload = {
+            item_id: item.target_id,
+            tanggal: tanggal,
+            stok_awal: item.stok_awal,
+            stok_masuk: item.stok_masuk,
+          };
+        }
 
-    transform((data) => {
-      if (tab === "menu") {
-        return {
-          recipe_id: data.target_id,
-          tanggal: data.tanggal,
-          pemakaian: data.pemakaian,
-        };
-      } else {
-        return {
-          item_id: data.target_id,
-          tanggal: data.tanggal,
-          stok_awal: data.stok_awal,
-          stok_masuk: data.stok_masuk,
-        };
+        await new Promise<void>((resolve, reject) => {
+          router.post(route(routeName), payload, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => resolve(),
+            onError: (errors) => {
+              console.error("Error submitting item:", errors);
+              reject(errors);
+            },
+          });
+        });
       }
-    });
-
-    post(route(routeName), {
-      onSuccess: () => {
-        reset();
-        onClose();
-        if (onSuccess) onSuccess();
-        window.history.replaceState({}, document.title, window.location.pathname);
-      },
-    });
+      
+      setProcessing(false);
+      onClose();
+      if (onSuccess) onSuccess();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (error) {
+      setProcessing(false);
+      console.error("Error during submission:", error);
+    }
   };
 
   const isMenuTab = tab === "menu";
   const isMentahTab = tab === "mentah";
-  const isButtonDisabled =
-    processing ||
-    !data.target_id ||
-    (isMenuTab && (data.pemakaian === "" || data.pemakaian === null)) ||
-    (isMentahTab && (data.stok_awal === "" || data.stok_awal === null));
+  const isButtonDisabled = processing || items.some(item => 
+    !item.target_id ||
+    (isMenuTab && (item.pemakaian === "" || item.pemakaian === null)) ||
+    (isMentahTab && (item.stok_awal === "" || item.stok_awal === null))
+  );
 
   if (!show) return null;
 
@@ -130,99 +196,126 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
       <motion.div
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
-        className="bg-white rounded-[30px] shadow-2xl w-full max-w-md p-8"
+        className="bg-white rounded-[30px] shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto"
       >
         <h3 className="font-bold text-lg text-center mb-6">
           Input Data Dapur ({tab === "menu" ? "Menu" : "Bahan Mentah"})
         </h3>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-6">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Tanggal</label>
             <div className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium border-none text-gray-600">
-              {new Date(data.tanggal).toLocaleDateString("id-ID")}
+              {new Date(tanggal).toLocaleDateString("id-ID")}
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nama Item</label>
-            <div className="relative">
-              <select
-                value={data.target_id}
-                onChange={handleItemChange}
-                className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
-                style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
-              >
-                <option value="">Pilih Item...</option>
-                {inputableMenus.map((m: DropdownItem) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nama}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 absolute right-4 top-3.5 text-gray-400 pointer-events-none" />
+          {/* Multiple Items */}
+          {items.map((item, index) => (
+            <div key={item.id} className="border-2 border-gray-200 rounded-2xl p-4 space-y-4 relative">
+              {items.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeItem(index)}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-bold text-gray-700">Item #{index + 1}</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nama Item</label>
+                <div className="relative">
+                  <select
+                    value={item.target_id}
+                    onChange={(e) => handleItemChange(index, e)}
+                    className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C] text-gray-700"
+                    style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
+                  >
+                    <option value="">Pilih Item...</option>
+                    {inputableMenus.map((m: any) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nama}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 absolute right-4 top-3.5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Satuan</label>
+                <input
+                  type="text"
+                  value={item.selectedItemInfo?.satuan || "porsi"}
+                  disabled
+                  className="w-full bg-gray-100 border-none rounded-xl px-4 py-3 text-sm text-gray-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Stok Awal</label>
+                {tab === "menu" ? (
+                  <input
+                    type="text"
+                    value={item.selectedItemInfo?.stok_awal ?? "0"}
+                    disabled
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700"
+                  />
+                ) : (
+                  <input
+                    type="number"
+                    value={item.stok_awal}
+                    onChange={(e) => handleFieldChange(index, 'stok_awal', e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  />
+                )}
+              </div>
+
+              {tab === "mentah" && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Stok Masuk</label>
+                  <input
+                    type="number"
+                    value={item.stok_masuk}
+                    onChange={(e) => handleFieldChange(index, 'stok_masuk', e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  />
+                </div>
+              )}
+
+              {tab === "menu" && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Pemakaian</label>
+                  <input
+                    type="number"
+                    value={item.pemakaian}
+                    onChange={(e) => handleFieldChange(index, 'pemakaian', e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  />
+                </div>
+              )}
             </div>
-          </div>
+          ))}
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Satuan</label>
-            <input
-              type="text"
-              value={selectedItemInfo?.satuan || "porsi"}
-              disabled
-              className="w-full bg-gray-100 border-none rounded-xl px-4 py-3 text-sm text-gray-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Stok Awal</label>
-            {tab === "menu" ? (
-              <input
-                type="text"
-                value={selectedItemInfo?.stok_awal ?? "0"}
-                disabled
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700"
-              />
-            ) : (
-              <input
-                type="number"
-                value={data.stok_awal}
-                onChange={(e) => setData("stok_awal", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-              />
-            )}
-          </div>
-
-          {/* FIELD SISA STOK SAAT INI SUDAH DIHAPUS DARI SINI */}
-
-          {tab === "mentah" && (
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Stok Masuk</label>
-              <input
-                type="number"
-                value={data.stok_masuk}
-                onChange={(e) => setData("stok_masuk", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-              />
-            </div>
-          )}
-
-          {tab === "menu" && (
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Pemakaian</label>
-              <input
-                type="number"
-                value={data.pemakaian}
-                onChange={(e) => setData("pemakaian", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-              />
-            </div>
-          )}
+          {/* Tombol Tambah Item */}
+          <button
+            type="button"
+            onClick={addNewItem}
+            className="w-full py-3 border-2 border-dashed border-[#8B5E3C] rounded-xl text-[#8B5E3C] font-bold text-sm hover:bg-[#8B5E3C]/5 transition flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Tambah Item
+          </button>
 
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border rounded-full font-bold text-sm text-gray-600"
+              className="px-6 py-2 border border-gray-300 rounded-full font-bold text-sm text-gray-600 hover:bg-gray-50"
             >
               Batal
             </button>
@@ -230,10 +323,10 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
               type="submit"
               disabled={isButtonDisabled}
               className={`px-6 py-2 rounded-full text-white font-bold text-sm ${
-                isButtonDisabled ? "bg-[#E0C09E]" : "bg-[#D9A978]"
+                isButtonDisabled ? "bg-[#E0C09E] cursor-not-allowed" : "bg-[#D9A978] hover:bg-[#C19A6B]"
               }`}
             >
-              Simpan
+              {processing ? "Menyimpan..." : "Simpan"}
             </button>
           </div>
         </form>
