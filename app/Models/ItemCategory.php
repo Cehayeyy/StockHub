@@ -11,14 +11,13 @@ class ItemCategory extends Model
 
     protected $table = 'item_categories';
 
-
     protected $fillable = [
         'name',
         'division',
     ];
 
     /**
-     * Relasi ke item.
+     * Relasi ke Item.
      * Satu kategori bisa punya banyak item.
      */
     public function items()
@@ -27,17 +26,12 @@ class ItemCategory extends Model
     }
 
     /**
-     * Relasi ke resep lewat item (opsional, kalau dibutuhkan)
+     * Relasi ke Resep (LANGSUNG).
+     * Satu kategori bisa digunakan oleh banyak resep.
+     * (Ini tambahan baru agar sinkron dengan kolom category_id di tabel recipes)
      */
-    public function resep()
+    public function recipes()
     {
-        return $this->hasManyThrough(
-            Recipe::class,
-            Item::class,
-            'item_category_id', // FK di table items
-            'item_id',          // FK di table resep
-            'id',               // PK di ItemCategory
-            'id'                // PK di Item
-        );
+        return $this->hasMany(Recipe::class, 'category_id');
     }
 }

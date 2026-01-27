@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Recipe;
 use App\Models\Item;
+use App\Models\ItemCategory; // 🔥 PERBAIKAN: Gunakan Model ItemCategory
 use App\Models\StokHarianMenu;
 use App\Models\StokHarianMentah;
 use App\Models\StokHarianDapurMentah;
@@ -26,24 +27,27 @@ class RecipeController extends Controller
             $division = $request->input('division', 'bar');
         }
 
+        // 🔥 PERBAIKAN: Ambil ItemCategory sesuai divisi yang sedang aktif
+        $categories = ItemCategory::where('division', $division)->get();
+
         $recipes = Recipe::where('division', $division)
             ->latest()
             ->get()
             ->map(fn ($r) => [
                 'id'                => $r->id,
                 'name'              => $r->name,
+                'category_id'       => $r->category_id,
+                // Relasi ini sekarang akan mengambil nama dari tabel item_categories
+                'category_name'     => $r->category->name ?? '-',
                 'ingredients'       => $r->ingredients,
                 'total_ingredients' => $r->total_ingredients,
                 'created_at'        => $r->created_at?->format('d/m/Y'),
             ]);
 
-        // 🔥 REVISI: HAPUS LOGIKA 'kitchen' (Backward Compatibility)
-        // Kita buat strict agar dropdown SAMA PERSIS dengan Master Data Item
-
         $items = Item::with('itemCategory')
-            ->where('division', $division) // Hanya ambil sesuai divisi aktif (dapur/bar)
+            ->where('division', $division)
             ->get()
-            ->unique('nama') // Tetap pakai unique jaga-jaga ada duplikat nama
+            ->unique('nama')
             ->values()
             ->map(fn ($i) => [
                 'id'       => $i->id,
@@ -54,16 +58,13 @@ class RecipeController extends Controller
 
         return Inertia::render('MasterData/Resep', [
             'recipes'      => $recipes,
+            'categories'   => $categories, // Kirim data kategori yang benar ke frontend
             'bahan_menu'   => $items->where('category', 'Menu')->values(),
             'bahan_mentah' => $items->where('category', 'Mentah')->values(),
             'division'     => $division,
             'userRole'     => $user->role,
         ]);
     }
-
-    // ... (Fungsi store, update, destroy, helpers biarkan tetap sama seperti sebelumnya)
-    // Silakan copy-paste sisa fungsinya dari kode sebelumnya jika perlu,
-    // tapi yang krusial diubah hanya method index() di atas.
 
     public function store(Request $request)
     {
@@ -72,6 +73,8 @@ class RecipeController extends Controller
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
             'division'              => 'required|in:bar,dapur',
+            // 🔥 PERBAIKAN: Validasi ke tabel 'item_categories'
+            'category_id'           => 'required|exists:item_categories,id',
             'ingredients'           => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
@@ -87,6 +90,7 @@ class RecipeController extends Controller
             $recipe = Recipe::create([
                 'name'              => $validated['name'],
                 'division'          => $validated['division'],
+                'category_id'       => $validated['category_id'],
                 'ingredients'       => $validated['ingredients'],
                 'total_ingredients' => count($validated['ingredients']),
             ]);
@@ -142,6 +146,8 @@ class RecipeController extends Controller
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
             'division'              => 'required|in:bar,dapur',
+            // 🔥 PERBAIKAN: Validasi ke tabel 'item_categories'
+            'category_id'           => 'required|exists:item_categories,id',
             'ingredients'           => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
@@ -158,6 +164,7 @@ class RecipeController extends Controller
             $recipe->update([
                 'name'              => $validated['name'],
                 'division'          => $validated['division'],
+                'category_id'       => $validated['category_id'],
                 'ingredients'       => $validated['ingredients'],
                 'total_ingredients' => count($validated['ingredients']),
             ]);

@@ -11,6 +11,7 @@ class Recipe extends Model
 
     protected $fillable = [
         'item_id',
+        'category_id', // Agar category_id bisa disimpan
         'name',
         'division',
         'ingredients',
@@ -20,6 +21,15 @@ class Recipe extends Model
     protected $casts = [
         'ingredients' => 'array',
     ];
+
+    /**
+     * Relasi ke ItemCategory
+     * (Digunakan di Controller untuk mengambil nama kategori)
+     */
+    public function category() // 🔥 PERBAIKAN: Arahkan ke ItemCategory
+    {
+        return $this->belongsTo(ItemCategory::class, 'category_id');
+    }
 
     /**
      * Relasi ke Item (MENU)

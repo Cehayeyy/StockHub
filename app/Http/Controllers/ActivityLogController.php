@@ -46,7 +46,7 @@ class ActivityLogController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($uq) use ($search) {
                     $uq->where('username', 'like', "%{$search}%")
-                       ->orWhere('name', 'like', "%{$search}%");
+                        ->orWhere('name', 'like', "%{$search}%");
                 })
                 ->orWhere('activity', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%");
@@ -80,7 +80,7 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Export laporan aktivitas ke file .xls (HTML Table).
+     * Export laporan aktivitas ke file .csv (Safe Excel).
      */
     public function export(Request $request)
     {
@@ -115,7 +115,7 @@ class ActivityLogController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($uq) use ($search) {
                     $uq->where('username', 'like', "%{$search}%")
-                       ->orWhere('name', 'like', "%{$search}%");
+                        ->orWhere('name', 'like', "%{$search}%");
                 })
                 ->orWhere('activity', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%");
@@ -125,48 +125,44 @@ class ActivityLogController extends Controller
         // Urutkan dari terlama ke terbaru untuk laporan excel
         $logs = $query->orderBy('created_at', 'asc')->get();
 
-        // Nama File
-        $fileName = 'laporan_aktivitas_' . $selectedDate . '.xls';
+        // Nama File (Ganti ekstensi jadi .csv)
+        $fileName = 'laporan_aktivitas_' . $selectedDate . '.csv';
 
-        // Header HTTP untuk download file
+        // Header HTTP untuk download file CSV
         $headers = [
-            'Content-Type'        => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
-            'Pragma'              => 'no-cache',
-            'Expires'             => '0',
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
         ];
 
-        // Callback untuk streaming konten HTML Table
+        // Callback untuk streaming konten CSV
         $callback = function () use ($logs) {
-            echo '<table border="1">';
-            echo '<thead>
-                    <tr>
-                        <th style="background-color: #f0f0f0;">No</th>
-                        <th style="background-color: #f0f0f0;">Waktu</th>
-                        <th style="background-color: #f0f0f0;">Pengguna</th>
-                        <th style="background-color: #f0f0f0;">Aktifitas</th>
-                        <th style="background-color: #f0f0f0;">Keterangan</th>
-                    </tr>
-                  </thead>';
-            echo '<tbody>';
+            $file = fopen('php://output', 'w');
 
+            // Tambahkan BOM agar Excel membaca karakter UTF-8 dengan benar
+            fputs($file, "\xEF\xBB\xBF");
+
+            // Header Kolom di CSV
+            fputcsv($file, ['No', 'Waktu', 'Pengguna', 'Aktivitas', 'Keterangan']);
+
+            // Isi Data
             foreach ($logs as $index => $log) {
-                $waktu = $log->created_at->format('d-m-Y H:i');
                 $pengguna = $log->user
                     ? $log->user->name . ' (' . $log->user->username . ')'
                     : '-';
 
-                echo '<tr>';
-                echo '<td>' . ($index + 1) . '</td>';
-                echo '<td>' . $waktu . '</td>';
-                echo '<td>' . e($pengguna) . '</td>';
-                echo '<td>' . e($log->activity) . '</td>';
-                echo '<td>' . e($log->description) . '</td>';
-                echo '</tr>';
+                fputcsv($file, [
+                    $index + 1,
+                    $log->created_at->format('d-m-Y H:i'),
+                    $pengguna,
+                    $log->activity,
+                    $log->description
+                ]);
             }
 
-            echo '</tbody>';
-            echo '</table>';
+            fclose($file);
         };
 
         return response()->stream($callback, 200, $headers);

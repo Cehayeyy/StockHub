@@ -12,7 +12,6 @@ class VerifikasiStokController extends Controller
 {
     public function index(Request $request)
     {
-        // ==================== KODE KAMU (TIDAK DIUBAH) ====================
         $tab = $request->get('tab', 'bar');
         $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
         $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
@@ -47,62 +46,67 @@ class VerifikasiStokController extends Controller
         ]);
     }
 
-    // ==================== 🔽 TAMBAHAN EXPORT EXCEL ====================
- public function export(Request $request)
-{
-    $tab = $request->get('tab', 'bar');
-    $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
-    $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
+    // ==================== 🔽 EXPORT CSV (SAFE EXCEL) ====================
+    public function export(Request $request)
+    {
+        $tab = $request->get('tab', 'bar');
+        $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
+        $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
 
-    $items = $tab === 'bar'
-        ? StokHarianMentah::with('item')->whereDate('tanggal', $mondayDate)->get()
-        : StokHarianDapurMentah::with('item')->whereDate('tanggal', $mondayDate)->get();
+        $items = $tab === 'bar'
+            ? StokHarianMentah::with('item')->whereDate('tanggal', $mondayDate)->get()
+            : StokHarianDapurMentah::with('item')->whereDate('tanggal', $mondayDate)->get();
 
-    $filename = "verifikasi-stok-{$tab}-{$mondayDate}.xlsx";
+        // 🔥 UBAH EKSTENSI JADI .csv
+        $filename = "verifikasi-stok-{$tab}-{$mondayDate}.csv";
 
-    $headers = [
-        "Content-Type" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition" => "attachment; filename={$filename}",
-    ];
+        $headers = [
+            "Content-Type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename={$filename}",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
 
-    $callback = function () use ($items) {
-        $file = fopen('php://output', 'w');
+        $callback = function () use ($items) {
+            $file = fopen('php://output', 'w');
 
-        // BOM UTF-8 supaya karakter tampil
-        fwrite($file, "\xEF\xBB\xBF");
+            // BOM UTF-8 (Penting agar Excel baca karakter dengan benar)
+            fputs($file, "\xEF\xBB\xBF");
 
-        // Header
-        fputcsv($file, [
-            'No',
-            'Nama Item',
-            'Satuan',
-            'Stok Sistem (Senin)',
-            'Stok Fisik',
-            'Selisih',
-            'Status'
-        ], ';');
-
-        foreach ($items as $i => $item) {
-            $namaItem   = optional($item->item)->nama ?? '-';
-            $satuan     = $item->unit ?? optional($item->item)->satuan ?? '-';
-            $stokSistem = $item->stok_akhir ?? 0;
-            $stokFisik  = $stokSistem;
-            $selisih    = $stokFisik - $stokSistem;
-
+            // Header CSV
             fputcsv($file, [
-                $i + 1,
-                $namaItem,
-                $satuan,
-                $stokSistem,
-                $stokFisik,
-                $selisih,
-                $selisih === 0 ? 'Cocok' : 'Selisih',
-            ], ';');
-        }
+                'No',
+                'Nama Item',
+                'Satuan',
+                'Stok Sistem (Senin)',
+                'Stok Fisik',
+                'Selisih',
+                'Status'
+            ]); // Default delimiter koma (lebih kompatibel)
 
-        fclose($file);
-    };
+            foreach ($items as $i => $item) {
+                $namaItem   = optional($item->item)->nama ?? '-';
+                $satuan     = $item->unit ?? optional($item->item)->satuan ?? '-';
+                $stokSistem = $item->stok_akhir ?? 0;
+                $stokFisik  = ''; // Kosongkan agar bisa diisi manual saat diprint
+                $selisih    = '';
+                $status     = '';
 
-    return response()->stream($callback, 200, $headers);
-}
+                fputcsv($file, [
+                    $i + 1,
+                    $namaItem,
+                    $satuan,
+                    $stokSistem,
+                    $stokFisik,
+                    $selisih,
+                    $status,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

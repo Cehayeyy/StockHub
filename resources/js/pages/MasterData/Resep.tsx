@@ -3,9 +3,17 @@ import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
 import { Search, Trash, ChevronDown, Plus, BookOpen } from "lucide-react";
 
+// 🔥 TAMBAHAN: Interface Category
+interface Category {
+  id: number;
+  name: string;
+}
+
 interface Recipe {
   id: number;
   name: string;
+  category_id?: number; // 🔥 TAMBAHAN: Field category_id
+  category_name?: string; // 🔥 TAMBAHAN: Field nama kategori (optional)
   total_ingredients: number;
   created_at: string | null;
   ingredients?: {
@@ -32,6 +40,7 @@ interface Ingredient {
 
 interface PageProps {
   recipes: Recipe[];
+  categories: Category[]; // 🔥 TAMBAHAN: Menerima props categories
   bahan_menu: Item[];
   bahan_mentah: Item[];
   division: "bar" | "dapur";
@@ -45,6 +54,7 @@ interface PageProps {
 const Resep: React.FC = () => {
   const {
     recipes = [],
+    categories = [], // 🔥 TAMBAHAN: Destructuring categories
     bahan_menu = [],
     bahan_mentah = [],
     division,
@@ -64,6 +74,7 @@ const Resep: React.FC = () => {
   // === TAMBAH ===
   const [showModal, setShowModal] = useState(false);
   const [menuName, setMenuName] = useState("");
+  const [categoryId, setCategoryId] = useState<number | string>(""); // 🔥 TAMBAHAN: State categoryId
   const [ingredients, setIngredients] = useState<Ingredient[]>([
     { id: 1, item_id: null, item_name: "", amount: 1, unit: "porsi" },
   ]);
@@ -78,6 +89,7 @@ const Resep: React.FC = () => {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState<number | string>(""); // 🔥 TAMBAHAN: State Edit Category
   const [editIngredients, setEditIngredients] = useState<Ingredient[]>([]);
 
   // --- HELPERS ---
@@ -166,12 +178,14 @@ const Resep: React.FC = () => {
 
     const invalid = ingredients.some((ing) => !ing.item_id || ing.amount <= 0);
     if (invalid) return alert("Pastikan semua bahan valid dan jumlah > 0.");
+    if (!categoryId) return alert("Silakan pilih kategori terlebih dahulu."); // 🔥 Validasi Kategori
 
     router.post(
       route("resep.store"),
       {
         name: menuName,
         division: selectedDivision,
+        category_id: categoryId, // 🔥 TAMBAHAN: Kirim category_id
         menu_item_id: menu?.id ?? null,
         ingredients: ingredients.map((i) => ({
           item_id: i.item_id,
@@ -183,6 +197,7 @@ const Resep: React.FC = () => {
         onSuccess: () => {
           setShowModal(false);
           setMenuName("");
+          setCategoryId(""); // Reset category
           setIngredients([
             { id: 1, item_id: null, item_name: "", amount: 1, unit: "porsi" },
           ]);
@@ -195,6 +210,7 @@ const Resep: React.FC = () => {
   const openEdit = (recipe: Recipe) => {
     setEditId(recipe.id);
     setEditName(recipe.name);
+    setEditCategoryId(recipe.category_id || ""); // 🔥 TAMBAHAN: Set initial category
     setEditIngredients(
       recipe.ingredients?.map((ing, i) => ({
         id: i + 1,
@@ -252,12 +268,14 @@ const Resep: React.FC = () => {
       return alert(
         "Pastikan semua bahan valid (dipilih dari daftar dropdown) dan jumlah > 0."
       );
+    if (!editCategoryId) return alert("Silakan pilih kategori terlebih dahulu.");
 
     router.put(
       route("resep.update", editId),
       {
         name: editName,
         division: selectedDivision,
+        category_id: editCategoryId, // 🔥 TAMBAHAN: Kirim edit category id
         ingredients: editIngredients.map((ing) => ({
           item_id: ing.item_id,
           amount: ing.amount,
@@ -361,54 +379,60 @@ const Resep: React.FC = () => {
           {/* Tampil di layar kecil (< md) */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
             {filteredRecipes.length === 0 ? (
-                <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
-                    Belum ada resep.
-                </div>
+              <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                Belum ada resep.
+              </div>
             ) : (
-                filteredRecipes.map((r) => (
-                    <div key={r.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-                        <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-orange-50 p-2 rounded-lg text-[#D9A978]">
-                                    <BookOpen className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <div className="font-bold text-gray-800">{r.name}</div>
-                                    <div className="text-xs text-gray-500">{r.total_ingredients} bahan</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="text-xs text-gray-400 mb-3 pl-1">
-                            Dibuat: {r.created_at || "-"}
-                        </div>
-
-                        <div className="flex gap-2 border-t pt-3">
-                            <button
-                                onClick={() => openViewRecipe(r)}
-                                className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-600 transition"
-                            >
-                                View
-                            </button>
-                            {!isStaff && (
-                                <>
-                                    <button
-                                        onClick={() => openEdit(r)}
-                                        className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-600 transition"
-                                    >
-                                        Edit
-                                    </button>
-                                    <button
-                                        onClick={() => openDeleteConfirm(r.id)}
-                                        className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-600 transition"
-                                    >
-                                        Hapus
-                                    </button>
-                                </>
-                            )}
-                        </div>
+              filteredRecipes.map((r) => (
+                <div key={r.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-orange-50 p-2 rounded-lg text-[#D9A978]">
+                        <BookOpen className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-gray-800">{r.name}</div>
+                        <div className="text-xs text-gray-500">{r.total_ingredients} bahan</div>
+                        {/* Tampilkan kategori di card mobile jika ada */}
+                        {r.category_name && (
+                           <div className="text-xs text-[#7A4A2B] mt-1 bg-[#F6E1C6] px-2 py-0.5 rounded-full w-fit">
+                             {r.category_name}
+                           </div>
+                        )}
+                      </div>
                     </div>
-                ))
+                  </div>
+
+                  <div className="text-xs text-gray-400 mb-3 pl-1">
+                    Dibuat: {r.created_at || "-"}
+                  </div>
+
+                  <div className="flex gap-2 border-t pt-3">
+                    <button
+                      onClick={() => openViewRecipe(r)}
+                      className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-600 transition"
+                    >
+                      View
+                    </button>
+                    {!isStaff && (
+                      <>
+                        <button
+                          onClick={() => openEdit(r)}
+                          className="flex-1 bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-600 transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => openDeleteConfirm(r.id)}
+                          className="flex-1 bg-red-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-600 transition"
+                        >
+                          Hapus
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
 
@@ -420,6 +444,7 @@ const Resep: React.FC = () => {
                 <tr>
                   <th className="p-4 w-16 text-center">No</th>
                   <th className="p-4">Menu Jadi</th>
+                  <th className="p-4">Kategori</th>
                   <th className="p-4">Total Bahan</th>
                   <th className="p-4">Dibuat</th>
                   <th className="p-4 text-center">Aksi</th>
@@ -428,7 +453,7 @@ const Resep: React.FC = () => {
               <tbody className="divide-y divide-gray-100">
                 {filteredRecipes.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-gray-400">
+                    <td colSpan={6} className="p-8 text-center text-gray-400">
                       Belum ada resep.
                     </td>
                   </tr>
@@ -437,6 +462,13 @@ const Resep: React.FC = () => {
                     <tr key={r.id} className="hover:bg-[#FFF7EC] transition">
                       <td className="p-4 text-center text-gray-500">{i + 1}</td>
                       <td className="p-4 font-medium text-gray-800">{r.name}</td>
+                      <td className="p-4 text-gray-600">
+                        {r.category_name ? (
+                            <span className="bg-[#F6E1C6] text-[#7A4A2B] px-2 py-1 rounded-lg text-xs font-medium">
+                                {r.category_name}
+                            </span>
+                        ) : "-"}
+                      </td>
                       <td className="p-4 text-gray-600">
                         {r.total_ingredients} bahan
                       </td>
@@ -487,6 +519,24 @@ const Resep: React.FC = () => {
             </h3>
 
             <form onSubmit={saveRecipe} className="space-y-5">
+              {/* 🔥 TAMBAHAN: DROPDOWN KATEGORI */}
+              <div>
+                <label className="font-semibold text-sm">Pilih Kategori</label>
+                <select
+                    className="w-full bg-gray-100 px-4 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#D9A978] mt-1"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    required
+                >
+                    <option value="">-- Pilih Kategori --</option>
+                    {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                            {category.name}
+                        </option>
+                    ))}
+                </select>
+              </div>
+
               <div>
                 <label className="font-semibold text-sm">Nama Menu Jadi</label>
                 {/* 🔥 INPUT DENGAN DATALIST MENU (AUTOCOMPLETE) */}
@@ -587,6 +637,24 @@ const Resep: React.FC = () => {
           <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-xl font-semibold text-center mb-4">Edit Resep</h3>
             <form onSubmit={updateRecipe} className="space-y-5">
+              {/* 🔥 TAMBAHAN: EDIT KATEGORI */}
+              <div>
+                <label className="font-semibold text-sm">Pilih Kategori</label>
+                <select
+                    className="w-full bg-gray-100 px-4 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#D9A978] mt-1"
+                    value={editCategoryId}
+                    onChange={(e) => setEditCategoryId(e.target.value)}
+                    required
+                >
+                    <option value="">-- Pilih Kategori --</option>
+                    {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                            {category.name}
+                        </option>
+                    ))}
+                </select>
+              </div>
+
               <div>
                 <label className="font-semibold text-sm">Nama Menu Jadi</label>
                 {/* 🔥 INPUT DENGAN DATALIST MENU (AUTOCOMPLETE) */}
@@ -696,6 +764,10 @@ const Resep: React.FC = () => {
 
             <p className="font-semibold mb-2">
               Menu item: {viewRecipe.name}
+            </p>
+            {/* Tampilkan kategori di modal view */}
+            <p className="font-semibold mb-2">
+              Kategori: {viewRecipe.category_name || "-"}
             </p>
 
             <p className="font-semibold">Komposisi bahan (mentah):</p>
