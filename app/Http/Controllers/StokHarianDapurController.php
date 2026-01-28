@@ -179,8 +179,10 @@ class StokHarianDapurController extends Controller
             $menu = StokHarianDapurMenu::firstOrCreate(['recipe_id' => $data['recipe_id'], 'tanggal' => $data['tanggal']],
                 ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]);
 
-            $delta = $data['pemakaian'] - $menu->stok_keluar;
-            $menu->stok_keluar = $data['pemakaian'];
+            // ✅ PERBAIKAN: Accumulate pemakaian, bukan mengganti
+            $delta = $data['pemakaian']; // Delta adalah nilai input (penambahan)
+            $menu->stok_keluar = $menu->stok_keluar + $delta; // Tambah ke nilai existing
+            $menu->stok_akhir = max(0, $menu->stok_awal + $menu->stok_masuk - $menu->stok_keluar);
             $menu->is_submitted = 1;
             $menu->user_id = Auth::id();
             $menu->save();

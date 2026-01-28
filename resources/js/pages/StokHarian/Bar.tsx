@@ -51,7 +51,6 @@ interface FormItem {
   target_id: string;
   satuan: string;
   stok_awal: string;
-  stok_masuk: string;
   pemakaian: string;
   selectedItemInfo: any;
 }
@@ -63,12 +62,11 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
       target_id: "",
       satuan: "porsi",
       stok_awal: "",
-      stok_masuk: "",
       pemakaian: "",
       selectedItemInfo: null,
     }
   ]);
-  
+
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -79,7 +77,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           target_id: "",
           satuan: "porsi",
           stok_awal: "",
-          stok_masuk: "",
           pemakaian: "",
           selectedItemInfo: null,
         }
@@ -117,7 +114,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
       target_id: "",
       satuan: "porsi",
       stok_awal: "",
-      stok_masuk: "",
       pemakaian: "",
       selectedItemInfo: null,
     }]);
@@ -133,20 +129,19 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProcessing(true);
-    
+
     const routeName = tab === "menu" ? "stok-harian-menu.store" : "stok-harian-mentah.store";
-    
+
     try {
       // Submit each item one by one
       for (const item of items) {
         if (!item.target_id) continue;
-        
+
         const payload = {
           item_id: item.target_id,
           tanggal: tanggal,
           pemakaian: item.pemakaian,
           stok_awal: item.stok_awal,
-          stok_masuk: item.stok_masuk,
         };
 
         await new Promise<void>((resolve, reject) => {
@@ -161,7 +156,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           });
         });
       }
-      
+
       setProcessing(false);
       onClose();
       if (onSuccess) onSuccess();
@@ -174,7 +169,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
   const isMenuTab = tab === "menu";
   const isMentahTab = tab === "mentah";
-  const isButtonDisabled = processing || items.some(item => 
+  const isButtonDisabled = processing || items.some(item =>
     !item.target_id ||
     (isMenuTab && (item.pemakaian === "" || item.pemakaian === null)) ||
     (isMentahTab && (item.stok_awal === "" || item.stok_awal === null))
@@ -212,7 +207,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
                   <X className="w-4 h-4" />
                 </button>
               )}
-              
+
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-sm font-bold text-gray-700">Item #{index + 1}</span>
               </div>
@@ -266,17 +261,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
                 )}
               </div>
 
-              {tab === "mentah" && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Stok Masuk</label>
-                  <input
-                    type="number"
-                    value={item.stok_masuk}
-                    onChange={(e) => handleFieldChange(index, 'stok_masuk', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
-                  />
-                </div>
-              )}
+              {/* Stok Masuk removed for mentah input: users now only input Stok Awal */}
 
               {tab === "menu" && (
                 <div>
@@ -803,7 +788,7 @@ export default function Bar() {
                   <input
                     type="number"
                     value={formStokMasuk}
-                    onChange={(e) => setFormStokMasuk(Number(e.target.value))}
+                    onChange={(e) => setFormStokMasuk(e.target.value)}
                     className="w-full border rounded-xl px-4 py-2.5 text-sm"
                   />
                 </div>

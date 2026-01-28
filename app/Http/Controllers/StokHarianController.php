@@ -132,8 +132,10 @@ class StokHarianController extends Controller
             $menu = StokHarianMenu::firstOrCreate(['item_id' => $data['item_id'], 'tanggal' => $data['tanggal']],
                 ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]);
 
-            $delta = $data['pemakaian'] - $menu->stok_keluar;
-            $menu->stok_keluar = $data['pemakaian'];
+            // ✅ PERBAIKAN: Accumulate pemakaian, bukan mengganti
+            $delta = $data['pemakaian']; // Delta adalah nilai input (penambahan)
+            $menu->stok_keluar = $menu->stok_keluar + $delta; // Tambah ke nilai existing
+            $menu->stok_akhir = max(0, $menu->stok_awal + $menu->stok_masuk - $menu->stok_keluar);
             $menu->is_submitted = 1;
             $menu->user_id = Auth::id();
             $menu->save();
@@ -165,7 +167,7 @@ class StokHarianController extends Controller
 
     public function storeMentah(Request $request)
     {
-        $data = $request->validate(['item_id' => 'required', 'tanggal' => 'required', 'stok_awal' => 'required|numeric', 'stok_masuk' => 'nullable|numeric']);
+        $data = $request->validate(['item_id' => 'required|exists:items,id', 'tanggal' => 'required|date', 'stok_awal' => 'required|numeric|min:0', 'stok_masuk' => 'nullable|numeric|min:0']);
 
         DB::transaction(function () use ($data) {
             $mentah = StokHarianMentah::firstOrNew(['item_id' => $data['item_id'], 'tanggal' => $data['tanggal']]);
@@ -176,9 +178,9 @@ class StokHarianController extends Controller
             $mentah->save();
 
             $this->distributeStockToMenus($mentah->item_id, 0, $mentah->tanggal);
-            ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Input Mentah Bar', 'description' => "Update stok mentah."]);
+            ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Input Mentah Bar', 'description' => "Update stok mentah via Input Data."]);
         });
-        return back()->with('success', 'Stok mentah disimpan.');
+        return back()->with('success', 'Stok bahan mentah disimpan.');
     }
 
     public function updateMenu(Request $request, $id)
@@ -208,9 +210,9 @@ class StokHarianController extends Controller
                     }
                 }
             }
-            ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Update Menu Bar', 'description' => "Update stok/penjualan '{$menu->item->nama}'."]);
+            ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Update Menu Bar', 'description' => "Update penjualan '{$menu->item->nama}'. Terjual: {$newKeluar}."]);
         });
-        return back()->with('success', 'Updated.');
+        return back()->with('success', 'Produksi disimpan & stok dibagi ulang.');
     }
 
     public function updateMentah(Request $request, $id)
@@ -221,7 +223,8 @@ class StokHarianController extends Controller
                          'stok_akhir' => $request->stok_awal + $masuk - $mentah->stok_keluar]);
 
         $this->distributeStockToMenus($mentah->item_id, 0, $mentah->tanggal);
-        return back()->with('success', 'Updated.');
+        ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Update Mentah Bar', 'description' => "Update stok mentah '{$mentah->item->nama}'."]);
+        return back()->with('success', 'Stok diperbarui.');
     }
 
     // 🔥🔥 DISTRIBUSI LOGIC: FIX 502 & FAIR SHARE (20 20 20) 🔥🔥
@@ -306,15 +309,15 @@ class StokHarianController extends Controller
              $menu->delete();
              ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Menu Bar', 'description' => "Menghapus menu '{$nama}'."]);
         });
-        return back()->with('success', 'Menu dihapus.');
+        return back()->with('success', 'Menu bar dihapus.');
     }
 
     public function destroyMentah($id) {
         $mentah = StokHarianMentah::with('item')->findOrFail($id);
         $nama = $mentah->item->nama;
         $mentah->delete();
-        ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Mentah Bar', 'description' => "Menghapus mentah '{$nama}'."]);
-        return back()->with('success', 'Mentah dihapus.');
+        ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Mentah Bar', 'description' => "Menghapus stok mentah '{$nama}'."]);
+        return back()->with('success', 'Stok bahan mentah dihapus.');
     }
 
     private function canUserInput() {
