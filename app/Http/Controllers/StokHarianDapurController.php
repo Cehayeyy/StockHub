@@ -20,7 +20,7 @@ class StokHarianDapurController extends Controller
     public function dapur(Request $request)
     {
         $tab     = $request->get('tab', 'menu');
-        $search  = $request->search;
+        $search  = $request->input('search');
         $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
         // 1. Generate Data Harian
@@ -34,7 +34,8 @@ class StokHarianDapurController extends Controller
             if ($search) {
                 $query->whereHas('recipe', fn ($q) => $q->where('name', 'like', "%{$search}%"));
             }
-            $items = $query->orderBy('id')->paginate(10)->through(function ($s) {
+
+            $items = $query->orderByDesc('id')->paginate(10)->through(function ($s) {
                 return [
                     'id'         => $s->id,
                     'recipe_id'  => $s->recipe_id,
@@ -49,10 +50,12 @@ class StokHarianDapurController extends Controller
             })->withQueryString();
         } else {
             $query = StokHarianDapurMentah::with('item')->whereDate('tanggal', $tanggal);
+
             if ($search) {
-                $query->whereHas('item', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+                $query->whereHas('item', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
             }
-            $items = $query->orderBy('id')->paginate(10)->through(fn ($s) => [
+
+            $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
                 'id'         => $s->id,
                 'item_id'    => $s->item_id,
                 'nama'       => $s->item->nama,
@@ -62,7 +65,7 @@ class StokHarianDapurController extends Controller
                 'stok_total' => $s->stok_awal + $s->stok_masuk,
                 'pemakaian'  => $s->stok_keluar,
                 'tersisa'    => $s->stok_akhir,
-            ]);
+            ])->withQueryString();
         }
 
         // 3. Dropdown Data (Shared)
@@ -118,6 +121,7 @@ class StokHarianDapurController extends Controller
             'inputableMenus' => $inputableMenus,
             'lowStockItems'  => $lowStockItems,
             'canInput'       => $canInput,
+            'search'         => $search, // 🔥 PERBAIKAN: Mengirim search kembali ke frontend
         ]);
     }
 

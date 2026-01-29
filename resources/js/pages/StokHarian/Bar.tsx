@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react"; // 🔥 Tambah useRef
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router, useForm } from "@inertiajs/react";
 import { Search, ChevronDown, Trash2, Plus, AlertTriangle, Edit, X } from "lucide-react";
@@ -33,8 +33,14 @@ interface LowStockItem {
   kategori: string;
 }
 
+// 🔥 UPDATE INTERFACE: Tambahkan search prop
 interface PageProps {
-  items: { data: ItemData[]; links: any[] };
+  items: {
+    data: ItemData[];
+    links: any[];
+    current_page: number;
+    per_page: number;
+  };
   inputableMenus: DropdownItem[];
   tab: "menu" | "mentah";
   tanggal: string;
@@ -43,6 +49,7 @@ interface PageProps {
   flash: any;
   availableMenus: any[];
   canInput: boolean;
+  search?: string; // 🔥 Added search prop
 }
 
 // --- MODAL INPUT DATA ---
@@ -261,8 +268,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
                 )}
               </div>
 
-              {/* Stok Masuk removed for mentah input: users now only input Stok Awal */}
-
               {tab === "menu" && (
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Pemakaian</label>
@@ -313,12 +318,15 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
 // === MAIN COMPONENT ===
 export default function Bar() {
-  const { items, inputableMenus, tab, tanggal, auth, lowStockItems, canInput } = usePage<any>().props as PageProps;
+  // 🔥 PERBAIKAN 1: Tangkap 'search' dari props
+  const { items, inputableMenus, tab, tanggal, auth, lowStockItems, canInput, search: initialSearch } = usePage<any>().props as PageProps;
   const role = auth?.user?.role;
 
-  const [search, setSearch] = useState("");
+  // 🔥 PERBAIKAN 2: Inisialisasi state dengan nilai dari props & Setup Ref
+  const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
   const [showInputModal, setShowInputModal] = useState(false);
+  const isFirstRender = useRef(true); // Ref untuk mencegah fetch awal yang tidak perlu
 
   // Edit States
   const [showEditModal, setShowEditModal] = useState(false);
@@ -341,13 +349,42 @@ export default function Bar() {
     if (new URLSearchParams(window.location.search).get("autoInput") === "1") setShowInputModal(true);
   }, []);
 
+  // Sync state search jika ada update dari server (misal pagination)
+  useEffect(() => {
+    setSearch(initialSearch || "");
+  }, [initialSearch]);
+
+
+  // 🔥 PERBAIKAN 3: DEBOUNCE SEARCH LOGIC (500ms)
+  useEffect(() => {
+    // Skip fetch saat pertama kali render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      // Hanya request jika nilai search beda dari yang ada di props (menghindari loop)
+      if (search !== initialSearch) {
+        router.get(
+          route("stok-harian.bar"),
+          { tab, tanggal: date, search },
+          {
+            preserveScroll: true,
+            preserveState: true, // Jaga state agar fokus tidak hilang
+            replace: true        // Ganti history, jangan tumpuk
+          }
+        );
+      }
+    }, 500); // Tunggu 500ms setelah user berhenti mengetik
+
+    return () => clearTimeout(timeoutId); // Cleanup timeout lama jika user ngetik lagi
+  }, [search, tab, date]); // Dependency array: jalankan jika search, tab, atau date berubah
+
+
+  // 🔥 PERBAIKAN 4: Handler Search (Hanya update state lokal)
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    router.get(
-      route("stok-harian.bar"),
-      { tab, tanggal: date, search: e.target.value },
-      { preserveScroll: true }
-    );
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,19 +430,15 @@ export default function Bar() {
   const submitUpdate = () => {
     if (!formRecordId) return;
 
-    // 🔥 Validasi: Cek apakah jam sudah lewat 21:00 (hanya untuk staff, bukan owner/supervisor)
     if (role !== "owner" && role !== "supervisor") {
       const currentHour = new Date().getHours();
       const currentMinute = new Date().getMinutes();
-      const currentTime = currentHour * 60 + currentMinute; // convert to minutes
-      const cutoffTime = 21 * 60; // 21:00 = 1260 menit
+      const currentTime = currentHour * 60 + currentMinute;
+      const cutoffTime = 21 * 60;
 
       if (currentTime >= cutoffTime) {
-        // Tampilkan notif
         setShowTimeNotif(true);
-        // Auto hide notif setelah 4 detik
         setTimeout(() => setShowTimeNotif(false), 4000);
-        // Jangan lanjutkan submit
         return;
       }
     }
@@ -441,7 +474,6 @@ export default function Bar() {
     });
   };
 
-  // 🔥 LOGIKA TOMBOL INPUT: Supervisor HANYA bisa input di Mentah
   const showInputButton = tab === "mentah" || (tab === "menu" && role !== "supervisor");
 
   return (
@@ -465,7 +497,6 @@ export default function Bar() {
         )}
       </AnimatePresence>
 
-      {/* 🔥 NOTIFIKASI: SIMPAN LEWAT JAM 21:00 */}
       {showTimeNotif && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -501,7 +532,6 @@ export default function Bar() {
         )}
 
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
-          {/* Notifikasi Waktu Input Tertutup */}
           {!canInput && (
             <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-start gap-3">
               <div className="p-2 bg-yellow-100 rounded-full text-yellow-600">
@@ -518,7 +548,6 @@ export default function Bar() {
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div className="flex gap-3 w-full md:w-auto">
-              {/* 🔥 TOMBOL INPUT SESUAI ROLE */}
               {showInputButton && (
                 <button
                   onClick={() => setShowInputModal(true)}
@@ -546,6 +575,7 @@ export default function Bar() {
                   placeholder="Search..."
                   value={search}
                   onChange={handleSearch}
+                  autoFocus // 🔥 PERBAIKAN 5: Keep focus
                   className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm"
                 />
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
@@ -590,7 +620,10 @@ export default function Bar() {
                 {items.data.length > 0 ? (
                   items.data.map((item: ItemData, i: number) => (
                     <tr key={item.id} className="hover:bg-[#FFF9F0]">
-                      <td className="p-4 text-center text-gray-500">{i + 1}</td>
+                      <td className="p-4 text-center text-gray-500">
+                        {/* Logic penomoran agar berlanjut di halaman berikutnya */}
+                        {(items.current_page ? (items.current_page - 1) * items.per_page : 0) + i + 1}
+                      </td>
                       <td className="p-4 font-bold text-gray-800">{item.nama}</td>
                       <td className="p-4 text-center text-gray-500">{item.satuan}</td>
                       <td className="p-4 text-center">{item.stok_awal}</td>
@@ -694,6 +727,37 @@ export default function Bar() {
               <p className="text-center text-gray-400 text-sm">Belum ada data.</p>
             )}
           </div>
+
+          {/* --- PAGINATION (ADDED HERE) --- */}
+          {items.links && items.links.length > 3 && (
+            <div className="mt-6 flex justify-center pb-4">
+              <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
+                {items.links.map((link: any, i: number) => {
+                  let label = link.label;
+                  if (label.includes('&laquo;')) label = 'Prev';
+                  if (label.includes('&raquo;')) label = 'Next';
+
+                  return (
+                    <button
+                      key={i}
+                      disabled={!link.url}
+                      onClick={() =>
+                        link.url &&
+                        router.get(link.url, {}, { preserveScroll: true })
+                      }
+                      className={`px-3 sm:px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                        link.active
+                          ? "bg-[#D9A978] text-white shadow-md"
+                          : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
+                      } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
+                      dangerouslySetInnerHTML={{ __html: label }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
 
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
@@ -788,7 +852,8 @@ export default function Bar() {
                   <input
                     type="number"
                     value={formStokMasuk}
-                    onChange={(e) => setFormStokMasuk(e.target.value)}
+                    // 🔥 PERBAIKAN 2: Mengubah string kosong menjadi "" atau parse ke number
+                    onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-full border rounded-xl px-4 py-2.5 text-sm"
                   />
                 </div>

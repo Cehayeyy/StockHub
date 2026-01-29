@@ -20,16 +20,18 @@ class StokHarianController extends Controller
     public function bar(Request $request)
     {
         $tab     = $request->get('tab', 'menu');
-        $search  = $request->search;
+        $search  = $request->input('search');
         $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
         $this->ensureStokExists($tanggal);
 
         if ($tab === 'menu') {
             $query = StokHarianMenu::with('item')->whereDate('tanggal', $tanggal);
+
             if ($search) {
                 $query->whereHas('item', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
             }
+
             $items = $query->orderByDesc('id')->paginate(10)->through(function ($s) {
                 return [
                     'id'         => $s->id,
@@ -45,9 +47,11 @@ class StokHarianController extends Controller
             })->withQueryString();
         } else {
             $query = StokHarianMentah::with('item')->whereDate('tanggal', $tanggal);
+
             if ($search) {
                 $query->whereHas('item', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
             }
+
             $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
                 'id'         => $s->id,
                 'item_id'    => $s->item_id,
@@ -58,7 +62,7 @@ class StokHarianController extends Controller
                 'stok_total' => $s->stok_awal + $s->stok_masuk,
                 'pemakaian'  => $s->stok_keluar,
                 'tersisa'    => $s->stok_akhir,
-            ]);
+            ])->withQueryString();
         }
 
         // Dropdowns & Low Stock Logic (Sama seperti sebelumnya)
@@ -78,9 +82,14 @@ class StokHarianController extends Controller
             ->filter(fn($item) => $item['tersisa'] < 7)->values();
 
         return Inertia::render('StokHarian/Bar', [
-            'items' => $items, 'tab' => $tab, 'division' => 'bar', 'tanggal' => $tanggal,
-            'inputableMenus' => $inputableMenus, 'lowStockItems' => $lowMentah->concat($lowMenu),
-            'canInput' => $this->canUserInput(),
+            'items'          => $items,
+            'tab'            => $tab,
+            'division'       => 'bar',
+            'tanggal'        => $tanggal,
+            'inputableMenus' => $inputableMenus,
+            'lowStockItems'  => $lowMentah->concat($lowMenu),
+            'canInput'       => $this->canUserInput(),
+            'search'         => $search, // 🔥 PERBAIKAN: Mengirim search kembali ke frontend
         ]);
     }
 
@@ -227,8 +236,7 @@ class StokHarianController extends Controller
         return back()->with('success', 'Stok diperbarui.');
     }
 
-    // 🔥🔥 DISTRIBUSI LOGIC: FIX 502 & FAIR SHARE (20 20 20) 🔥🔥
-    // Fungsi ini hanya memproses Menu yang terkait dengan Raw Item ID tertentu (Efisien)
+    // 🔥🔥 DISTRIBUSI LOGIC: TOTAL DINAMIS & FAIR SHARE 🔥🔥
     private function distributeStockToMenus($rawItemId, $dummy, $date)
     {
         // 1. Cari Resep yang menggunakan bahan ini
@@ -260,7 +268,6 @@ class StokHarianController extends Controller
                 $raw = StokHarianMentah::where('item_id', $ingId)->where('tanggal', $date)->first();
                 if ($raw) {
                     // 🔥 FIX LOGIKA KOMPETITOR (FAIR SHARE) 🔥
-                    // Hitung ada berapa menu di hari ini yang resepnya pakai bahan ini
                     $recipesUsingIngredient = Recipe::whereJsonContains('ingredients', [['item_id' => (int)$ingId]])->pluck('name');
                     $activeCompetitors = StokHarianMenu::whereHas('item', fn($q) => $q->whereIn('nama', $recipesUsingIngredient))
                         ->where('tanggal', $date)
@@ -287,15 +294,8 @@ class StokHarianController extends Controller
             if ($maxCapAkhirReal === 999999) $maxCapAkhirReal = 0;
 
             // --- EKSEKUSI UPDATE ---
-            // 1. Stok Awal: Diambil dari pembagian rata Stok Awal Mentah
             $menu->stok_awal = $maxCapAwal;
-
-            // 2. Stok Akhir: Diambil dari pembagian rata Sisa Fisik Mentah
             $menu->stok_akhir = $maxCapAkhirReal;
-
-            // 3. Stok Masuk: Penyeimbang agar Total Dinamis
-            // Masuk = Akhir - Awal.
-            // (Jadi Total = Awal + Masuk = Akhir/Sisa Fisik).
             $menu->stok_masuk = $menu->stok_akhir - $menu->stok_awal;
 
             $menu->save();

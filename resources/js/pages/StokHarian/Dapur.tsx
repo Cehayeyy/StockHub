@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react"; // 🔥 Tambah useRef
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router, useForm } from "@inertiajs/react";
 import { Search, ChevronDown, Trash2, Plus, AlertTriangle, Edit, X } from "lucide-react";
@@ -34,8 +34,14 @@ interface LowStockItem {
   kategori: string;
 }
 
+// 🔥 PERBAIKAN 1: Tambahkan search ke PageProps
 interface PageProps {
-  items: { data: ItemData[]; links: any[] };
+  items: {
+    data: ItemData[];
+    links: any[];
+    current_page: number;
+    per_page: number;
+  };
   inputableMenus: DropdownItem[];
   tab: "menu" | "mentah";
   tanggal: string;
@@ -44,6 +50,7 @@ interface PageProps {
   flash: any;
   availableMenus: any[];
   canInput: boolean;
+  search?: string; // 🔥 Added search prop
 }
 
 // --- MODAL INPUT (CREATE) ---
@@ -334,16 +341,23 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
 // === MAIN COMPONENT ===
 export default function Dapur() {
-  const { items, inputableMenus, tab, tanggal, lowStockItems, auth, canInput } = usePage<any>().props as PageProps;
+  // 🔥 PERBAIKAN 2: Tangkap 'search' dari props
+  const { items, inputableMenus, tab, tanggal, lowStockItems, auth, canInput, search: initialSearch } = usePage<any>().props as PageProps;
   const role = auth?.user?.role;
 
-  const [search, setSearch] = useState("");
+  // 🔥 PERBAIKAN 3: Gunakan initialSearch sebagai nilai awal state
+  const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
   const [showInputModal, setShowInputModal] = useState(false);
 
+  // 🔥 PERBAIKAN: Ref untuk mencegah fetch saat render pertama
+  const isFirstRender = useRef(true);
+
   // Edit States
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);  const [showTimeNotif, setShowTimeNotif] = useState(false);  const [formRecordId, setFormRecordId] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showTimeNotif, setShowTimeNotif] = useState(false);
+  const [formRecordId, setFormRecordId] = useState<number | null>(null);
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
   const [formStokAwal, setFormStokAwal] = useState<number | "">("");
@@ -363,13 +377,41 @@ export default function Dapur() {
     if (new URLSearchParams(window.location.search).get("autoInput") === "1") setShowInputModal(true);
   }, []);
 
-  const handleSearch = (e: any) => {
+  // Sync state search jika ada update dari server (misal pagination)
+  useEffect(() => {
+    setSearch(initialSearch || "");
+  }, [initialSearch]);
+
+  // 🔥 PERBAIKAN UTAMA: DEBOUNCE SEARCH (500ms)
+  useEffect(() => {
+    // Skip fetch saat pertama kali render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      // Hanya request jika nilai search beda dari yang ada di props (menghindari loop)
+      if (search !== initialSearch) {
+        router.get(
+          route("stok-harian.dapur"),
+          { tab, tanggal: date, search },
+          {
+            preserveScroll: true,
+            preserveState: true, // Jaga state agar fokus tidak hilang
+            replace: true        // Ganti history, jangan tumpuk
+          }
+        );
+      }
+    }, 500); // Tunggu 500ms setelah user berhenti mengetik
+
+    return () => clearTimeout(timeoutId); // Cleanup timeout lama jika user ngetik lagi
+  }, [search, tab, date]);
+
+
+  // 🔥 PERBAIKAN: Handler Search (Hanya update state lokal)
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
-    router.get(
-      route("stok-harian.dapur"),
-      { tab, tanggal: date, search: e.target.value },
-      { preserveScroll: true }
-    );
   };
 
   const handleDateChange = (e: any) => {
@@ -570,6 +612,7 @@ export default function Dapur() {
                   placeholder="Search..."
                   value={search}
                   onChange={handleSearch}
+                  autoFocus // 🔥 Keep Focus
                   className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm"
                 />
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
@@ -614,7 +657,10 @@ export default function Dapur() {
                 {items.data.length > 0 ? (
                   items.data.map((item: ItemData, i: number) => (
                     <tr key={item.id} className="hover:bg-[#FFF9F0]">
-                      <td className="p-4 text-center text-gray-500">{i + 1}</td>
+                      <td className="p-4 text-center text-gray-500">
+                        {/* Logic penomoran agar berlanjut di halaman berikutnya */}
+                        {(items.current_page ? (items.current_page - 1) * items.per_page : 0) + i + 1}
+                      </td>
                       <td className="p-4 font-bold text-gray-800">{item.nama}</td>
                       <td className="p-4 text-center text-gray-500">{item.satuan}</td>
                       <td className="p-4 text-center">{item.stok_awal}</td>
@@ -718,6 +764,37 @@ export default function Dapur() {
               <p className="text-center text-gray-400 text-sm">Belum ada data.</p>
             )}
           </div>
+
+          {/* --- PAGINATION (ADDED HERE) --- */}
+          {items.links && items.links.length > 3 && (
+            <div className="mt-6 flex justify-center pb-4">
+              <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
+                {items.links.map((link: any, i: number) => {
+                  let label = link.label;
+                  if (label.includes('&laquo;')) label = 'Prev';
+                  if (label.includes('&raquo;')) label = 'Next';
+
+                  return (
+                    <button
+                      key={i}
+                      disabled={!link.url}
+                      onClick={() =>
+                        link.url &&
+                        router.get(link.url, {}, { preserveScroll: true })
+                      }
+                      className={`px-3 sm:px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                        link.active
+                          ? "bg-[#D9A978] text-white shadow-md"
+                          : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
+                      } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
+                      dangerouslySetInnerHTML={{ __html: label }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
 
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
@@ -727,7 +804,7 @@ export default function Dapur() {
           </h3>
           {lowStockItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lowStockItems.map((item, idx) => (
+              {lowStockItems.map((item: LowStockItem, idx: number) => (
                 <div
                   key={idx}
                   className="flex flex-col gap-1 p-3 border border-gray-100 rounded-xl hover:shadow-sm"
@@ -812,7 +889,8 @@ export default function Dapur() {
                   <input
                     type="number"
                     value={formStokMasuk}
-                    onChange={(e) => setFormStokMasuk(e.target.value)}
+                    // 🔥 PERBAIKAN 2: Mengubah string kosong menjadi "" atau parse ke number
+                    onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
                     className="w-full border rounded-xl px-4 py-2.5 text-sm"
                   />
                 </div>

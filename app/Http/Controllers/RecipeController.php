@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Recipe;
 use App\Models\Item;
-use App\Models\ItemCategory; // 🔥 PERBAIKAN: Gunakan Model ItemCategory
+use App\Models\ItemCategory;
 use App\Models\StokHarianMenu;
 use App\Models\StokHarianMentah;
 use App\Models\StokHarianDapurMentah;
@@ -27,17 +27,20 @@ class RecipeController extends Controller
             $division = $request->input('division', 'bar');
         }
 
-        // 🔥 PERBAIKAN: Ambil ItemCategory sesuai divisi yang sedang aktif
         $categories = ItemCategory::where('division', $division)->get();
 
+        // 🔥 LOGIKA PAGINATION (SERVER SIDE)
         $recipes = Recipe::where('division', $division)
+            ->when($request->input('search'), function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
             ->latest()
-            ->get()
-            ->map(fn ($r) => [
+            ->paginate(10) // Batasi 10 item per halaman
+            ->withQueryString() // Jaga filter search saat ganti halaman
+            ->through(fn ($r) => [
                 'id'                => $r->id,
                 'name'              => $r->name,
                 'category_id'       => $r->category_id,
-                // Relasi ini sekarang akan mengambil nama dari tabel item_categories
                 'category_name'     => $r->category->name ?? '-',
                 'ingredients'       => $r->ingredients,
                 'total_ingredients' => $r->total_ingredients,
@@ -58,11 +61,12 @@ class RecipeController extends Controller
 
         return Inertia::render('MasterData/Resep', [
             'recipes'      => $recipes,
-            'categories'   => $categories, // Kirim data kategori yang benar ke frontend
+            'categories'   => $categories,
             'bahan_menu'   => $items->where('category', 'Menu')->values(),
             'bahan_mentah' => $items->where('category', 'Mentah')->values(),
             'division'     => $division,
             'userRole'     => $user->role,
+            'search'       => $request->input('search'),
         ]);
     }
 
@@ -71,11 +75,10 @@ class RecipeController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name'                  => 'required|string|max:255',
-            'division'              => 'required|in:bar,dapur',
-            // 🔥 PERBAIKAN: Validasi ke tabel 'item_categories'
-            'category_id'           => 'required|exists:item_categories,id',
-            'ingredients'           => 'required|array|min:1',
+            'name'              => 'required|string|max:255',
+            'division'          => 'required|in:bar,dapur',
+            'category_id'       => 'required|exists:item_categories,id',
+            'ingredients'       => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
@@ -144,11 +147,10 @@ class RecipeController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name'                  => 'required|string|max:255',
-            'division'              => 'required|in:bar,dapur',
-            // 🔥 PERBAIKAN: Validasi ke tabel 'item_categories'
-            'category_id'           => 'required|exists:item_categories,id',
-            'ingredients'           => 'required|array|min:1',
+            'name'              => 'required|string|max:255',
+            'division'          => 'required|in:bar,dapur',
+            'category_id'       => 'required|exists:item_categories,id',
+            'ingredients'       => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
