@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"; // 🔥 Tambah useRef
+import React, { useState, useEffect, useRef } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router, useForm } from "@inertiajs/react";
 import { Search, ChevronDown, Trash2, Plus, AlertTriangle, Edit, X } from "lucide-react";
@@ -33,7 +33,6 @@ interface LowStockItem {
   kategori: string;
 }
 
-// 🔥 UPDATE INTERFACE: Tambahkan search prop
 interface PageProps {
   items: {
     data: ItemData[];
@@ -318,15 +317,14 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
 // === MAIN COMPONENT ===
 export default function Bar() {
-  // 🔥 PERBAIKAN 1: Tangkap 'search' dari props
   const { items, inputableMenus, tab, tanggal, auth, lowStockItems, canInput, search: initialSearch } = usePage<any>().props as PageProps;
   const role = auth?.user?.role;
 
-  // 🔥 PERBAIKAN 2: Inisialisasi state dengan nilai dari props & Setup Ref
+  // 🔥 STATE with Debounce Setup
   const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
   const [showInputModal, setShowInputModal] = useState(false);
-  const isFirstRender = useRef(true); // Ref untuk mencegah fetch awal yang tidak perlu
+  const isFirstRender = useRef(true);
 
   // Edit States
   const [showEditModal, setShowEditModal] = useState(false);
@@ -349,40 +347,34 @@ export default function Bar() {
     if (new URLSearchParams(window.location.search).get("autoInput") === "1") setShowInputModal(true);
   }, []);
 
-  // Sync state search jika ada update dari server (misal pagination)
+  // Sync state
   useEffect(() => {
     setSearch(initialSearch || "");
   }, [initialSearch]);
 
 
-  // 🔥 PERBAIKAN 3: DEBOUNCE SEARCH LOGIC (500ms)
+  // 🔥 DEBOUNCE EFFECT
   useEffect(() => {
-    // Skip fetch saat pertama kali render
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
 
     const timeoutId = setTimeout(() => {
-      // Hanya request jika nilai search beda dari yang ada di props (menghindari loop)
+      // Hanya request jika search berubah dari yang ada di URL/Props
       if (search !== initialSearch) {
         router.get(
           route("stok-harian.bar"),
           { tab, tanggal: date, search },
-          {
-            preserveScroll: true,
-            preserveState: true, // Jaga state agar fokus tidak hilang
-            replace: true        // Ganti history, jangan tumpuk
-          }
+          { preserveScroll: true, preserveState: true, replace: true }
         );
       }
     }, 500); // Tunggu 500ms setelah user berhenti mengetik
 
-    return () => clearTimeout(timeoutId); // Cleanup timeout lama jika user ngetik lagi
-  }, [search, tab, date]); // Dependency array: jalankan jika search, tab, atau date berubah
+    return () => clearTimeout(timeoutId); // Cleanup timeout lama jika user mengetik lagi
+  }, [search, tab, date]);
 
-
-  // 🔥 PERBAIKAN 4: Handler Search (Hanya update state lokal)
+  // Handlers
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   };
@@ -575,7 +567,7 @@ export default function Bar() {
                   placeholder="Search..."
                   value={search}
                   onChange={handleSearch}
-                  autoFocus // 🔥 PERBAIKAN 5: Keep focus
+                  autoFocus // 🔥 Keep Focus
                   className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm"
                 />
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />

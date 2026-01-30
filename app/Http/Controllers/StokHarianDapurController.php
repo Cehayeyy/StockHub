@@ -121,7 +121,7 @@ class StokHarianDapurController extends Controller
             'inputableMenus' => $inputableMenus,
             'lowStockItems'  => $lowStockItems,
             'canInput'       => $canInput,
-            'search'         => $search, // 🔥 PERBAIKAN: Mengirim search kembali ke frontend
+            'search'         => $search, // 🔥 PENTING: Kirim parameter search ke frontend
         ]);
     }
 

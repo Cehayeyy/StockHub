@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"; // 🔥 Tambah useRef
 import AppLayout from "@/layouts/app-layout";
-import { Head, usePage, router, useForm } from "@inertiajs/react";
+import { Head, usePage, router } from "@inertiajs/react";
 import { Search, ChevronDown, Trash2, Plus, AlertTriangle, Edit, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -34,7 +34,6 @@ interface LowStockItem {
   kategori: string;
 }
 
-// 🔥 PERBAIKAN 1: Tambahkan search ke PageProps
 interface PageProps {
   items: {
     data: ItemData[];
@@ -341,16 +340,16 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
 // === MAIN COMPONENT ===
 export default function Dapur() {
-  // 🔥 PERBAIKAN 2: Tangkap 'search' dari props
+  // 🔥 PERBAIKAN: Tangkap 'search' dari props (initialSearch)
   const { items, inputableMenus, tab, tanggal, lowStockItems, auth, canInput, search: initialSearch } = usePage<any>().props as PageProps;
   const role = auth?.user?.role;
 
-  // 🔥 PERBAIKAN 3: Gunakan initialSearch sebagai nilai awal state
+  // 🔥 PERBAIKAN: Inisialisasi state search dari prop
   const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
   const [showInputModal, setShowInputModal] = useState(false);
 
-  // 🔥 PERBAIKAN: Ref untuk mencegah fetch saat render pertama
+  // 🔥 PERBAIKAN: Ref untuk debounce
   const isFirstRender = useRef(true);
 
   // Edit States
@@ -409,7 +408,7 @@ export default function Dapur() {
   }, [search, tab, date]);
 
 
-  // 🔥 PERBAIKAN: Handler Search (Hanya update state lokal)
+  // 🔥 PERBAIKAN: Handler Search (Hanya update state lokal, useEffect yang kirim request)
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   };
@@ -612,7 +611,7 @@ export default function Dapur() {
                   placeholder="Search..."
                   value={search}
                   onChange={handleSearch}
-                  autoFocus // 🔥 Keep Focus
+                  autoFocus // 🔥 PERBAIKAN: Keep Focus
                   className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm"
                 />
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
@@ -658,8 +657,8 @@ export default function Dapur() {
                   items.data.map((item: ItemData, i: number) => (
                     <tr key={item.id} className="hover:bg-[#FFF9F0]">
                       <td className="p-4 text-center text-gray-500">
-                        {/* Logic penomoran agar berlanjut di halaman berikutnya */}
-                        {(items.current_page ? (items.current_page - 1) * items.per_page : 0) + i + 1}
+                        {/* UPDATE LOGIC PENOMORAN HALAMAN */}
+                        {(items.current_page ? (items.current_page - 1) * (items.per_page || 10) : 0) + i + 1}
                       </td>
                       <td className="p-4 font-bold text-gray-800">{item.nama}</td>
                       <td className="p-4 text-center text-gray-500">{item.satuan}</td>
