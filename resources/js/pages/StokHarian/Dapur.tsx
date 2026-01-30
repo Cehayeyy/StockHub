@@ -588,9 +588,12 @@ export default function Dapur() {
               {showInputButton && (
                 <button
                   onClick={() => setShowInputModal(true)}
-                  disabled={!canInput}
+                  disabled={
+                    (tab === "mentah" && isPastCutoff) ||
+                    (tab === "menu" && (!canInput || isPastCutoff))
+                  }
                   className={`flex-1 md:flex-none justify-center px-6 py-2 rounded-full text-sm font-bold flex gap-2 items-center transition ${
-                    canInput
+                    (tab === "mentah" && !isPastCutoff) || (tab === "menu" && canInput && !isPastCutoff)
                       ? 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
@@ -678,28 +681,57 @@ export default function Dapur() {
                       </td>
                       <td className="p-4 text-center">
   <div className="flex justify-center gap-2">
-    <button
-      onClick={() => handleEditClick(item)}
-      disabled={!canInput}
-      className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-        canInput
-          ? "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
-          : "bg-gray-300 text-gray-500 cursor-not-allowed" // 🔥 Style abu-abu saat terkunci
-      }`}
-    >
-      Edit
-    </button>
-    <button
-      onClick={() => handleDeleteClick(item.id)}
-      disabled={!canInput}
-      className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-        canInput
-          ? "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
-          : "bg-gray-300 text-gray-500 cursor-not-allowed" // 🔥 Style abu-abu saat terkunci
-      }`}
-    >
-      Hapus
-    </button>
+    {tab === "mentah" ? (
+      <>
+        <button
+          onClick={() => handleEditClick(item)}
+          disabled={isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            isPastCutoff
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
+          }`}
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDeleteClick(item.id)}
+          disabled={isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            isPastCutoff
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
+          }`}
+        >
+          Hapus
+        </button>
+      </>
+    ) : (
+      <>
+        <button
+          onClick={() => handleEditClick(item)}
+          disabled={!canInput || isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            (!canInput || isPastCutoff)
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
+          }`}
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDeleteClick(item.id)}
+          disabled={!canInput || isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            (!canInput || isPastCutoff)
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
+          }`}
+        >
+          Hapus
+        </button>
+      </>
+    )}
   </div>
 </td>
                     </tr>

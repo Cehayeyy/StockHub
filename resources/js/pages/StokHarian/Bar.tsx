@@ -62,7 +62,7 @@ interface FormItem {
   selectedItemInfo: any;
 }
 
-const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess }: any) => {
+const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, canInput, isPastCutoff, onSuccess }: any) => {
   const [items, setItems] = useState<FormItem[]>([
     {
       id: Date.now(),
@@ -275,7 +275,8 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
                     type="number"
                     value={item.pemakaian}
                     onChange={(e) => handleFieldChange(index, 'pemakaian', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                    disabled={!canInput || isPastCutoff}
+                    className={`w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978] ${(!canInput || isPastCutoff) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
                   />
                 </div>
               )}
@@ -480,6 +481,8 @@ export default function Bar() {
             inputableMenus={inputableMenus}
             tab={tab}
             tanggal={tanggal}
+            canInput={canInput}
+            isPastCutoff={isPastCutoff}
             onSuccess={() =>
               router.visit(route("stok-harian.bar"), {
                 data: { tab, tanggal },
@@ -544,9 +547,12 @@ export default function Bar() {
               {showInputButton && (
                 <button
                   onClick={() => setShowInputModal(true)}
-                  disabled={!canInput}
+                  disabled={
+                    (tab === "mentah" && isPastCutoff) ||
+                    (tab === "menu" && (!canInput || isPastCutoff))
+                  }
                   className={`flex-1 md:flex-none justify-center px-6 py-2 rounded-full text-sm font-bold flex gap-2 items-center transition ${
-                    canInput
+                    (tab === "mentah" && !isPastCutoff) || (tab === "menu" && canInput && !isPastCutoff)
                       ? 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
@@ -634,28 +640,57 @@ export default function Bar() {
                       </td>
                       <td className="p-4 text-center">
   <div className="flex justify-center gap-2">
-    <button
-      onClick={() => handleEditClick(item)}
-      disabled={!canInput}
-      className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-        canInput
-          ? "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
-          : "bg-gray-300 text-gray-500 cursor-not-allowed" // 🔥 Style abu-abu saat terkunci
-      }`}
-    >
-      Edit
-    </button>
-    <button
-      onClick={() => handleDeleteClick(item.id)}
-      disabled={!canInput}
-      className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-        canInput
-          ? "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
-          : "bg-gray-300 text-gray-500 cursor-not-allowed" // 🔥 Style abu-abu saat terkunci
-      }`}
-    >
-      Hapus
-    </button>
+    {tab === "mentah" ? (
+      <>
+        <button
+          onClick={() => handleEditClick(item)}
+          disabled={isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            isPastCutoff
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
+          }`}
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDeleteClick(item.id)}
+          disabled={isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            isPastCutoff
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
+          }`}
+        >
+          Hapus
+        </button>
+      </>
+    ) : (
+      <>
+        <button
+          onClick={() => handleEditClick(item)}
+          disabled={!canInput || isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            (!canInput || isPastCutoff)
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
+          }`}
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDeleteClick(item.id)}
+          disabled={!canInput || isPastCutoff}
+          className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+            (!canInput || isPastCutoff)
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
+          }`}
+        >
+          Hapus
+        </button>
+      </>
+    )}
   </div>
 </td>
                     </tr>
@@ -711,18 +746,41 @@ export default function Bar() {
                     </div>
                   </div>
                   <div className="flex gap-2 mt-3 pt-3 border-t">
-                    <button
-  onClick={() => handleEditClick(item)}
-  className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4]"
->
-  Edit
-</button>
-                    <button
-                      onClick={() => handleDeleteClick(item.id)}
-                      className="flex-1 bg-red-500 text-white py-1 rounded text-xs"
-                    >
-                      Hapus
-                    </button>
+                    {tab === "mentah" ? (
+                      <>
+                        <button
+                          onClick={() => handleEditClick(item)}
+                          disabled={isPastCutoff}
+                          className={`bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] ${isPastCutoff ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' : ''}`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(item.id)}
+                          disabled={isPastCutoff}
+                          className={`flex-1 bg-red-500 text-white py-1 rounded text-xs ${isPastCutoff ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' : ''}`}
+                        >
+                          Hapus
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleEditClick(item)}
+                          disabled={!canInput || isPastCutoff}
+                          className={`bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4] ${(!canInput || isPastCutoff) ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' : ''}`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(item.id)}
+                          disabled={!canInput || isPastCutoff}
+                          className={`flex-1 bg-red-500 text-white py-1 rounded text-xs ${(!canInput || isPastCutoff) ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300' : ''}`}
+                        >
+                          Hapus
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
