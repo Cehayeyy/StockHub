@@ -21,9 +21,18 @@ class StokHarianController extends Controller
     {
         $tab     = $request->get('tab', 'menu');
         $search  = $request->input('search');
-        $tanggal = $request->get('tanggal', Carbon::now()->toDateString());
 
-        $this->ensureStokExists($tanggal);
+        // Ambil tanggal hari ini
+        $today   = Carbon::now()->toDateString();
+        // Gunakan tanggal dari request, jika tidak ada gunakan hari ini
+        $tanggal = $request->get('tanggal', $today);
+
+        // 🔥 LOGIKA PENTING:
+        // Hanya generate/hitung stok jika tanggal yang dilihat adalah HARI INI atau MASA LALU.
+        // Jangan generate untuk MASA DEPAN karena transaksi hari ini belum selesai.
+        if ($tanggal <= $today) {
+            $this->ensureStokExists($tanggal);
+        }
 
         if ($tab === 'menu') {
             $query = StokHarianMenu::with('item')->whereDate('tanggal', $tanggal);
@@ -34,15 +43,16 @@ class StokHarianController extends Controller
 
             $items = $query->orderByDesc('id')->paginate(10)->through(function ($s) {
                 return [
-                    'id'         => $s->id,
-                    'item_id'    => $s->item_id,
-                    'nama'       => $s->item->nama,
-                    'satuan'     => $s->item->satuan ?? 'porsi',
-                    'stok_awal'  => $s->stok_awal,
-                    'stok_masuk' => $s->stok_masuk,
-                    'stok_total' => $s->stok_awal + $s->stok_masuk,
-                    'pemakaian'  => $s->stok_keluar,
-                    'tersisa'    => $s->stok_akhir,
+                    'id'           => $s->id,
+                    'item_id'      => $s->item_id,
+                    'nama'         => $s->item->nama,
+                    'satuan'       => $s->item->satuan ?? 'porsi',
+                    'stok_awal'    => $s->stok_awal,
+                    'stok_masuk'   => $s->stok_masuk,
+                    'stok_total'   => $s->stok_awal + $s->stok_masuk,
+                    'pemakaian'    => $s->stok_keluar,
+                    'tersisa'      => $s->stok_akhir,
+                    'is_submitted' => $s->is_submitted,
                 ];
             })->withQueryString();
         } else {
@@ -53,32 +63,43 @@ class StokHarianController extends Controller
             }
 
             $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
-                'id'         => $s->id,
-                'item_id'    => $s->item_id,
-                'nama'       => $s->item->nama,
-                'satuan'     => $s->unit ?? $s->item->satuan,
-                'stok_awal'  => $s->stok_awal,
-                'stok_masuk' => $s->stok_masuk,
-                'stok_total' => $s->stok_awal + $s->stok_masuk,
-                'pemakaian'  => $s->stok_keluar,
-                'tersisa'    => $s->stok_akhir,
+                'id'           => $s->id,
+                'item_id'      => $s->item_id,
+                'nama'         => $s->item->nama,
+                'satuan'       => $s->unit ?? $s->item->satuan,
+                'stok_awal'    => $s->stok_awal,
+                'stok_masuk'   => $s->stok_masuk,
+                'stok_total'   => $s->stok_awal + $s->stok_masuk,
+                'pemakaian'    => $s->stok_keluar,
+                'tersisa'      => $s->stok_akhir,
+                'is_submitted' => 0,
             ])->withQueryString();
         }
 
+        // Dropdown Data
         $inputableMenus = [];
-        if ($tab === 'menu') {
-            $inputableMenus = StokHarianMenu::with('item')->whereDate('tanggal', $tanggal)->get()
-                ->map(fn ($s) => ['id' => $s->item_id, 'nama' => $s->item->nama, 'satuan' => $s->unit, 'stok_awal' => $s->stok_awal, 'tersisa' => $s->stok_akhir, 'pemakaian' => $s->stok_keluar]);
-        } else {
-            $inputableMenus = StokHarianMentah::with('item')->whereDate('tanggal', $tanggal)->get()
-                ->map(fn ($s) => ['id' => $s->item_id, 'nama' => $s->item->nama, 'satuan' => $s->unit, 'stok_awal' => $s->stok_awal, 'tersisa' => $s->stok_akhir]);
+        // Jika melihat masa depan, kosongkan dropdown agar tidak bisa input
+        if ($tanggal <= $today) {
+            if ($tab === 'menu') {
+                $inputableMenus = StokHarianMenu::with('item')->whereDate('tanggal', $tanggal)->get()
+                    ->map(fn ($s) => ['id' => $s->item_id, 'nama' => $s->item->nama, 'satuan' => $s->unit, 'stok_awal' => $s->stok_awal, 'tersisa' => $s->stok_akhir, 'pemakaian' => $s->stok_keluar]);
+            } else {
+                $inputableMenus = StokHarianMentah::with('item')->whereDate('tanggal', $tanggal)->get()
+                    ->map(fn ($s) => ['id' => $s->item_id, 'nama' => $s->item->nama, 'satuan' => $s->unit, 'stok_awal' => $s->stok_awal, 'tersisa' => $s->stok_akhir]);
+            }
         }
 
+        // Low Stock Logic
         $lowMentah = StokHarianMentah::with('item')->whereDate('tanggal', $tanggal)->where('stok_akhir', '<', 7)->get()
             ->map(fn($i) => ['nama' => $i->item->nama, 'tersisa' => $i->stok_akhir, 'kategori' => 'Bahan Bar']);
         $lowMenu = StokHarianMenu::with('item')->whereDate('tanggal', $tanggal)->get()
             ->map(fn($s) => ['nama' => $s->item->nama, 'tersisa' => $s->stok_akhir, 'kategori' => 'Menu Bar'])
             ->filter(fn($item) => $item['tersisa'] < 7)->values();
+
+        $lowStockItems = $lowMentah->concat($lowMenu);
+
+        // canInput tetap mengecek jam dan izin, tapi untuk masa depan otomatis terkunci karena item kosong
+        $canInput = $this->canUserInput($tanggal);
 
         return Inertia::render('StokHarian/Bar', [
             'items'          => $items,
@@ -86,8 +107,9 @@ class StokHarianController extends Controller
             'division'       => 'bar',
             'tanggal'        => $tanggal,
             'inputableMenus' => $inputableMenus,
-            'lowStockItems'  => $lowMentah->concat($lowMenu),
-            'canInput'       => $this->canUserInput(),
+            'lowStockItems'  => $lowStockItems,
+            'canInput'       => $canInput,
+            'isPastCutoff'   => Carbon::now()->greaterThan(Carbon::parse($tanggal)->setTime(21, 0, 0)),
             'search'         => $search,
         ]);
     }
@@ -97,32 +119,68 @@ class StokHarianController extends Controller
         $userId = Auth::id();
         $kemarin = Carbon::parse($tanggal)->subDay()->toDateString();
 
+        // 1. GENERATE STOK MENTAH (Carry Over Murni)
         if (!StokHarianMentah::whereDate('tanggal', $tanggal)->exists()) {
             $items = Item::where('division', 'bar')->whereHas('itemCategory', fn ($q) => $q->where('name', 'Mentah'))->get();
             foreach ($items as $item) {
+                // Carry Over: Ambil sisa kemarin
                 $stokKemarin = StokHarianMentah::where('item_id', $item->id)->where('tanggal', $kemarin)->value('stok_akhir') ?? 0;
+
                 StokHarianMentah::firstOrCreate(['item_id' => $item->id, 'tanggal' => $tanggal], [
                     'stok_awal' => $stokKemarin, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => $stokKemarin, 'unit' => $item->satuan
                 ]);
             }
         }
 
+        // 2. GENERATE STOK MENU (Logika Perbaikan)
         if (!StokHarianMenu::whereDate('tanggal', $tanggal)->exists()) {
             $menus = Item::where('division', 'bar')->whereHas('itemCategory', fn ($q) => $q->where('name', 'Menu'))->get();
             foreach ($menus as $item) {
+                // Ambil sisa kemarin (untuk barang retail)
+                $sisaMenuKemarin = StokHarianMenu::where('item_id', $item->id)->where('tanggal', $kemarin)->value('stok_akhir') ?? 0;
+
+                // Hitung kapasitas dari bahan mentah pagi ini (untuk menu racikan)
+                $kapasitasAwalPagi = 0;
+                $recipe = Recipe::where('name', $item->nama)->first();
+                if (!$recipe) $recipe = Recipe::where('item_id', $item->id)->first();
+
+                if ($recipe && is_array($recipe->ingredients)) {
+                    $minCap = 999999;
+                    foreach ($recipe->ingredients as $ing) {
+                        $raw = StokHarianMentah::where('item_id', $ing['item_id'])->where('tanggal', $tanggal)->first();
+                        if ($raw) {
+                            $cap = floor($raw->stok_awal / ($ing['amount'] ?? 1));
+                            $minCap = min($minCap, $cap);
+                        } else { $minCap = 0; break; }
+                    }
+                    $kapasitasAwalPagi = ($minCap === 999999) ? 0 : $minCap;
+                }
+
+                // 🔥 LOGIKA PERHITUNGAN BARU (Mencegah Double Counting) 🔥
+                if ($recipe && is_array($recipe->ingredients) && count($recipe->ingredients) > 0) {
+                    // Jika Menu Racikan (Made-to-Order): Stok Awal = Kapasitas Mentah Pagi Ini
+                    $stokAwalFixed = $kapasitasAwalPagi;
+                } else {
+                    // Jika Barang Jadi (Retail): Stok Awal = Sisa Menu Kemarin
+                    $stokAwalFixed = $sisaMenuKemarin;
+                }
+
                 StokHarianMenu::firstOrCreate(['item_id' => $item->id, 'tanggal' => $tanggal], [
-                    'stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => $item->satuan, 'user_id' => $userId
+                    'stok_awal' => $stokAwalFixed,
+                    'stok_masuk' => 0,
+                    'stok_keluar' => 0,
+                    'stok_akhir' => $stokAwalFixed,
+                    'unit' => $item->satuan,
+                    'user_id' => $userId
                 ]);
-            }
-            if (!StokHarianMentah::whereDate('tanggal', $tanggal)->exists()) {
-                $allMentah = StokHarianMentah::where('tanggal', $tanggal)->get();
-                foreach($allMentah as $m) $this->distributeStockToMenus($m->item_id, 0, $tanggal);
             }
         }
     }
 
     public function storeMenu(Request $request)
     {
+        if (!$this->canUserInput($request->tanggal)) abort(403, 'Akses ditutup.');
+
         $data = $request->validate(['item_id' => 'required|exists:items,id', 'tanggal' => 'required|date', 'pemakaian' => 'required|numeric|min:0']);
         $item = Item::find($data['item_id']);
 
@@ -144,7 +202,6 @@ class StokHarianController extends Controller
                 foreach ($recipe->ingredients as $ing) {
                     $qty = $delta * ($ing['amount'] ?? 0);
                     if ($qty == 0) continue;
-
                     $mentah = StokHarianMentah::where(['item_id' => $ing['item_id'], 'tanggal' => $data['tanggal']])->first();
                     if ($mentah) {
                         $mentah->stok_keluar = max(0, $mentah->stok_keluar + $qty);
@@ -183,11 +240,10 @@ class StokHarianController extends Controller
         $menu = StokHarianMenu::with('item')->findOrFail($id);
         $newKeluar = $request->input('stok_keluar') ?? $request->input('pemakaian') ?? $menu->stok_keluar;
 
-        DB::transaction(function () use ($menu, $newKeluar) {
+        DB::transaction(function () use ($request, $menu, $newKeluar) {
             $delta = $newKeluar - $menu->stok_keluar;
             $menu->stok_keluar = $newKeluar;
             $menu->is_submitted = 1;
-            $menu->user_id = Auth::id();
             $menu->save();
 
             if ($delta != 0) {
@@ -207,18 +263,15 @@ class StokHarianController extends Controller
             }
             ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Update Menu Bar', 'description' => "Update penjualan '{$menu->item->nama}'. Terjual: {$newKeluar}."]);
         });
-        return back()->with('success', 'Produksi disimpan & stok dibagi ulang.');
+        return back()->with('success', 'Data diperbarui.');
     }
 
     public function updateMentah(Request $request, $id)
     {
         $mentah = StokHarianMentah::with('item')->findOrFail($id);
         $masuk = $request->stok_masuk ?? 0;
-        $mentah->update(['stok_awal' => $request->stok_awal, 'stok_masuk' => $masuk,
-                         'stok_akhir' => $request->stok_awal + $masuk - $mentah->stok_keluar]);
-
+        $mentah->update(['stok_awal' => $request->stok_awal, 'stok_masuk' => $masuk, 'stok_akhir' => $request->stok_awal + $masuk - $mentah->stok_keluar]);
         $this->distributeStockToMenus($mentah->item_id, 0, $mentah->tanggal);
-        ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Update Mentah Bar', 'description' => "Update stok mentah '{$mentah->item->nama}'."]);
         return back()->with('success', 'Stok diperbarui.');
     }
 
@@ -237,9 +290,7 @@ class StokHarianController extends Controller
             if (!$recipe) $recipe = Recipe::where('item_id', $menu->item_id)->first();
             if (!$recipe || !is_array($recipe->ingredients)) continue;
 
-            $maxCapAwal = 999999;
-            $maxCapAkhirReal = 999999;
-
+            $minCapReal = 999999;
             foreach ($recipe->ingredients as $ing) {
                 $ingId = $ing['item_id'] ?? null;
                 $amt = $ing['amount'] ?? 0;
@@ -247,60 +298,46 @@ class StokHarianController extends Controller
 
                 $raw = StokHarianMentah::where('item_id', $ingId)->where('tanggal', $date)->first();
                 if ($raw) {
-                    $recipesUsingIngredient = Recipe::whereJsonContains('ingredients', [['item_id' => (int)$ingId]])->pluck('name');
-                    $activeCompetitors = StokHarianMenu::whereHas('item', fn($q) => $q->whereIn('nama', $recipesUsingIngredient))
-                        ->where('tanggal', $date)
-                        ->count();
-
-                    $activeCompetitors = max(1, $activeCompetitors);
-
-                    $shareAwal = floor($raw->stok_awal / $activeCompetitors);
-                    $capAwal   = floor($shareAwal / $amt);
-
-                    $shareReal = floor($raw->stok_akhir / $activeCompetitors);
-                    $capReal   = floor($shareReal / $amt);
-
-                    $maxCapAwal = min($maxCapAwal, $capAwal);
-                    $maxCapAkhirReal = min($maxCapAkhirReal, $capReal);
-                } else {
-                    $maxCapAwal = 0; $maxCapAkhirReal = 0;
-                }
+                    $capReal = floor($raw->stok_akhir / $amt);
+                    $minCapReal = min($minCapReal, $capReal);
+                } else { $minCapReal = 0; break; }
             }
-
-            if ($maxCapAwal === 999999) $maxCapAwal = 0;
-            if ($maxCapAkhirReal === 999999) $maxCapAkhirReal = 0;
-
-            $menu->stok_awal = $maxCapAwal;
-            $menu->stok_akhir = $maxCapAkhirReal;
-            $menu->stok_masuk = $menu->stok_akhir - $menu->stok_awal;
+            if ($minCapReal === 999999) $minCapReal = 0;
+            $menu->stok_masuk = max(0, $minCapReal - $menu->stok_awal);
+            $menu->stok_akhir = max(0, $menu->stok_awal + $menu->stok_masuk - $menu->stok_keluar);
             $menu->save();
         }
     }
 
     public function destroyMenu($id) {
-        $menu = StokHarianMenu::with('item')->findOrFail($id);
-        $nama = $menu->item->nama;
-        DB::transaction(function () use ($menu, $nama) {
-             $menu->delete();
-             ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Menu Bar', 'description' => "Menghapus menu '{$nama}'."]);
-        });
-        return back()->with('success', 'Menu bar dihapus.');
+        StokHarianMenu::findOrFail($id)->delete();
+        return back()->with('success', 'Data dihapus.');
     }
 
     public function destroyMentah($id) {
-        $mentah = StokHarianMentah::with('item')->findOrFail($id);
-        $nama = $mentah->item->nama;
-        $mentah->delete();
-        ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Hapus Mentah Bar', 'description' => "Menghapus stok mentah '{$nama}'."]);
-        return back()->with('success', 'Stok bahan mentah dihapus.');
+        StokHarianMentah::findOrFail($id)->delete();
+        return back()->with('success', 'Data dihapus.');
     }
 
-    private function canUserInput() {
+    private function canUserInput($tanggal) {
         $user = Auth::user();
-        if (in_array($user->role, ['owner', 'supervisor'])) return true;
         $now = Carbon::now();
-        $cutoffTime = Carbon::today()->setTime(21, 0, 0);
-        if ($now->lessThan($cutoffTime)) return true;
-        return IzinRevisi::where('user_id', $user->id)->where('status', 'approved')->where('start_time', '<=', $now)->where('end_time', '>=', $now)->exists();
+        $cutoffTime = Carbon::parse($tanggal)->setTime(21, 0, 0);
+
+        if (in_array($user->role, ['owner', 'supervisor'])) return true;
+
+        $hasIzin = IzinRevisi::where('user_id', $user->id)
+                    ->where('status', 'approved')
+                    ->where('start_time', '<=', $now)
+                    ->where('end_time', '>=', $now)
+                    ->exists();
+
+        if ($hasIzin) return true;
+
+        if ($now->greaterThanOrEqualTo($cutoffTime)) {
+            return false;
+        }
+
+        return true;
     }
 }

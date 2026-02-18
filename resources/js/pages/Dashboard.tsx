@@ -102,9 +102,16 @@ export default function Dashboard() {
   ];
 
   const handlePieClick = () => {
-    setShowPilihStok(true);
+    // 🔥 UBAH INI: Jangan setShowPilihStok, tapi buka modal detail item
+    setShowItemDetailModal(true);
+
+    // Opsional: Reset tab ke "Stok Habis" saat dibuka
+    setSelectedDetailCategory('habis');
   };
 
+const { itemDetails } = usePage<any>().props; // Tangkap data dari controller
+const [showItemDetailModal, setShowItemDetailModal] = useState(false);
+const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | 'hampir' | 'aman'>('habis');
 
   // --- FUNGSI UPDATE IZIN ---
   const submitIzinRevisi = (id: number, action: 'approve' | 'reject', extraData: any = {}) => {
@@ -798,7 +805,6 @@ export default function Dashboard() {
                       alert("Lengkapi semua waktu izin revisi");
                       return;
                     }
-
                     // Submit ke backend
                     submitIzinRevisi(selectedIzin.id, 'approve', formRevisi);
                   }}
@@ -1030,7 +1036,6 @@ export default function Dashboard() {
                   Riwayat Login
                 </button>
               </div>
-
               {/* Tab Content */}
               <div className="overflow-y-auto flex-1">
                 {execDetailTab === 'activity' ? (
@@ -1584,6 +1589,147 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
+{/* MODAL BARU: RINCIAN NAMA ITEM */}
+      <AnimatePresence>
+        {showItemDetailModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              {/* Header Modal */}
+              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Rincian Item Stok</h3>
+                  <p className="text-xs text-gray-500">Lihat item berdasarkan status stok</p>
+                </div>
+                <button
+                  onClick={() => setShowItemDetailModal(false)}
+                  className="p-2 hover:bg-gray-200 rounded-full transition text-gray-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Tab Navigasi (Habis / Hampir / Aman) */}
+              <div className="p-4 flex gap-2 border-b border-gray-100">
+                <button
+                  onClick={() => setSelectedDetailCategory('habis')}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                    selectedDetailCategory === 'habis' ? 'bg-red-500 text-white shadow-md' : 'bg-red-50 text-red-600'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${selectedDetailCategory === 'habis' ? 'bg-white' : 'bg-red-500'}`} />
+                  Habis ({
+                    (itemDetails?.bar?.habis?.length || 0) + (itemDetails?.dapur?.habis?.length || 0)
+                  })
+                </button>
+                <button
+                  onClick={() => setSelectedDetailCategory('hampir')}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                    selectedDetailCategory === 'hampir' ? 'bg-amber-500 text-white shadow-md' : 'bg-amber-50 text-amber-600'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${selectedDetailCategory === 'hampir' ? 'bg-white' : 'bg-amber-500'}`} />
+                  Hampir ({
+                    (itemDetails?.bar?.hampir?.length || 0) + (itemDetails?.dapur?.hampir?.length || 0)
+                  })
+                </button>
+               <button
+    onClick={() => setSelectedDetailCategory('aman')}
+    className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 ${
+      selectedDetailCategory === 'aman' ? 'bg-green-500 text-white shadow-md' : 'bg-green-50 text-green-600 hover:bg-green-100'
+    }`}
+  >
+    <div className={`w-2 h-2 rounded-full ${selectedDetailCategory === 'aman' ? 'bg-white' : 'bg-green-500'}`} />
+
+    {/* Ini bagian yang menampilkan jumlahnya */}
+    Aman ({
+      (itemDetails?.bar?.aman?.length || 0) + (itemDetails?.dapur?.aman?.length || 0)
+    })
+  </button>
+              </div>
+
+              {/* List Nama Item */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-white">
+
+                {/* LIST BAR */}
+                {(isOwner || auth.user.role === 'bar' || auth.user.role === 'supervisor') && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#8B5E3C]"></span> Divisi Bar
+                    </h4>
+                    <div className="space-y-2">
+                      {itemDetails?.bar?.[selectedDetailCategory]?.length > 0 ? (
+                        itemDetails.bar[selectedDetailCategory].map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 border border-gray-100 rounded-xl hover:bg-gray-100 transition">
+                            <span className="text-sm font-medium text-gray-700">{item.nama}</span>
+                            <span className={`text-xs font-bold px-2 py-1 rounded-md ${
+                              selectedDetailCategory === 'habis' ? 'bg-red-100 text-red-600' :
+                              selectedDetailCategory === 'hampir' ? 'bg-amber-100 text-amber-600' :
+                              'bg-green-100 text-green-600'
+                            }`}>
+                              Sisa: {item.stok}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-400 italic pl-4">Tidak ada item di kategori ini.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* LIST DAPUR */}
+                {(isOwner || ['dapur', 'kitchen', 'staff_kitchen'].includes(auth.user.role) || auth.user.role === 'supervisor') && (
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#D9A978]"></span> Divisi Dapur
+                    </h4>
+                    <div className="space-y-2">
+                      {itemDetails?.dapur?.[selectedDetailCategory]?.length > 0 ? (
+                        itemDetails.dapur[selectedDetailCategory].map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 border border-gray-100 rounded-xl hover:bg-gray-100 transition">
+                            <span className="text-sm font-medium text-gray-700">{item.nama}</span>
+                            <span className={`text-xs font-bold px-2 py-1 rounded-md ${
+                              selectedDetailCategory === 'habis' ? 'bg-red-100 text-red-600' :
+                              selectedDetailCategory === 'hampir' ? 'bg-amber-100 text-amber-600' :
+                              'bg-green-100 text-green-600'
+                            }`}>
+                              Sisa: {item.stok}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-gray-400 italic pl-4">Tidak ada item di kategori ini.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer: Tombol Shortcut */}
+              <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">
+                 <button onClick={() => router.visit('/stok-harian/bar')} className="py-2.5 rounded-xl border border-[#8B5E3C] text-[#8B5E3C] font-bold text-xs hover:bg-[#8B5E3C] hover:text-white transition">
+                    Ke Stok Bar
+                 </button>
+                 <button onClick={() => router.visit('/stok-harian/dapur')} className="py-2.5 rounded-xl border border-[#8B5E3C] text-[#8B5E3C] font-bold text-xs hover:bg-[#8B5E3C] hover:text-white transition">
+                    Ke Stok Dapur
+                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppLayout>
+
+
   );
 }

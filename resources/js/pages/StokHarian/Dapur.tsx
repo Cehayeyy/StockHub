@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"; // 🔥 Tambah useRef
+import React, { useState, useEffect, useRef } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
 import { Search, ChevronDown, Trash2, Plus, AlertTriangle, Edit, X } from "lucide-react";
@@ -16,6 +16,7 @@ interface ItemData {
   stok_total: number;
   pemakaian: number;
   tersisa: number;
+  is_submitted?: number;
 }
 
 interface DropdownItem {
@@ -49,7 +50,8 @@ interface PageProps {
   flash: any;
   availableMenus: any[];
   canInput: boolean;
-  search?: string; // 🔥 Added search prop
+  isPastCutoff: boolean;
+  search?: string;
 }
 
 // --- MODAL INPUT (CREATE) ---
@@ -144,7 +146,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     const routeName = tab === "menu" ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
 
     try {
-      // Submit each item one by one
       for (const item of items) {
         if (!item.target_id) continue;
 
@@ -212,7 +213,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
             </div>
           </div>
 
-          {/* Multiple Items */}
           {items.map((item, index) => (
             <div key={item.id} className="border-2 border-gray-200 rounded-2xl p-4 space-y-4 relative">
               {items.length > 1 && (
@@ -304,7 +304,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
             </div>
           ))}
 
-          {/* Tombol Tambah Item */}
           <button
             type="button"
             onClick={addNewItem}
@@ -340,16 +339,12 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
 // === MAIN COMPONENT ===
 export default function Dapur() {
-  // 🔥 PERBAIKAN: Tangkap 'search' dari props (initialSearch)
-  const { items, inputableMenus, tab, tanggal, lowStockItems, auth, canInput, search: initialSearch } = usePage<any>().props as PageProps;
+  const { items, inputableMenus, tab, tanggal, lowStockItems, auth, canInput, isPastCutoff, search: initialSearch } = usePage<any>().props as PageProps;
   const role = auth?.user?.role;
 
-  // 🔥 PERBAIKAN: Inisialisasi state search dari prop
   const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
   const [showInputModal, setShowInputModal] = useState(false);
-
-  // 🔥 PERBAIKAN: Ref untuk debounce
   const isFirstRender = useRef(true);
 
   // Edit States
@@ -360,55 +355,57 @@ export default function Dapur() {
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
   const [formStokAwal, setFormStokAwal] = useState<number | "">("");
-
-  // 🔥 TAMBAHAN: State untuk Sisa Stok di Edit Modal
   const [formStokTersisa, setFormStokTersisa] = useState<number | "">("");
-
   const [formStokMasuk, setFormStokMasuk] = useState<number | "">("");
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
+
+  // 🔥 LOGIKA PENGUNCIAN BERTINGKAT 🔥
+  const isAlreadySubmitted = items.data.some((item: ItemData) => item.is_submitted === 1);
+  const isStaff = role !== 'owner' && role !== 'supervisor';
+
+  // 1. Kunci MENU: Terkunci jika (Staff DAN Dashboard Centang Hijau) ATAU (Staff DAN Jam > 21:00)
+  // bypass jika canInput = true (Izin Revisi disetujui).
+  const isMenuLocked = isStaff && !canInput && (isAlreadySubmitted || isPastCutoff);
+
+  // 2. Kunci MENTAH: HANYA terkunci jika (Staff DAN Jam > 21:00)
+  // Mentah TETAP TERBUKA meskipun sudah centang hijau sampai jam 9 malam.
+  const isMentahLocked = isStaff && !canInput && isPastCutoff;
+
+  // Variabel penentu akhir sesuai tab yang aktif di layar
+  const isLocked = tab === "menu" ? isMenuLocked : isMentahLocked;
 
   useEffect(() => {
     setDate(tanggal);
   }, [tanggal]);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("autoInput") === "1") setShowInputModal(true);
-  }, []);
+    if (new URLSearchParams(window.location.search).get("autoInput") === "1" && !isLocked) setShowInputModal(true);
+  }, [isLocked, tab]);
 
-  // Sync state search jika ada update dari server (misal pagination)
   useEffect(() => {
     setSearch(initialSearch || "");
   }, [initialSearch]);
 
-  // 🔥 PERBAIKAN UTAMA: DEBOUNCE SEARCH (500ms)
   useEffect(() => {
-    // Skip fetch saat pertama kali render
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
 
     const timeoutId = setTimeout(() => {
-      // Hanya request jika nilai search beda dari yang ada di props (menghindari loop)
       if (search !== initialSearch) {
         router.get(
           route("stok-harian.dapur"),
           { tab, tanggal: date, search },
-          {
-            preserveScroll: true,
-            preserveState: true, // Jaga state agar fokus tidak hilang
-            replace: true        // Ganti history, jangan tumpuk
-          }
+          { preserveScroll: true, preserveState: true, replace: true }
         );
       }
-    }, 500); // Tunggu 500ms setelah user berhenti mengetik
+    }, 500);
 
-    return () => clearTimeout(timeoutId); // Cleanup timeout lama jika user ngetik lagi
+    return () => clearTimeout(timeoutId);
   }, [search, tab, date]);
 
-
-  // 🔥 PERBAIKAN: Handler Search (Hanya update state lokal, useEffect yang kirim request)
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   };
@@ -435,18 +432,19 @@ export default function Dapur() {
     setFormItemId("");
     setFormItemName("");
     setFormStokAwal("");
-    setFormStokTersisa(""); // 🔥 Reset Tersisa
+    setFormStokTersisa("");
     setFormStokMasuk("");
     setFormPemakaian("");
     setFormSatuan("porsi");
   };
 
   const handleEditClick = (item: ItemData) => {
+    if (isLocked) return;
     setFormRecordId(item.id);
     setFormItemId(item.recipe_id ?? item.item_id ?? "");
     setFormItemName(item.nama);
     setFormStokAwal(item.stok_awal);
-    setFormStokTersisa(item.tersisa); // 🔥 Set Tersisa dari Item
+    setFormStokTersisa(item.tersisa);
     setFormStokMasuk(item.stok_masuk ?? "");
     setFormPemakaian(item.pemakaian);
     setFormSatuan(item.satuan || "porsi");
@@ -456,25 +454,13 @@ export default function Dapur() {
   const submitUpdate = () => {
     if (!formRecordId) return;
 
-    // 🔥 Validasi: Cek apakah jam sudah lewat 21:00 (hanya untuk staff, bukan owner/supervisor)
-    if (role !== "owner" && role !== "supervisor") {
-      const currentHour = new Date().getHours();
-      const currentMinute = new Date().getMinutes();
-      const currentTime = currentHour * 60 + currentMinute; // convert to minutes
-      const cutoffTime = 21 * 60; // 21:00 = 1260 menit
-
-      if (currentTime >= cutoffTime) {
-        // Tampilkan notif
-        setShowTimeNotif(true);
-        // Auto hide notif setelah 4 detik
-        setTimeout(() => setShowTimeNotif(false), 4000);
-        // Jangan lanjutkan submit
-        return;
-      }
+    if (isLocked) {
+      setShowTimeNotif(true);
+      setTimeout(() => setShowTimeNotif(false), 4000);
+      return;
     }
 
-    const routeName =
-      tab === "menu" ? "stok-harian-dapur-menu.update" : "stok-harian-dapur-mentah.update";
+    const routeName = tab === "menu" ? "stok-harian-dapur-menu.update" : "stok-harian-dapur-mentah.update";
     const payload: any = { stok_awal: Number(formStokAwal) };
 
     if (tab === "mentah") payload.stok_masuk = Number(formStokMasuk);
@@ -490,14 +476,14 @@ export default function Dapur() {
   };
 
   const handleDeleteClick = (id: number) => {
+    if (isLocked) return;
     setFormRecordId(id);
     setShowDeleteModal(true);
   };
 
   const submitDelete = () => {
     if (!formRecordId) return;
-    const routeName =
-      tab === "menu" ? "stok-harian-dapur-menu.destroy" : "stok-harian-dapur-mentah.destroy";
+    const routeName = tab === "menu" ? "stok-harian-dapur-menu.destroy" : "stok-harian-dapur-mentah.destroy";
     router.delete(route(routeName, formRecordId), {
       onSuccess: () => {
         setShowDeleteModal(false);
@@ -506,7 +492,6 @@ export default function Dapur() {
     });
   };
 
-  // 🔥 LOGIKA TOMBOL INPUT: Supervisor HANYA bisa input di Mentah
   const showInputButton = tab === "mentah" || (tab === "menu" && role !== "supervisor");
 
   return (
@@ -530,7 +515,6 @@ export default function Dapur() {
         )}
       </AnimatePresence>
 
-      {/* 🔥 NOTIFIKASI: SIMPAN LEWAT JAM 21:00 */}
       {showTimeNotif && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -542,9 +526,9 @@ export default function Dapur() {
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-red-800 font-bold text-sm">Waktu Simpan Sudah Tutup</h3>
+            <h3 className="text-red-800 font-bold text-sm">Aksi Terkunci</h3>
             <p className="text-red-700 text-xs mt-1">
-              Jam input sudah lewat jam 21:00. Simpanan tidak akan tersimpan.
+              Waktu input sudah lewat jam 21:00 atau data menu sudah disimpan.
             </p>
           </div>
         </motion.div>
@@ -566,16 +550,18 @@ export default function Dapur() {
         )}
 
         <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
-          {/* Notifikasi Waktu Input Tertutup */}
-          {!canInput && (
+          {isLocked && (
             <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-start gap-3">
               <div className="p-2 bg-yellow-100 rounded-full text-yellow-600">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-yellow-800 font-bold text-sm">Waktu Input Ditutup</h3>
+                <h3 className="text-yellow-800 font-bold text-sm">Aksi Terkunci</h3>
                 <p className="text-yellow-700 text-xs mt-1">
-                  Waktu input harian telah ditutup (setelah jam 21:00). Silakan ajukan izin revisi untuk melakukan input.
+                  {tab === "menu" && isAlreadySubmitted && !isPastCutoff
+                    ? "Tab Menu terkunci karena data sudah berhasil disimpan (Dashboard Centang Hijau). Anda masih bisa input di tab Mentah sampai jam 21:00."
+                    : "Waktu input harian (Menu & Mentah) telah ditutup setelah jam 21:00. Silakan ajukan izin revisi untuk melakukan perubahan."
+                  }
                 </p>
               </div>
             </div>
@@ -583,18 +569,18 @@ export default function Dapur() {
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div className="flex gap-3 w-full md:w-auto">
-              {/* 🔥 TOMBOL INPUT SESUAI ROLE */}
               {showInputButton && (
                 <button
                   onClick={() => setShowInputModal(true)}
-                  disabled={!canInput}
+                  disabled={isLocked}
                   className={`flex-1 md:flex-none justify-center px-6 py-2 rounded-full text-sm font-bold flex gap-2 items-center transition ${
-                    canInput
-                      ? 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    isLocked
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                      : 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
                   }`}
                 >
-                  <Plus className="w-4 h-4" /> Input Data
+                  <Plus className="w-4 h-4" />
+                  {isAlreadySubmitted && isStaff && tab === "menu" && !canInput ? "Sudah Tersimpan" : "Input Data"}
                 </button>
               )}
             </div>
@@ -611,7 +597,7 @@ export default function Dapur() {
                   placeholder="Search..."
                   value={search}
                   onChange={handleSearch}
-                  autoFocus // 🔥 PERBAIKAN: Keep Focus
+                  autoFocus
                   className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm"
                 />
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
@@ -657,8 +643,7 @@ export default function Dapur() {
                   items.data.map((item: ItemData, i: number) => (
                     <tr key={item.id} className="hover:bg-[#FFF9F0]">
                       <td className="p-4 text-center text-gray-500">
-                        {/* UPDATE LOGIC PENOMORAN HALAMAN */}
-                        {(items.current_page ? (items.current_page - 1) * (items.per_page || 10) : 0) + i + 1}
+                        {(items.current_page ? (items.current_page - 1) * 10 : 0) + i + 1}
                       </td>
                       <td className="p-4 font-bold text-gray-800">{item.nama}</td>
                       <td className="p-4 text-center text-gray-500">{item.satuan}</td>
@@ -679,13 +664,23 @@ export default function Dapur() {
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleEditClick(item)}
-                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4]"
+                            disabled={isLocked}
+                            className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+                              isLocked
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
+                            }`}
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteClick(item.id)}
-                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535]"
+                            disabled={isLocked}
+                            className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+                              isLocked
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
+                            }`}
                           >
                             Hapus
                           </button>
@@ -746,13 +741,19 @@ export default function Dapur() {
                   <div className="flex gap-2 mt-3 pt-3 border-t">
                     <button
                       onClick={() => handleEditClick(item)}
-                      className="flex-1 bg-blue-500 text-white py-1 rounded text-xs"
+                      disabled={isLocked}
+                      className={`flex-1 py-1 rounded text-xs ${
+                        isLocked ? "bg-gray-200 text-gray-400" : "bg-blue-500 text-white"
+                      }`}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteClick(item.id)}
-                      className="flex-1 bg-red-500 text-white py-1 rounded text-xs"
+                      disabled={isLocked}
+                      className={`flex-1 py-1 rounded text-xs ${
+                        isLocked ? "bg-gray-200 text-gray-400" : "bg-red-500 text-white"
+                      }`}
                     >
                       Hapus
                     </button>
@@ -764,7 +765,6 @@ export default function Dapur() {
             )}
           </div>
 
-          {/* --- PAGINATION (ADDED HERE) --- */}
           {items.links && items.links.length > 3 && (
             <div className="mt-6 flex justify-center pb-4">
               <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
@@ -793,7 +793,6 @@ export default function Dapur() {
               </div>
             </div>
           )}
-
         </div>
 
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
@@ -869,52 +868,52 @@ export default function Dapur() {
                 />
               </div>
 
-              {/* 🔥 NEW FIELD: Sisa Stok Saat Ini (Hanya Tampil di Tab Mentah) */}
               {tab === "mentah" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Sisa Stok Saat Ini</label>
-                  <input
-                    type="text"
-                    value={formStokTersisa}
-                    disabled
-                    className="w-full bg-gray-200 border border-gray-300 text-gray-600 rounded-xl px-4 py-2.5 text-sm font-bold"
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Sisa Stok Saat Ini</label>
+                    <input
+                      type="text"
+                      value={formStokTersisa}
+                      disabled
+                      className="w-full bg-gray-200 border border-gray-300 text-gray-600 rounded-xl px-4 py-2.5 text-sm font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Stok Masuk</label>
+                    <input
+                      type="number"
+                      value={formStokMasuk}
+                      onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm"
+                    />
+                  </div>
+                </>
               )}
 
-              {tab === "mentah" ? (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Stok Masuk</label>
-                  <input
-                    type="number"
-                    value={formStokMasuk}
-                    // 🔥 PERBAIKAN 2: Mengubah string kosong menjadi "" atau parse ke number
-                    onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
-                    className="w-full border rounded-xl px-4 py-2.5 text-sm"
-                  />
-                </div>
-              ) : (
+              {tab === "menu" && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Pemakaian</label>
                   <input
                     type="number"
                     value={formPemakaian}
                     onChange={(e) => setFormPemakaian(Number(e.target.value))}
-                    className="w-full border rounded-xl px-4 py-2.5 text-sm"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm"
                   />
                 </div>
               )}
+
               <div className="flex justify-end gap-3 mt-4">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border rounded-lg"
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Update
                 </button>
@@ -928,16 +927,17 @@ export default function Dapur() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white p-6 rounded-3xl shadow-2xl text-center max-w-sm w-full">
             <h2 className="text-lg font-bold mb-2">Hapus Data?</h2>
+            <p className="text-gray-500 text-sm mb-4">Aksi ini tidak dapat dibatalkan.</p>
             <div className="flex justify-center gap-3 mt-4">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border rounded-lg"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
               >
                 Batal
               </button>
               <button
                 onClick={submitDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 Hapus
               </button>

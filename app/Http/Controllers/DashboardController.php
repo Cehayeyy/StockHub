@@ -23,6 +23,7 @@ class DashboardController extends Controller
         $user = $request->user();
         $today = Carbon::today()->toDateString();
 
+
         // ================= 1. CHECK STATUS INPUT HARI INI =================
         $alreadyInputToday = false;
 
@@ -138,6 +139,92 @@ class DashboardController extends Controller
         $stokHabis = $barMenuHabisTotal + $barMentahHabisTotal + $dapurMenuHabisTotal + $dapurMentahHabisTotal;
         $stokAman = $barMenuAman + $barMentahAman + $dapurMenuAman + $dapurMentahAman;
 
+     // ================= 4.5 LIST NAMA ITEM UNTUK DETAIL (FINAL REVISI) =================
+        $today = Carbon::today()->toDateString();
+
+        // 1. Helper untuk Ambil Data Tabel (Cek Singular/Plural)
+        $getDataSafe = function($singularName) use ($today) {
+            $pluralName = $singularName . 's';
+            try {
+                // Cek Plural dulu
+                $data = DB::table($pluralName)->whereDate('tanggal', $today)->get();
+                if ($data->isNotEmpty()) return $data;
+                // Cek Singular
+                return DB::table($singularName)->whereDate('tanggal', $today)->get();
+            } catch (\Exception $e) {
+                try {
+                    return DB::table($singularName)->whereDate('tanggal', $today)->get();
+                } catch (\Exception $ex) {
+                    return collect([]);
+                }
+            }
+        };
+
+        // 2. Ambil Data Mentah
+        $barMenuData = $getDataSafe('stok_harian_menu');
+        $barMentahData = $getDataSafe('stok_harian_mentah');
+        $dapurMenuData = $getDataSafe('stok_harian_dapur_menu');
+        $dapurMentahData = $getDataSafe('stok_harian_dapur_mentah');
+
+        // 3. Helper Pengambil Nama (SUPER ROBUST - Cek Semua Kemungkinan)
+        $mapToNames = function($data) {
+            return $data->map(function($row) {
+                $name = null;
+
+                // DETEKSI ID: Cek apakah pakai kolom 'item_id' atau 'recipe_id'
+                // Kita gunakan operator null coalescing (??) untuk fallback
+                $id = $row->item_id ?? $row->recipe_id ?? 0;
+
+                // LOGIKA 1: Cek di tabel ITEMS dulu
+                if ($id) {
+                    $name = DB::table('items')->where('id', $id)->value('nama');
+                }
+
+                // LOGIKA 2: Jika tidak ketemu di Items, cek di tabel RECIPES
+                // (Menu Dapur seringkali ID-nya mengarah ke sini)
+                if (!$name && $id) {
+                    $name = DB::table('recipes')->where('id', $id)->value('name');
+                }
+
+                // LOGIKA 3: Fallback terakhir jika ID pun tidak ketemu di object row
+                if (!$name) {
+                    $name = 'Item Tidak Dikenal (ID: ' . $id . ')';
+                }
+
+                return [
+                    'nama' => $name,
+                    'stok' => $row->stok_akhir
+                ];
+            })->values();
+        };
+
+        // 4. Proses Data (Gunakan helper yang sama untuk SEMUA)
+        $barItemsProcessed = $mapToNames($barMenuData)->merge($mapToNames($barMentahData));
+        $dapurItemsProcessed = $mapToNames($dapurMenuData)->merge($mapToNames($dapurMentahData));
+
+        // 5. Filter Status Stok
+        $filterStatus = function ($collection, $status) {
+            return $collection->filter(function ($i) use ($status) {
+                if ($status === 'habis') return $i['stok'] == 0;
+                if ($status === 'hampir') return $i['stok'] > 0 && $i['stok'] <= 7;
+                if ($status === 'aman') return $i['stok'] > 7;
+                return false;
+            })->values();
+        };
+
+        // 6. Masukkan ke Array Data
+        $data['itemDetails'] = [
+            'bar' => [
+                'habis' => $filterStatus($barItemsProcessed, 'habis'),
+                'hampir' => $filterStatus($barItemsProcessed, 'hampir'),
+                'aman' => $filterStatus($barItemsProcessed, 'aman'),
+            ],
+            'dapur' => [
+                'habis' => $filterStatus($dapurItemsProcessed, 'habis'),
+                'hampir' => $filterStatus($dapurItemsProcessed, 'hampir'),
+                'aman' => $filterStatus($dapurItemsProcessed, 'aman'),
+            ]
+        ];
         // ================= 5. IZIN REVISI =================
         $izinRevisiPending = DB::table('izin_revisi')
             ->join('users', 'izin_revisi.user_id', '=', 'users.id')
@@ -245,6 +332,48 @@ class DashboardController extends Controller
             $stokHabisFiltered = $dapurMenuHabisTotal + $dapurMentahHabisTotal;
             $stokAmanFiltered = $dapurMenuAman + $dapurMentahAman;
         }
+// ================= 4.5 AMBIL DETAIL NAMA ITEM (TAMBAHAN BARU) =================
+
+        // Helper function: Ambil nama dan stok dari tabel stok harian
+        $getNames = function ($table, $relationType = 'item') use ($today) {
+            try {
+                return DB::table($table)
+                    ->whereDate('tanggal', $today)
+                    ->join('items', "$table.item_id", '=', 'items.id') // Join ke tabel items
+                    ->select('items.nama', "$table.stok_akhir as stok")
+                    ->get();
+            } catch (\Exception $e) {
+                return collect([]); // Return kosong jika tabel belum ada
+            }
+        };
+
+        // Ambil data mentah
+        $barItems = $getNames('stok_harian_menu')->merge($getNames('stok_harian_mentah'));
+        $dapurItems = $getNames('stok_harian_dapur_menu')->merge($getNames('stok_harian_dapur_mentah'));
+
+        // Helper filter status
+        $filterStatus = function ($collection, $status) {
+            return $collection->filter(function ($i) use ($status) {
+                if ($status === 'habis') return $i->stok == 0;
+                if ($status === 'hampir') return $i->stok > 0 && $i->stok <= 7;
+                if ($status === 'aman') return $i->stok > 7;
+                return false;
+            })->values();
+        };
+
+        // Susun struktur data untuk frontend
+        $itemDetails = [
+            'bar' => [
+                'habis' => $filterStatus($barItems, 'habis'),
+                'hampir' => $filterStatus($barItems, 'hampir'),
+                'aman' => $filterStatus($barItems, 'aman'),
+            ],
+            'dapur' => [
+                'habis' => $filterStatus($dapurItems, 'habis'),
+                'hampir' => $filterStatus($dapurItems, 'hampir'),
+                'aman' => $filterStatus($dapurItems, 'aman'),
+            ]
+        ];
 
         $data = [
             'totalItem'         => $totalItem ?? 0,
@@ -261,6 +390,7 @@ class DashboardController extends Controller
             'staffSudahInput'   => $staffSudahInput ?? [],
             'staffBelumInput'   => $staffBelumInput ?? [],
             'totalStaff'        => $allStaff->count(),
+            'itemDetails'       => $itemDetails,
             'flash'             => [
                 'success' => session('success'),
                 'error'   => session('error'),

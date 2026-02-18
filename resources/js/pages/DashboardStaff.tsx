@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Box, Layers, BookOpen, ShieldCheck, Clock, TrendingUp, AlertTriangle } from "lucide-react";
+import { Box, Layers, BookOpen, ShieldCheck, Clock, TrendingUp, AlertTriangle, X } from "lucide-react"; // 🔥 Pastikan X diimport
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion"; // 🔥 Pastikan AnimatePresence diimport
 import CountUp from "react-countup";
 
 const COLORS = ["#DC2626", "#F59E0B", "#22C55E"];
+
+// ... (Komponen CountdownTimer dan InfoCard tetap sama, tidak perlu diubah) ...
+// ... (Silakan paste ulang bagian CountdownTimer dan InfoCard dari kode Anda sebelumnya) ...
 
 // Komponen Countdown Timer - Flip Clock Style
 const CountdownTimer = ({ endTime }: { endTime: string }) => {
@@ -46,15 +49,11 @@ const CountdownTimer = ({ endTime }: { endTime: string }) => {
   const TimeBlock = ({ value, label }: { value: string; label: string }) => (
     <div className="flex flex-col items-center">
       <div className="relative">
-        {/* Main block dengan efek 3D */}
         <div className="bg-gradient-to-b from-[#8B5E3C] to-[#6F4E37] w-14 h-16 rounded-lg flex items-center justify-center shadow-lg relative overflow-hidden">
-          {/* Garis tengah */}
           <div className="absolute inset-x-0 top-1/2 h-[1px] bg-black/20" />
-          {/* Highlight atas */}
           <div className="absolute inset-x-0 top-0 h-1/2 bg-white/10 rounded-t-lg" />
           <span className="text-2xl font-bold text-white relative z-10">{value}</span>
         </div>
-        {/* Shadow bawah */}
         <div className="absolute -bottom-1 left-1 right-1 h-2 bg-[#5D4037] rounded-b-lg -z-10" />
       </div>
       <span className="text-[11px] text-gray-500 mt-2 font-medium uppercase tracking-wide">{label}</span>
@@ -85,7 +84,6 @@ const CountdownTimer = ({ endTime }: { endTime: string }) => {
   );
 };
 
-// Komponen Card Statistik Atas - Simple dan formal dengan warna sama - RESPONSIVE
 const InfoCard = ({
   title,
   value,
@@ -113,23 +111,31 @@ const InfoCard = ({
 );
 
 export default function DashboardStaff() {
-  // Mengambil data dari Backend (DashboardController)
   const {
     auth,
     totalItem,
     totalResep,
     totalKategori,
-    alreadyInputToday, // <--- INI VARIABEL KUNCI (TRUE/FALSE)
+    alreadyInputToday,
     totalStokHarian,
     stokHampirHabis,
     stokHabis,
     flash,
     alreadyRequestedRevision,
-    izinApproved, // Data izin yang sudah disetujui dengan waktu
-    canInput, // Cek apakah user bisa input (sebelum jam 8 malam atau punya izin revisi)
+    izinApproved,
+    canInput,
+    itemDetails, // 🔥 PASTIKAN INI ADA
   } = usePage<any>().props;
 
-  // Data untuk pie chart dengan 3 kategori
+  // 🔥 STATE BARU UNTUK MODAL
+  const [showItemDetailModal, setShowItemDetailModal] = useState(false);
+  const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | 'hampir' | 'aman'>('habis');
+
+  // 🔥 LOGIKA DATA DIVISI
+  const isBar = auth.user.role === 'bar';
+  const myDivisionData = isBar ? itemDetails?.bar : itemDetails?.dapur;
+  const myDivisionName = isBar ? 'Bar' : 'Dapur';
+
   const totalStokData = (stokHabis || 0) + (stokHampirHabis || 0);
   const stokAman = Math.max(totalStokHarian - totalStokData, 0);
 
@@ -149,7 +155,7 @@ export default function DashboardStaff() {
     <AppLayout header={<h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>}>
       <Head title="Dashboard Staff" />
 
-      {/* FLASH MESSAGE (Notifikasi Sukses/Gagal) */}
+      {/* FLASH MESSAGE */}
       <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
         {flash?.error && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg sm:rounded-xl bg-red-50 border border-red-200 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-700 font-medium">
@@ -165,7 +171,7 @@ export default function DashboardStaff() {
 
       <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-6 sm:pb-8 md:pb-10">
 
-        {/* 1. CARD STATISTIK - Warna sama - RESPONSIVE */}
+        {/* 1. CARD STATISTIK */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <InfoCard title="Total Item" value={totalItem} icon={Layers} onClick={() => router.visit("/item")} />
           <InfoCard title="Total Resep" value={totalResep} icon={BookOpen} onClick={() => router.visit("/resep")} />
@@ -174,14 +180,14 @@ export default function DashboardStaff() {
           </div>
         </div>
 
-        {/* 2. STATUS STOK - 3 Kategori - RESPONSIVE */}
+        {/* 2. STATUS STOK (KLIK MEMBUKA MODAL) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          onClick={() => {
-            if (auth.user.role === "bar") router.visit("/stok-harian/bar");
-            else if (["dapur", "kitchen", "staff_kitchen"].includes(auth.user.role)) router.visit("/stok-harian/dapur");
-          }}
+
+          // 🔥 UBAH ONCLICK INI:
+          onClick={() => setShowItemDetailModal(true)}
+
           className="bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:bg-[#F0EBE5] transition active:scale-[0.99]"
         >
           <div className="mb-3 sm:mb-4">
@@ -218,14 +224,12 @@ export default function DashboardStaff() {
                   />
                 </PieChart>
               </ResponsiveContainer>
-              {/* Center Text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-xl sm:text-2xl font-bold text-gray-800">{totalStokHarian}</span>
                 <span className="text-xs text-gray-500">Total</span>
               </div>
             </div>
 
-            {/* Legend kustom dengan 3 kategori - RESPONSIVE */}
             <div className="w-full md:w-1/2 space-y-2 sm:space-y-3">
               <div className="flex items-center justify-between p-2 sm:p-3 bg-red-50 rounded-lg sm:rounded-xl border border-red-100">
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -261,7 +265,7 @@ export default function DashboardStaff() {
           </div>
         </motion.div>
 
-        {/* 3. CARD IZIN REVISI - Desain lebih clean - RESPONSIVE */}
+        {/* 3. CARD IZIN REVISI */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -277,7 +281,7 @@ export default function DashboardStaff() {
             </div>
           </div>
 
-          {/* Tampilkan Timer jika izin sudah disetujui */}
+          {/* ... (Isi card izin revisi sama seperti sebelumnya) ... */}
           {izinApproved ? (
             <div className="space-y-3 sm:space-y-4">
               <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-green-50 text-green-700 rounded-full text-xs sm:text-sm font-medium">
@@ -318,7 +322,7 @@ export default function DashboardStaff() {
           )}
         </motion.div>
 
-        {/* 4. CARD INPUT HARIAN - Desain lebih clean - RESPONSIVE */}
+        {/* 4. CARD INPUT HARIAN */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -326,7 +330,6 @@ export default function DashboardStaff() {
           className="bg-white p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100"
         >
           {alreadyInputToday && !izinApproved ? (
-            // --- TAMPILAN SESUDAH DISIMPAN ---
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
@@ -339,15 +342,16 @@ export default function DashboardStaff() {
               </div>
             </div>
           ) : (
-            // --- TAMPILAN SEBELUM INPUT atau IZIN REVISI AKTIF ---
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8B5E3C]/10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B5E3C]" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 text-sm sm:text-base">Input Stok Harian</h3>
-                  <p className="text-xs sm:text-sm text-gray-500">Catat stok harian untuk divisi kamu</p>
+            <>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-3">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8B5E3C]/10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-[#8B5E3C]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-800 text-sm sm:text-base">Input Stok Harian</h3>
+                    <p className="text-xs sm:text-sm text-gray-500">Catat stok harian untuk divisi kamu</p>
+                  </div>
                 </div>
               </div>
 
@@ -359,7 +363,7 @@ export default function DashboardStaff() {
                   <div>
                     <h3 className="text-yellow-800 font-bold text-xs">Waktu Input Ditutup</h3>
                     <p className="text-yellow-700 text-xs mt-0.5">
-                      Input harian ditutup setelah jam 21:00. Ajukan izin revisi untuk input.
+                      Input harian ditutup setelah jam 21:00. Ajukan izin revisi untuk melakukan input.
                     </p>
                   </div>
                 </div>
@@ -387,11 +391,102 @@ export default function DashboardStaff() {
                 </svg>
                 Mulai Input
               </button>
-            </div>
+            </>
           )}
         </motion.div>
 
       </div>
+
+      {/* === MODAL RINCIAN ITEM STOK (KHUSUS STAFF) === */}
+      <AnimatePresence>
+        {showItemDetailModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              {/* Header Modal */}
+              <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">Stok {myDivisionName}</h3>
+                  <p className="text-xs text-gray-500">Rincian item divisi kamu hari ini</p>
+                </div>
+                <button
+                  onClick={() => setShowItemDetailModal(false)}
+                  className="p-2 hover:bg-gray-200 rounded-full transition text-gray-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Tab Navigasi (Habis / Hampir / Aman) */}
+              <div className="p-4 flex gap-2 border-b border-gray-100">
+                {[
+                  { id: 'habis', label: 'Habis', color: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50' },
+                  { id: 'hampir', label: 'Hampir', color: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50' },
+                  { id: 'aman', label: 'Aman', color: 'bg-green-500', text: 'text-green-600', bg: 'bg-green-50' }
+                ].map((cat: any) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedDetailCategory(cat.id)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                      selectedDetailCategory === cat.id
+                        ? `${cat.color} text-white shadow-md`
+                        : `${cat.bg} ${cat.text} hover:opacity-80`
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full ${selectedDetailCategory === cat.id ? 'bg-white' : cat.color}`} />
+                    {cat.label} ({myDivisionData?.[cat.id]?.length || 0})
+                  </button>
+                ))}
+              </div>
+
+              {/* List Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
+                {myDivisionData?.[selectedDetailCategory]?.length > 0 ? (
+                  myDivisionData[selectedDetailCategory].map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 border border-gray-100 rounded-xl hover:bg-gray-100 transition">
+                      <span className="text-sm font-medium text-gray-700">{item.nama}</span>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-md ${
+                        selectedDetailCategory === 'habis' ? 'bg-red-100 text-red-600' :
+                        selectedDetailCategory === 'hampir' ? 'bg-amber-100 text-amber-600' :
+                        'bg-green-100 text-green-600'
+                      }`}>
+                        Sisa: {item.stok}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="h-40 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-100 rounded-xl">
+                    <p className="text-sm italic">Tidak ada item di kategori ini.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer: Tombol Navigasi Cepat */}
+              <div className="p-4 bg-gray-50 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    const url = isBar ? "/stok-harian/bar" : "/stok-harian/dapur";
+                    router.visit(url);
+                  }}
+                  className="w-full py-3 bg-[#8B5E3C] text-white rounded-xl text-sm font-bold hover:bg-[#6F4E37] transition shadow-sm flex items-center justify-center gap-2"
+                >
+                  <span>📝</span> Kelola Stok {myDivisionName}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </AppLayout>
   );
 }

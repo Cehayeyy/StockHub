@@ -15,6 +15,7 @@ interface ItemData {
   stok_total: number;
   pemakaian: number;
   tersisa: number;
+  is_submitted?: number; // 🔥 Added for checking submission status
 }
 
 interface DropdownItem {
@@ -48,7 +49,7 @@ interface PageProps {
   flash: any;
   availableMenus: any[];
   canInput: boolean;
-  search?: string; // 🔥 Added search prop
+  search?: string;
 }
 
 // --- MODAL INPUT DATA ---
@@ -139,7 +140,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     const routeName = tab === "menu" ? "stok-harian-menu.store" : "stok-harian-mentah.store";
 
     try {
-      // Submit each item one by one
       for (const item of items) {
         if (!item.target_id) continue;
 
@@ -201,7 +201,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
             </div>
           </div>
 
-          {/* Multiple Items */}
           {items.map((item, index) => (
             <div key={item.id} className="border-2 border-gray-200 rounded-2xl p-4 space-y-4 relative">
               {items.length > 1 && (
@@ -281,7 +280,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
             </div>
           ))}
 
-          {/* Tombol Tambah Item */}
           <button
             type="button"
             onClick={addNewItem}
@@ -320,7 +318,6 @@ export default function Bar() {
   const { items, inputableMenus, tab, tanggal, auth, lowStockItems, canInput, search: initialSearch } = usePage<any>().props as PageProps;
   const role = auth?.user?.role;
 
-  // 🔥 STATE with Debounce Setup
   const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
   const [showInputModal, setShowInputModal] = useState(false);
@@ -339,21 +336,26 @@ export default function Bar() {
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
 
+  // 🔥 Logika Kunci Global berdasarkan status submit dari server
+  // Mengecek apakah salah satu data sudah memiliki flag is_submitted === 1 (Centang Hijau di Dashboard)
+  const isAlreadySubmitted = items.data.some((item: ItemData) => item.is_submitted === 1);
+
+  // canInput sudah diproses di controller (mencegah jam malam & status submit)
+  // Namun kita tambahkan lagi pengecekan isAlreadySubmitted untuk keamanan tampilan
+  const isLocked = !canInput || isAlreadySubmitted;
+
   useEffect(() => {
     setDate(tanggal);
   }, [tanggal]);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("autoInput") === "1") setShowInputModal(true);
-  }, []);
+    if (new URLSearchParams(window.location.search).get("autoInput") === "1" && canInput) setShowInputModal(true);
+  }, [canInput]);
 
-  // Sync state
   useEffect(() => {
     setSearch(initialSearch || "");
   }, [initialSearch]);
 
-
-  // 🔥 DEBOUNCE EFFECT
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -361,7 +363,6 @@ export default function Bar() {
     }
 
     const timeoutId = setTimeout(() => {
-      // Hanya request jika search berubah dari yang ada di URL/Props
       if (search !== initialSearch) {
         router.get(
           route("stok-harian.bar"),
@@ -369,12 +370,11 @@ export default function Bar() {
           { preserveScroll: true, preserveState: true, replace: true }
         );
       }
-    }, 500); // Tunggu 500ms setelah user berhenti mengetik
+    }, 500);
 
-    return () => clearTimeout(timeoutId); // Cleanup timeout lama jika user mengetik lagi
+    return () => clearTimeout(timeoutId);
   }, [search, tab, date]);
 
-  // Handlers
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   };
@@ -408,6 +408,7 @@ export default function Bar() {
   };
 
   const handleEditClick = (item: ItemData) => {
+    if (isLocked && role !== 'owner' && role !== 'supervisor') return;
     setFormRecordId(item.id);
     setFormItemId(item.item_id);
     setFormItemName(item.nama);
@@ -421,19 +422,6 @@ export default function Bar() {
 
   const submitUpdate = () => {
     if (!formRecordId) return;
-
-    if (role !== "owner" && role !== "supervisor") {
-      const currentHour = new Date().getHours();
-      const currentMinute = new Date().getMinutes();
-      const currentTime = currentHour * 60 + currentMinute;
-      const cutoffTime = 21 * 60;
-
-      if (currentTime >= cutoffTime) {
-        setShowTimeNotif(true);
-        setTimeout(() => setShowTimeNotif(false), 4000);
-        return;
-      }
-    }
 
     const routeName = tab === "menu" ? "stok-harian-menu.update" : "stok-harian-mentah.update";
     const payload: any = { item_id: Number(formItemId), stok_awal: Number(formStokAwal) };
@@ -451,6 +439,7 @@ export default function Bar() {
   };
 
   const handleDeleteClick = (id: number) => {
+    if (isLocked && role !== 'owner' && role !== 'supervisor') return;
     setFormRecordId(id);
     setShowDeleteModal(true);
   };
@@ -489,25 +478,6 @@ export default function Bar() {
         )}
       </AnimatePresence>
 
-      {showTimeNotif && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[999] bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-lg max-w-md w-full md:w-auto md:max-w-sm"
-        >
-          <div className="p-2 bg-red-100 rounded-full text-red-600 flex-shrink-0">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-red-800 font-bold text-sm">Waktu Simpan Sudah Tutup</h3>
-            <p className="text-red-700 text-xs mt-1">
-              Jam input sudah lewat jam 21:00. Simpanan tidak akan tersimpan.
-            </p>
-          </div>
-        </motion.div>
-      )}
-
       <div className="py-6 space-y-6">
         {lowStockItems && lowStockItems.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4 shadow-sm animate-in fade-in">
@@ -524,15 +494,20 @@ export default function Bar() {
         )}
 
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
-          {!canInput && (
+
+          {/* Notifikasi Penguncian bagi Staff */}
+          {isLocked && role !== 'owner' && role !== 'supervisor' && (
             <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-start gap-3">
               <div className="p-2 bg-yellow-100 rounded-full text-yellow-600">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-yellow-800 font-bold text-sm">Waktu Input Ditutup</h3>
+                <h3 className="text-yellow-800 font-bold text-sm">Aksi Terkunci</h3>
                 <p className="text-yellow-700 text-xs mt-1">
-                  Waktu input harian telah ditutup (setelah jam 21:00). Silakan ajukan izin revisi untuk melakukan input.
+                  {isAlreadySubmitted
+                    ? "Data stok hari ini sudah berhasil disimpan. Tidak dapat melakukan input atau perubahan lagi."
+                    : "Waktu input harian telah ditutup (setelah jam 21:00). Silakan ajukan izin revisi untuk melakukan perubahan."
+                  }
                 </p>
               </div>
             </div>
@@ -543,14 +518,15 @@ export default function Bar() {
               {showInputButton && (
                 <button
                   onClick={() => setShowInputModal(true)}
-                  disabled={!canInput}
+                  disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
                   className={`flex-1 md:flex-none justify-center px-6 py-2 rounded-full text-sm font-bold flex gap-2 items-center transition ${
-                    canInput
-                      ? 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    isLocked && role !== 'owner' && role !== 'supervisor'
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                      : 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
                   }`}
                 >
-                  <Plus className="w-4 h-4" /> Input Data
+                  <Plus className="w-4 h-4" />
+                  {isAlreadySubmitted && role !== 'owner' && role !== 'supervisor' ? "Sudah Tersimpan" : "Input Data"}
                 </button>
               )}
             </div>
@@ -567,7 +543,7 @@ export default function Bar() {
                   placeholder="Search..."
                   value={search}
                   onChange={handleSearch}
-                  autoFocus // 🔥 Keep Focus
+                  autoFocus
                   className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm"
                 />
                 <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
@@ -613,7 +589,6 @@ export default function Bar() {
                   items.data.map((item: ItemData, i: number) => (
                     <tr key={item.id} className="hover:bg-[#FFF9F0]">
                       <td className="p-4 text-center text-gray-500">
-                        {/* Logic penomoran agar berlanjut di halaman berikutnya */}
                         {(items.current_page ? (items.current_page - 1) * items.per_page : 0) + i + 1}
                       </td>
                       <td className="p-4 font-bold text-gray-800">{item.nama}</td>
@@ -635,13 +610,23 @@ export default function Bar() {
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleEditClick(item)}
-                            className="bg-[#1D8CFF] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#166ac4]"
+                            disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                            className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+                              isLocked && role !== 'owner' && role !== 'supervisor'
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
+                            }`}
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteClick(item.id)}
-                            className="bg-[#FF4B4B] text-white px-4 py-1 rounded-full text-xs font-semibold hover:bg-[#e03535]"
+                            disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                            className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
+                              isLocked && role !== 'owner' && role !== 'supervisor'
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
+                            }`}
                           >
                             Hapus
                           </button>
@@ -702,13 +687,23 @@ export default function Bar() {
                   <div className="flex gap-2 mt-3 pt-3 border-t">
                     <button
                       onClick={() => handleEditClick(item)}
-                      className="flex-1 bg-blue-500 text-white py-1 rounded text-xs"
+                      disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                      className={`flex-1 py-1 rounded text-xs ${
+                        isLocked && role !== 'owner' && role !== 'supervisor'
+                          ? "bg-gray-200 text-gray-400"
+                          : "bg-blue-500 text-white"
+                      }`}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteClick(item.id)}
-                      className="flex-1 bg-red-500 text-white py-1 rounded text-xs"
+                      disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                      className={`flex-1 py-1 rounded text-xs ${
+                        isLocked && role !== 'owner' && role !== 'supervisor'
+                          ? "bg-gray-200 text-gray-400"
+                          : "bg-red-500 text-white"
+                      }`}
                     >
                       Hapus
                     </button>
@@ -720,7 +715,6 @@ export default function Bar() {
             )}
           </div>
 
-          {/* --- PAGINATION (ADDED HERE) --- */}
           {items.links && items.links.length > 3 && (
             <div className="mt-6 flex justify-center pb-4">
               <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
@@ -825,7 +819,6 @@ export default function Bar() {
                 />
               </div>
 
-              {/* 🔥 NEW FIELD: Sisa Stok Saat Ini (Hanya Tampil di Tab Mentah) */}
               {tab === "mentah" && (
                 <div>
                   <label className="block text-sm font-medium mb-1">Sisa Stok Saat Ini</label>
@@ -844,9 +837,8 @@ export default function Bar() {
                   <input
                     type="number"
                     value={formStokMasuk}
-                    // 🔥 PERBAIKAN 2: Mengubah string kosong menjadi "" atau parse ke number
                     onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
-                    className="w-full border rounded-xl px-4 py-2.5 text-sm"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm"
                   />
                 </div>
               ) : (
