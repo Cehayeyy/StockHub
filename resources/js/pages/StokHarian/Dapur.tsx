@@ -229,30 +229,28 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     e.preventDefault();
     setErrorMessage(null);
 
-    // 1. Logika Filter Berdasarkan Tab yang Aktif
     const itemsToSubmit = items
       .filter(item => {
         if (!item.target_id) return false;
         if (tab === "menu") {
-          // Tab Menu wajib isi Pemakaian
           return item.pemakaian !== "" && Number(item.pemakaian) > 0;
         } else {
-          // Tab Mentah wajib isi Stok Awal
           return item.stok_awal !== "" && Number(item.stok_awal) >= 0;
         }
       })
       .map(item => {
-        // Mapping data agar sesuai dengan kebutuhan Backend masing-masing tab
+        // 🔥 MAPPING AMAN (Pisahkan Menu dan Mentah)
         if (tab === "menu") {
           return {
-            item_id: item.target_id.toString(), // Akan dibaca sebagai recipe_id
+            item_id: item.target_id.toString(),
             pemakaian: item.pemakaian.toString(),
           };
         } else {
           return {
             item_id: item.target_id.toString(),
             stok_awal: item.stok_awal.toString(),
-            stok_masuk: item.stok_masuk ? item.stok_masuk.toString() : "0",
+            // Gunakan (item as any) untuk mencegah error TypeScript merah
+            stok_masuk: (item as any).stok_masuk ? (item as any).stok_masuk.toString() : "0",
           };
         }
       });
@@ -263,6 +261,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     }
 
     setProcessing(true);
+    // PASTIKAN INI DAPUR
     const routeName = tab === "menu" ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
 
     router.post(route(routeName), {

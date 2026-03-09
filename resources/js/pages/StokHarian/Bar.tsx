@@ -225,25 +225,44 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     e.preventDefault();
     setErrorMessage(null);
 
-    // 1. Kumpulkan data ke dalam satu paket (Array)
-    // Kita bersihkan data agar ID dan Pemakaian terbaca sebagai String yang bersih
+    // 1. Filter Data (Hanya data yang valid yang boleh lewat)
     const itemsToSubmit = items
-      .filter(item => item.target_id && item.pemakaian !== "" && Number(item.pemakaian) > 0)
-      .map(item => ({
-        item_id: item.target_id.toString(),
-        pemakaian: item.pemakaian.toString(),
-      }));
+      .filter(item => {
+        if (!item.target_id) return false;
+        if (tab === "menu") {
+          return item.pemakaian !== "" && Number(item.pemakaian) > 0;
+        } else {
+          return item.stok_awal !== "" && Number(item.stok_awal) >= 0;
+        }
+      })
+      .map(item => {
+        // 2. MAPPING MIKRO: Biarkan Menu seperti aslinya, hanya perbaiki Mentah!
+        if (tab === "menu") {
+          return {
+            item_id: item.target_id.toString(),
+            pemakaian: item.pemakaian.toString(),
+          };
+        } else {
+          return {
+            item_id: item.target_id.toString(),
+            stok_awal: item.stok_awal.toString(),
+            stok_masuk: (item as any).stok_masuk ? (item as any).stok_masuk.toString() : "0",
+          };
+        }
+      });
 
     if (itemsToSubmit.length === 0) {
-      setErrorMessage("Mohon pilih setidaknya satu menu dan isi jumlah pemakaiannya.");
+      setErrorMessage(
+        tab === "menu"
+          ? "Mohon pilih setidaknya satu menu dan isi jumlah pemakaiannya."
+          : "Mohon pilih setidaknya satu bahan dan isi stok awalnya."
+      );
       return;
     }
 
     setProcessing(true);
-
     const routeName = tab === "menu" ? "stok-harian-menu.store" : "stok-harian-mentah.store";
 
-    // 2. Kirim sekaligus (Single Request)
     router.post(route(routeName), {
       tanggal: tanggal,
       items: itemsToSubmit
@@ -252,7 +271,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
       preserveScroll: true,
       onSuccess: () => {
         setProcessing(false);
-        onClose(); // 🔥 INI YANG MENUTUP CARD OTOMATIS
+        onClose();
         if (onSuccess) onSuccess();
       },
       onError: (errors) => {
