@@ -21,6 +21,7 @@ interface ItemData {
 
 interface DropdownItem {
   id: number;
+  item_id?: number;
   nama: string;
   satuan?: string;
   stok_awal?: number;
@@ -54,6 +55,83 @@ interface PageProps {
   search?: string;
 }
 
+// --- 🔥 KOMPONEN DROPDOWN PENCARIAN (BARU) 🔥 ---
+const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item..." }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter((opt: any) =>
+    opt.nama.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedOption = options.find((opt: any) => opt.id.toString() === value?.toString());
+
+  return (
+    <div ref={dropdownRef} className="relative w-full">
+      <div
+        onClick={() => { setIsOpen(!isOpen); setSearchTerm(""); }}
+        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] text-gray-700 cursor-pointer flex justify-between items-center"
+      >
+        <span className={selectedOption ? "text-gray-800" : "text-gray-400"}>
+          {selectedOption ? selectedOption.nama : placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-[60] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 flex flex-col overflow-hidden">
+          <div className="p-2 border-b border-gray-100 bg-gray-50">
+            <div className="relative">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Cari nama item..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+              />
+              <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
+            </div>
+          </div>
+          <div className="overflow-y-auto flex-1 p-1">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt: any) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.id);
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-[#FDF3E4] hover:text-[#8B5E3C] rounded-lg transition font-medium"
+                >
+                  {opt.nama}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                Item tidak ditemukan
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+// --- 🔥 SELESAI KOMPONEN DROPDOWN 🔥 ---
+
 // --- MODAL INPUT (CREATE) ---
 interface FormItem {
   id: number;
@@ -79,6 +157,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
   ]);
 
   const [processing, setProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (show) {
@@ -93,19 +172,26 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           selectedItemInfo: null,
         }
       ]);
+      setErrorMessage(null);
     }
   }, [show, tanggal]);
 
-  const handleItemChange = (index: number, e: React.ChangeEvent<HTMLSelectElement>) => {
-    const id = e.target.value;
+  // 🔥 UPDATE FUNGSI HANDLE CHANGE UNTUK DROPDOWN BARU 🔥
+  const handleItemChange = (index: number, val: string | number) => {
+    const id = val ? val.toString() : "";
     const newItems = [...items];
     newItems[index].target_id = id;
 
     if (id) {
-      const selected = inputableMenus.find((m: DropdownItem) => m.id === Number(id));
+      // Perbaikan: Mencari di 'id' atau 'recipe_id' agar sinkron dengan Controller Dapur
+      const selected = inputableMenus.find((m: any) =>
+        Number(m.id) === Number(id) || Number(m.recipe_id) === Number(id)
+      );
+
       if (selected) {
         newItems[index].selectedItemInfo = selected;
-        newItems[index].stok_awal = selected.stok_awal ?? "";
+        // Memastikan stok_awal terbaca sebagai string, jika tidak ada set ke "0"
+        newItems[index].stok_awal = selected.stok_awal !== undefined ? selected.stok_awal.toString() : "0";
         newItems[index].satuan = selected.satuan || "porsi";
       }
     } else {
@@ -141,48 +227,62 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setProcessing(true);
+    setErrorMessage(null);
 
+    // 1. Logika Filter Berdasarkan Tab yang Aktif
+    const itemsToSubmit = items
+      .filter(item => {
+        if (!item.target_id) return false;
+        if (tab === "menu") {
+          // Tab Menu wajib isi Pemakaian
+          return item.pemakaian !== "" && Number(item.pemakaian) > 0;
+        } else {
+          // Tab Mentah wajib isi Stok Awal
+          return item.stok_awal !== "" && Number(item.stok_awal) >= 0;
+        }
+      })
+      .map(item => {
+        // Mapping data agar sesuai dengan kebutuhan Backend masing-masing tab
+        if (tab === "menu") {
+          return {
+            item_id: item.target_id.toString(), // Akan dibaca sebagai recipe_id
+            pemakaian: item.pemakaian.toString(),
+          };
+        } else {
+          return {
+            item_id: item.target_id.toString(),
+            stok_awal: item.stok_awal.toString(),
+            stok_masuk: item.stok_masuk ? item.stok_masuk.toString() : "0",
+          };
+        }
+      });
+
+    if (itemsToSubmit.length === 0) {
+      setErrorMessage(tab === "menu" ? "Isi pemakaian menu!" : "Isi stok awal bahan!");
+      return;
+    }
+
+    setProcessing(true);
     const routeName = tab === "menu" ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
 
-    try {
-      for (const item of items) {
-        if (!item.target_id) continue;
-
-        const payload = tab === "menu"
-          ? {
-              recipe_id: item.target_id,
-              tanggal: tanggal,
-              pemakaian: item.pemakaian,
-            }
-          : {
-              item_id: item.target_id,
-              tanggal: tanggal,
-              stok_awal: item.stok_awal,
-              stok_masuk: item.stok_masuk,
-            };
-
-        await new Promise<void>((resolve, reject) => {
-          router.post(route(routeName), payload, {
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: () => resolve(),
-            onError: (errors) => {
-              console.error("Error submitting item:", errors);
-              reject(errors);
-            },
-          });
-        });
-      }
-
-      setProcessing(false);
-      onClose();
-      if (onSuccess) onSuccess();
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } catch (error) {
-      setProcessing(false);
-      console.error("Error during submission:", error);
-    }
+    router.post(route(routeName), {
+      tanggal: tanggal,
+      items: itemsToSubmit
+    }, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        setProcessing(false);
+        onClose();
+        if (onSuccess) onSuccess();
+      },
+      onError: (errors) => {
+        setProcessing(false);
+        const firstError = Object.values(errors)[0];
+        setErrorMessage(firstError as string || "Gagal menyimpan.");
+      },
+      onFinish: () => setProcessing(false)
+    });
   };
 
   const isMenuTab = tab === "menu";
@@ -205,6 +305,34 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
         <h3 className="font-bold text-lg text-center mb-6">
           Input Data Dapur ({tab === "menu" ? "Menu" : "Bahan Mentah"})
         </h3>
+
+        {/* Error Popup */}
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-red-50 border border-red-300 rounded-2xl p-4 flex items-start gap-3 mb-4"
+            >
+              <div className="flex-shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-red-700">Peringatan</p>
+                <p className="text-sm text-red-600 mt-1">{errorMessage}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="flex-shrink-0 text-red-400 hover:text-red-600 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <form onSubmit={submit} className="space-y-6">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Tanggal</label>
@@ -231,22 +359,13 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nama Item</label>
-                <div className="relative">
-                  <select
-                    value={item.target_id}
-                    onChange={(e) => handleItemChange(index, e)}
-                    className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C] text-gray-700"
-                    style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
-                  >
-                    <option value="">Pilih Item...</option>
-                    {inputableMenus.map((m: DropdownItem) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nama}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 absolute right-4 top-3.5 text-gray-400 pointer-events-none" />
-                </div>
+                {/* 🔥 PENERAPAN SEARCHABLE SELECT 🔥 */}
+                <SearchableSelect
+                  options={inputableMenus}
+                  value={item.target_id}
+                  onChange={(val: any) => handleItemChange(index, val)}
+                  placeholder="Ketik atau pilih item..."
+                />
               </div>
 
               <div>
@@ -491,6 +610,42 @@ export default function Dapur() {
       },
     });
   };
+
+  // --- 🔥 TAMBAHAN LOGIKA ENTER (HAPUS) & ESC (BATAL) 🔥 ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Jika Modal Hapus terbuka
+      if (showDeleteModal) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitDelete(); // Eksekusi Hapus
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setShowDeleteModal(false); // Batal
+        }
+      }
+      // 2. Jika Modal Edit terbuka
+      else if (showEditModal && e.key === "Escape") {
+        e.preventDefault();
+        setShowEditModal(false);
+      }
+      // 3. Jika Modal Input Data terbuka
+      else if (showInputModal && e.key === "Escape") {
+        e.preventDefault();
+        setShowInputModal(false);
+      }
+    };
+
+    // Pasang pendengar hanya saat salah satu modal aktif
+    if (showDeleteModal || showEditModal || showInputModal) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showDeleteModal, showEditModal, showInputModal, formRecordId]);
+  // --- 🔥 SELESAI TAMBAHAN 🔥 ---
 
   const showInputButton = tab === "mentah" || (tab === "menu" && role !== "supervisor");
 
@@ -855,15 +1010,15 @@ export default function Dapur() {
                   className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
                 />
               </div>
-              <div>
+             <div>
                 <label className="block text-sm font-medium mb-1">Stok Awal</label>
                 <input
                   type="number"
                   value={formStokAwal}
                   onChange={(e) => setFormStokAwal(Number(e.target.value))}
-                  disabled={tab === "menu"}
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none ${
-                    tab === "menu" ? "bg-gray-100 text-gray-500" : "bg-white"
+                  disabled={tab === "menu"} // Kunci hanya jika di tab menu
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors ${
+                    tab === "menu" ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white focus:ring-2 focus:ring-[#D9A978]"
                   }`}
                 />
               </div>

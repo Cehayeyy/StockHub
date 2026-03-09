@@ -17,6 +17,7 @@ import {
   CookingPot,
   Menu,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 
 // Tipe data props halaman
@@ -183,6 +184,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
   // buka/tutup submenu
   const [openMasterData, setOpenMasterData] = useState(false);
   const [openStokHarian, setOpenStokHarian] = useState(false);
+  const [openAuditData, setOpenAuditData] = useState(false);
 
   // Jam realtime
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -279,6 +281,36 @@ export default function AppLayout({ header, children }: LayoutProps) {
             </div>
           )}
         </div>
+
+        {/* --- TAMBAHKAN KODE AUDIT DATA DI BAWAH SINI --- */}
+        {!isStaff && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setOpenAuditData(!openAuditData)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+            >
+              <div className="flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-3 text-white/90 text-red-300" />
+                Audit Data
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  openAuditData ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {openAuditData && (
+              <div className="mt-1 space-y-1">
+                <SubMenuLink href="audit.index" icon={FileText} onNavigate={closeMobileMenu}>
+                  Laporan Audit
+                </SubMenuLink>
+              </div>
+            )}
+          </div>
+        )}
+        {/* --- BATAS KODE AUDIT DATA --- */}
 
         {/* STOK HARIAN + SUB: Bar, Dapur */}
         <div>

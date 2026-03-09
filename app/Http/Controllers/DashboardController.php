@@ -335,11 +335,20 @@ class DashboardController extends Controller
 // ================= 4.5 AMBIL DETAIL NAMA ITEM (TAMBAHAN BARU) =================
 
         // Helper function: Ambil nama dan stok dari tabel stok harian
-        $getNames = function ($table, $relationType = 'item') use ($today) {
+        $getNames = function ($table) use ($today) {
             try {
-                return DB::table($table)
-                    ->whereDate('tanggal', $today)
-                    ->join('items', "$table.item_id", '=', 'items.id') // Join ke tabel items
+                $query = DB::table($table)->whereDate('tanggal', $today);
+
+                // stok_harian_dapur_menu pakai recipe_id (join ke recipes), sisanya pakai item_id (join ke items)
+                if ($table === 'stok_harian_dapur_menu') {
+                    return $query
+                        ->join('recipes', "$table.recipe_id", '=', 'recipes.id')
+                        ->select('recipes.name as nama', "$table.stok_akhir as stok")
+                        ->get();
+                }
+
+                return $query
+                    ->join('items', "$table.item_id", '=', 'items.id')
                     ->select('items.nama', "$table.stok_akhir as stok")
                     ->get();
             } catch (\Exception $e) {
@@ -347,7 +356,7 @@ class DashboardController extends Controller
             }
         };
 
-        // Ambil data mentah
+        // Ambil data bar dan dapur
         $barItems = $getNames('stok_harian_menu')->merge($getNames('stok_harian_mentah'));
         $dapurItems = $getNames('stok_harian_dapur_menu')->merge($getNames('stok_harian_dapur_mentah'));
 

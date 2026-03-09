@@ -190,6 +190,47 @@ export default function KategoriPage() {
     });
   };
 
+  // --- 🔥 TAMBAHAN LOGIKA ENTER (HAPUS) & ESC (BATAL) 🔥 ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Jika Modal Hapus terbuka
+      if (deleteModalOpen) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleDeleteCategory(); // Eksekusi Hapus
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setDeleteModalOpen(false); // Batal
+        }
+      }
+      // 2. Jika Modal Tambah terbuka
+      else if (addModalOpen && e.key === "Escape") {
+        e.preventDefault();
+        setAddModalOpen(false);
+      }
+      // 3. Jika Modal Edit terbuka
+      else if (editModalOpen && e.key === "Escape") {
+        e.preventDefault();
+        setEditModalOpen(false);
+      }
+      // 4. Jika Modal View terbuka
+      else if (viewModalOpen && e.key === "Escape") {
+        e.preventDefault();
+        setViewModalOpen(false);
+      }
+    };
+
+    // Pasang pendengar hanya saat salah satu modal aktif
+    if (deleteModalOpen || addModalOpen || editModalOpen || viewModalOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [deleteModalOpen, addModalOpen, editModalOpen, viewModalOpen, selectedCategory]);
+  // --- 🔥 SELESAI TAMBAHAN 🔥 ---
+
   const titleDivisionLabel = staffDivision === "bar" ? "Bar" : "Dapur";
 
   return (

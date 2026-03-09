@@ -15,17 +15,19 @@ interface ItemData {
   stok_total: number;
   pemakaian: number;
   tersisa: number;
-  is_submitted?: number; // 🔥 Added for checking submission status
+  is_submitted?: number; // Ã°Å¸â€Â¥ Added for checking submission status
 }
 
 interface DropdownItem {
   id: number;
+  item_id?: number;
   nama: string;
   satuan?: string;
   stok_awal?: number;
   pemakaian?: number;
   stok_masuk?: number;
   tersisa?: number;
+  stok_keluar?: number;
 }
 
 interface LowStockItem {
@@ -49,8 +51,86 @@ interface PageProps {
   flash: any;
   availableMenus: any[];
   canInput: boolean;
+  canInputMentah: boolean;
   search?: string;
 }
+
+// --- 🔥 KOMPONEN DROPDOWN PENCARIAN (BARU) 🔥 ---
+const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item..." }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter((opt: any) =>
+    opt.nama.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedOption = options.find((opt: any) => opt.id.toString() === value?.toString());
+
+  return (
+    <div ref={dropdownRef} className="relative w-full">
+      <div
+        onClick={() => { setIsOpen(!isOpen); setSearchTerm(""); }}
+        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] text-gray-700 cursor-pointer flex justify-between items-center"
+      >
+        <span className={selectedOption ? "text-gray-800" : "text-gray-400"}>
+          {selectedOption ? selectedOption.nama : placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-[60] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 flex flex-col overflow-hidden">
+          <div className="p-2 border-b border-gray-100 bg-gray-50">
+            <div className="relative">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Cari nama item..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+              />
+              <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
+            </div>
+          </div>
+          <div className="overflow-y-auto flex-1 p-1">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt: any) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.id);
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-[#FDF3E4] hover:text-[#8B5E3C] rounded-lg transition font-medium"
+                >
+                  {opt.nama}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                Item tidak ditemukan
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+// --- 🔥 SELESAI KOMPONEN DROPDOWN 🔥 ---
 
 // --- MODAL INPUT DATA ---
 interface FormItem {
@@ -75,6 +155,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
   ]);
 
   const [processing, setProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (show) {
@@ -88,19 +169,26 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           selectedItemInfo: null,
         }
       ]);
+      setErrorMessage(null);
     }
   }, [show, tanggal]);
 
-  const handleItemChange = (index: number, e: React.ChangeEvent<HTMLSelectElement>) => {
-    const id = e.target.value;
+  // 🔥 UPDATE FUNGSI HANDLE CHANGE UNTUK DROPDOWN BARU 🔥
+  const handleItemChange = (index: number, val: string | number) => {
+    const id = val ? val.toString() : "";
     const newItems = [...items];
     newItems[index].target_id = id;
 
     if (id) {
-      const selected = inputableMenus.find((m: DropdownItem) => m.id === Number(id));
+      // Perbaikan: Mencari di 'id' atau 'item_id' agar lebih akurat di hosting
+      const selected = inputableMenus.find((m: any) =>
+        Number(m.id) === Number(id) || Number(m.item_id) === Number(id)
+      );
+
       if (selected) {
         newItems[index].selectedItemInfo = selected;
-        newItems[index].stok_awal = selected.stok_awal ?? "";
+        // Gunakan (float) atau paksa ke number agar tidak terbaca 0
+        newItems[index].stok_awal = selected.stok_awal !== undefined ? selected.stok_awal.toString() : "0";
         newItems[index].satuan = selected.satuan || "porsi";
       }
     } else {
@@ -135,42 +223,45 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
+    // 1. Kumpulkan data ke dalam satu paket (Array)
+    // Kita bersihkan data agar ID dan Pemakaian terbaca sebagai String yang bersih
+    const itemsToSubmit = items
+      .filter(item => item.target_id && item.pemakaian !== "" && Number(item.pemakaian) > 0)
+      .map(item => ({
+        item_id: item.target_id.toString(),
+        pemakaian: item.pemakaian.toString(),
+      }));
+
+    if (itemsToSubmit.length === 0) {
+      setErrorMessage("Mohon pilih setidaknya satu menu dan isi jumlah pemakaiannya.");
+      return;
+    }
+
     setProcessing(true);
 
     const routeName = tab === "menu" ? "stok-harian-menu.store" : "stok-harian-mentah.store";
 
-    try {
-      for (const item of items) {
-        if (!item.target_id) continue;
-
-        const payload = {
-          item_id: item.target_id,
-          tanggal: tanggal,
-          pemakaian: item.pemakaian,
-          stok_awal: item.stok_awal,
-        };
-
-        await new Promise<void>((resolve, reject) => {
-          router.post(route(routeName), payload, {
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: () => resolve(),
-            onError: (errors) => {
-              console.error("Error submitting item:", errors);
-              reject(errors);
-            },
-          });
-        });
-      }
-
-      setProcessing(false);
-      onClose();
-      if (onSuccess) onSuccess();
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } catch (error) {
-      setProcessing(false);
-      console.error("Error during submission:", error);
-    }
+    // 2. Kirim sekaligus (Single Request)
+    router.post(route(routeName), {
+      tanggal: tanggal,
+      items: itemsToSubmit
+    }, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        setProcessing(false);
+        onClose(); // 🔥 INI YANG MENUTUP CARD OTOMATIS
+        if (onSuccess) onSuccess();
+      },
+      onError: (errors) => {
+        setProcessing(false);
+        const firstError = Object.values(errors)[0];
+        setErrorMessage(firstError as string || "Terjadi kesalahan saat menyimpan.");
+      },
+      onFinish: () => setProcessing(false)
+    });
   };
 
   const isMenuTab = tab === "menu";
@@ -193,6 +284,34 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
         <h3 className="font-bold text-lg text-center mb-6">
           Input Data Bar ({tab === "menu" ? "Menu" : "Bahan Mentah"})
         </h3>
+
+        {/* Error Popup */}
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-red-50 border border-red-300 rounded-2xl p-4 flex items-start gap-3"
+            >
+              <div className="flex-shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-red-700">Peringatan</p>
+                <p className="text-sm text-red-600 mt-1">{errorMessage}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="flex-shrink-0 text-red-400 hover:text-red-600 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <form onSubmit={submit} className="space-y-6">
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Tanggal</label>
@@ -219,22 +338,13 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nama Item</label>
-                <div className="relative">
-                  <select
-                    value={item.target_id}
-                    onChange={(e) => handleItemChange(index, e)}
-                    className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978] text-gray-700"
-                    style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
-                  >
-                    <option value="">Pilih Item...</option>
-                    {inputableMenus.map((m: any) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nama}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 absolute right-4 top-3.5 text-gray-400 pointer-events-none" />
-                </div>
+                {/* 🔥 PENERAPAN SEARCHABLE SELECT 🔥 */}
+                <SearchableSelect
+                  options={inputableMenus}
+                  value={item.target_id}
+                  onChange={(val: any) => handleItemChange(index, val)}
+                  placeholder="Ketik atau pilih item..."
+                />
               </div>
 
               <div>
@@ -315,7 +425,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
 // === MAIN COMPONENT ===
 export default function Bar() {
-  const { items, inputableMenus, tab, tanggal, auth, lowStockItems, canInput, search: initialSearch } = usePage<any>().props as PageProps;
+  const { items, inputableMenus, tab, tanggal, auth, lowStockItems, canInput, canInputMentah, search: initialSearch } = usePage<any>().props as PageProps;
   const role = auth?.user?.role;
 
   const [search, setSearch] = useState(initialSearch || "");
@@ -336,13 +446,19 @@ export default function Bar() {
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
 
-  // 🔥 Logika Kunci Global berdasarkan status submit dari server
-  // Mengecek apakah salah satu data sudah memiliki flag is_submitted === 1 (Centang Hijau di Dashboard)
-  const isAlreadySubmitted = items.data.some((item: ItemData) => item.is_submitted === 1);
+  // ðŸ”¥ LOGIKA PENGUNCIAN BERTINGKAT ðŸ”¥
+  const isAlreadySubmitted = items.data.some((item: ItemData) => Number(item.is_submitted) === 1);
+  const isStaff = role !== 'owner' && role !== 'supervisor';
 
-  // canInput sudah diproses di controller (mencegah jam malam & status submit)
-  // Namun kita tambahkan lagi pengecekan isAlreadySubmitted untuk keamanan tampilan
-  const isLocked = !canInput || isAlreadySubmitted;
+  // 1. Kunci MENU: Terkunci jika staff DAN canInput false (sudah submit pemakaian / lewat jam 21:00)
+  const isMenuLocked = isStaff && !canInput;
+
+  // 2. Kunci MENTAH: HANYA terkunci jika staff DAN canInputMentah false (lewat jam 21:00 saja)
+  //    Mentah TETAP TERBUKA meskipun menu sudah submitted
+  const isMentahLocked = isStaff && !canInputMentah;
+
+  // Variabel penentu akhir sesuai tab yang aktif
+  const isLocked = tab === "menu" ? isMenuLocked : isMentahLocked;
 
   useEffect(() => {
     setDate(tanggal);
@@ -408,7 +524,7 @@ export default function Bar() {
   };
 
   const handleEditClick = (item: ItemData) => {
-    if (isLocked && role !== 'owner' && role !== 'supervisor') return;
+    if (isLocked) return;
     setFormRecordId(item.id);
     setFormItemId(item.item_id);
     setFormItemName(item.nama);
@@ -439,7 +555,7 @@ export default function Bar() {
   };
 
   const handleDeleteClick = (id: number) => {
-    if (isLocked && role !== 'owner' && role !== 'supervisor') return;
+    if (isLocked) return;
     setFormRecordId(id);
     setShowDeleteModal(true);
   };
@@ -454,6 +570,42 @@ export default function Bar() {
       },
     });
   };
+
+  // --- Ã°Å¸â€Â¥ TAMBAHAN LOGIKA ENTER (HAPUS) & ESC (BATAL) Ã°Å¸â€Â¥ ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Jika Modal Hapus terbuka
+      if (showDeleteModal) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitDelete(); // Eksekusi Hapus
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setShowDeleteModal(false); // Batal
+        }
+      }
+      // 2. Jika Modal Edit terbuka
+      else if (showEditModal && e.key === "Escape") {
+        e.preventDefault();
+        setShowEditModal(false);
+      }
+      // 3. Jika Modal Input Data terbuka
+      else if (showInputModal && e.key === "Escape") {
+        e.preventDefault();
+        setShowInputModal(false);
+      }
+    };
+
+    // Pasang pendengar hanya saat salah satu modal aktif
+    if (showDeleteModal || showEditModal || showInputModal) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showDeleteModal, showEditModal, showInputModal, formRecordId]);
+  // --- Ã°Å¸â€Â¥ SELESAI TAMBAHAN Ã°Å¸â€Â¥ ---
 
   const showInputButton = tab === "mentah" || (tab === "menu" && role !== "supervisor");
 
@@ -496,7 +648,7 @@ export default function Bar() {
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
 
           {/* Notifikasi Penguncian bagi Staff */}
-          {isLocked && role !== 'owner' && role !== 'supervisor' && (
+          {isLocked && (
             <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-start gap-3">
               <div className="p-2 bg-yellow-100 rounded-full text-yellow-600">
                 <AlertTriangle className="w-5 h-5" />
@@ -504,8 +656,8 @@ export default function Bar() {
               <div>
                 <h3 className="text-yellow-800 font-bold text-sm">Aksi Terkunci</h3>
                 <p className="text-yellow-700 text-xs mt-1">
-                  {isAlreadySubmitted
-                    ? "Data stok hari ini sudah berhasil disimpan. Tidak dapat melakukan input atau perubahan lagi."
+                  {tab === "menu" && isAlreadySubmitted
+                    ? "Data stok menu hari ini sudah berhasil disimpan. Tidak dapat melakukan input atau perubahan lagi."
                     : "Waktu input harian telah ditutup (setelah jam 21:00). Silakan ajukan izin revisi untuk melakukan perubahan."
                   }
                 </p>
@@ -518,15 +670,15 @@ export default function Bar() {
               {showInputButton && (
                 <button
                   onClick={() => setShowInputModal(true)}
-                  disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                  disabled={isLocked}
                   className={`flex-1 md:flex-none justify-center px-6 py-2 rounded-full text-sm font-bold flex gap-2 items-center transition ${
-                    isLocked && role !== 'owner' && role !== 'supervisor'
+                    isLocked
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
                       : 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
                   }`}
                 >
                   <Plus className="w-4 h-4" />
-                  {isAlreadySubmitted && role !== 'owner' && role !== 'supervisor' ? "Sudah Tersimpan" : "Input Data"}
+                  {tab === "menu" && isAlreadySubmitted && isStaff ? "Sudah Tersimpan" : "Input Data"}
                 </button>
               )}
             </div>
@@ -610,9 +762,9 @@ export default function Bar() {
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleEditClick(item)}
-                            disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                            disabled={isLocked}
                             className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-                              isLocked && role !== 'owner' && role !== 'supervisor'
+                              isLocked
                                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                                 : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
                             }`}
@@ -621,9 +773,9 @@ export default function Bar() {
                           </button>
                           <button
                             onClick={() => handleDeleteClick(item.id)}
-                            disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                            disabled={isLocked}
                             className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-                              isLocked && role !== 'owner' && role !== 'supervisor'
+                              isLocked
                                 ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                                 : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
                             }`}
@@ -687,9 +839,9 @@ export default function Bar() {
                   <div className="flex gap-2 mt-3 pt-3 border-t">
                     <button
                       onClick={() => handleEditClick(item)}
-                      disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                      disabled={isLocked}
                       className={`flex-1 py-1 rounded text-xs ${
-                        isLocked && role !== 'owner' && role !== 'supervisor'
+                        isLocked
                           ? "bg-gray-200 text-gray-400"
                           : "bg-blue-500 text-white"
                       }`}
@@ -698,9 +850,9 @@ export default function Bar() {
                     </button>
                     <button
                       onClick={() => handleDeleteClick(item.id)}
-                      disabled={isLocked && role !== 'owner' && role !== 'supervisor'}
+                      disabled={isLocked}
                       className={`flex-1 py-1 rounded text-xs ${
-                        isLocked && role !== 'owner' && role !== 'supervisor'
+                        isLocked
                           ? "bg-gray-200 text-gray-400"
                           : "bg-red-500 text-white"
                       }`}
@@ -811,12 +963,13 @@ export default function Bar() {
                 <input
                   type="number"
                   value={formStokAwal}
-                  onChange={(e) => setFormStokAwal(Number(e.target.value))}
-                  disabled={tab === "menu"}
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none ${
-                    tab === "menu" ? "bg-gray-100 text-gray-500" : "bg-white"
+                  onChange={(e) => setFormStokAwal(Number(e.target.value))} // 🔥 KEMBALIKAN FUNGSI ONCHANGE AGAR BISA DIKETIK
+                  disabled={tab === "menu"} // 🔥 HANYA KUNCI TAB MENU. TAB MENTAH TERBUKA!
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors ${
+                    tab === "menu" ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white focus:ring-2 focus:ring-[#D9A978]"
                   }`}
                 />
+                {/* Hapus teks peringatan warna merahnya karena sekarang Owner sudah diizinkan mengedit */}
               </div>
 
               {tab === "mentah" && (

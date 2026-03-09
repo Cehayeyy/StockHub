@@ -6,7 +6,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\StokHarianMentah;
 use App\Models\StokHarianDapurMentah;
+use App\Models\StokHarianMenu;
+use App\Models\StokHarianDapurMenu;
+use App\Models\Recipe;
+use App\Models\Item;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class VerifikasiStokController extends Controller
 {
@@ -46,23 +51,210 @@ class VerifikasiStokController extends Controller
         ]);
     }
 
-    // ==================== 🔽 EXPORT EXCEL (HTML-BASED) ====================
+    // ==================== 🔽 SIMPAN KE DATABASE & SINKRONISASI 🔽 ====================
+    // ==================== 🔽 SIMPAN KE DATABASE & EFEK DOMINO 🔽 ====================
+    public function store(Request $request)
+    {
+        $tab = $request->input('tab', 'bar');
+        $fisikData = $request->input('fisik', []);
+
+        DB::transaction(function () use ($tab, $fisikData) {
+            foreach ($fisikData as $id => $stokFisik) {
+                $stokFisik = (float)$stokFisik;
+
+                if ($tab === 'bar') {
+                    $mentah = StokHarianMentah::find($id);
+                    if ($mentah) {
+                        $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
+                        $selisih = $stokFisik - $stokSistem;
+
+                        if ($selisih != 0) {
+                            // 1. KOREKSI HARI VERIFIKASI
+                            if ($selisih < 0) {
+                                // Jika fisik kurang, tambahkan ke pengeluaran/pemakaian
+                                $mentah->stok_keluar += abs($selisih);
+                            } else {
+                                // Jika fisik lebih, tambahkan ke stok masuk
+                                $mentah->stok_masuk += $selisih;
+                            }
+
+                            // PAKSA STOK AKHIR SAMA DENGAN FISIK
+                            $mentah->stok_akhir = $stokFisik;
+                            $mentah->save();
+
+                            // Panggil sinkronisasi menu matang untuk hari ini
+                            $this->syncMenuBar($mentah->item_id, $mentah->tanggal);
+
+                            // 2. 🔥 EFEK DOMINO KE MASA DEPAN (Selasa - Sabtu, dst) 🔥
+                            // Terapkan selisih tersebut ke semua hari setelah tanggal verifikasi
+                            DB::table('stok_harian_mentah')
+                                ->where('item_id', $mentah->item_id)
+                                ->whereDate('tanggal', '>', $mentah->tanggal)
+                                ->update([
+                                    'stok_awal' => DB::raw("stok_awal + ($selisih)"),
+                                    'stok_akhir' => DB::raw("stok_akhir + ($selisih)")
+                                ]);
+
+                            // 3. Sinkronisasi Menu Matang untuk hari-hari masa depan tersebut
+                            $affectedDates = DB::table('stok_harian_mentah')
+                                ->where('item_id', $mentah->item_id)
+                                ->whereDate('tanggal', '>', $mentah->tanggal)
+                                ->pluck('tanggal');
+
+                            foreach($affectedDates as $affectedDate) {
+                                $this->syncMenuBar($mentah->item_id, $affectedDate);
+                            }
+                        }
+                    }
+                } else {
+                    // LOGIKA YANG SAMA UNTUK DAPUR
+                    $mentah = StokHarianDapurMentah::find($id);
+                    if ($mentah) {
+                        $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
+                        $selisih = $stokFisik - $stokSistem;
+
+                        if ($selisih != 0) {
+                            if ($selisih < 0) {
+                                $mentah->stok_keluar += abs($selisih);
+                            } else {
+                                $mentah->stok_masuk += $selisih;
+                            }
+
+                            // PAKSA STOK AKHIR SAMA DENGAN FISIK
+                            $mentah->stok_akhir = $stokFisik;
+                            $mentah->save();
+
+                            $this->syncMenuDapur($mentah->item_id, $mentah->tanggal);
+
+                            // 🔥 EFEK DOMINO DAPUR 🔥
+                            DB::table('stok_harian_dapur_mentah')
+                                ->where('item_id', $mentah->item_id)
+                                ->whereDate('tanggal', '>', $mentah->tanggal)
+                                ->update([
+                                    'stok_awal' => DB::raw("stok_awal + ($selisih)"),
+                                    'stok_akhir' => DB::raw("stok_akhir + ($selisih)")
+                                ]);
+
+                            $affectedDates = DB::table('stok_harian_dapur_mentah')
+                                ->where('item_id', $mentah->item_id)
+                                ->whereDate('tanggal', '>', $mentah->tanggal)
+                                ->pluck('tanggal');
+
+                            foreach($affectedDates as $affectedDate) {
+                                $this->syncMenuDapur($mentah->item_id, $affectedDate);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        return back()->with('success', 'Stok berhasil diverifikasi dan disinkronkan ke semua hari!');
+    }
+
+    // --- Logika Sinkronisasi Menu Bar ---
+    private function syncMenuBar($rawItemId, $date)
+    {
+        $recipes = Recipe::where('ingredients', 'LIKE', '%"item_id":"' . $rawItemId . '"%')
+                 ->orWhere('ingredients', 'LIKE', '%"item_id":' . $rawItemId . '%')
+                 ->get();
+        if ($recipes->isEmpty()) return;
+
+        $menuItems = Item::whereIn('nama', $recipes->pluck('name'))->get();
+        $targetMenus = StokHarianMenu::whereIn('item_id', $menuItems->pluck('id'))->where('tanggal', $date)->get();
+
+        foreach ($targetMenus as $menu) {
+            $recipe = Recipe::where('name', $menu->item->nama)->first();
+            if (!$recipe) $recipe = Recipe::where('item_id', $menu->item_id)->first();
+            if (!$recipe || !is_array($recipe->ingredients)) continue;
+
+            $minCapAwal = 999999; $minCapTotal = 999999; $minCapSisa = 999999;
+            foreach ($recipe->ingredients as $ing) {
+                $ingId = $ing['item_id'] ?? null;
+                $amt = $ing['amount'] ?? 0;
+                if (!$ingId || $amt == 0) continue;
+
+                $raw = StokHarianMentah::where('item_id', $ingId)->where('tanggal', $date)->first();
+                if ($raw) {
+                    $minCapAwal = min($minCapAwal, floor($raw->stok_awal / $amt));
+                    $minCapTotal = min($minCapTotal, floor(($raw->stok_awal + $raw->stok_masuk) / $amt));
+                    $minCapSisa = min($minCapSisa, floor($raw->stok_akhir / $amt));
+                } else {
+                    $minCapAwal = 0; $minCapTotal = 0; $minCapSisa = 0; break;
+                }
+            }
+
+            if ($minCapAwal === 999999) $minCapAwal = 0;
+            if ($minCapTotal === 999999) $minCapTotal = 0;
+            if ($minCapSisa === 999999) $minCapSisa = 0;
+
+            $menu->stok_awal = $minCapAwal;
+            $menu->stok_masuk = max(0, $minCapTotal - $minCapAwal);
+            $sisaMatematis = ($menu->stok_awal + $menu->stok_masuk) - $menu->stok_keluar;
+            $menu->stok_akhir = min($sisaMatematis, $minCapSisa);
+            $menu->save();
+        }
+    }
+
+    // --- Logika Sinkronisasi Menu Dapur ---
+    private function syncMenuDapur($rawItemId, $date)
+    {
+        $recipes = Recipe::where('division', 'dapur')->whereJsonContains('ingredients', [['item_id' => (int)$rawItemId]])->get();
+        if ($recipes->isEmpty()) return;
+
+        $targetMenus = StokHarianDapurMenu::whereIn('recipe_id', $recipes->pluck('id'))->where('tanggal', $date)->get();
+
+        foreach ($targetMenus as $menu) {
+            $recipe = Recipe::find($menu->recipe_id);
+            if (!$recipe || !is_array($recipe->ingredients)) continue;
+
+            $minCapAwal = 999999; $minCapTotal = 999999; $minCapSisa = 999999;
+            foreach ($recipe->ingredients as $ing) {
+                $ingId = $ing['item_id'] ?? null;
+                $amt = $ing['amount'] ?? 0;
+                if (!$ingId || $amt == 0) continue;
+
+                $raw = StokHarianDapurMentah::where('item_id', $ingId)->where('tanggal', $date)->first();
+                if ($raw) {
+                    $minCapAwal = min($minCapAwal, floor($raw->stok_awal / $amt));
+                    $minCapTotal = min($minCapTotal, floor(($raw->stok_awal + $raw->stok_masuk) / $amt));
+                    $minCapSisa = min($minCapSisa, floor($raw->stok_akhir / $amt));
+                } else {
+                    $minCapAwal = 0; $minCapTotal = 0; $minCapSisa = 0; break;
+                }
+            }
+
+            if ($minCapAwal === 999999) $minCapAwal = 0;
+            if ($minCapTotal === 999999) $minCapTotal = 0;
+            if ($minCapSisa === 999999) $minCapSisa = 0;
+
+            $menu->stok_awal = $minCapAwal;
+            $menu->stok_masuk = max(0, $minCapTotal - $minCapAwal);
+            $sisaMatematis = ($menu->stok_awal + $menu->stok_masuk) - $menu->stok_keluar;
+            $menu->stok_akhir = min($sisaMatematis, $minCapSisa);
+            $menu->save();
+        }
+    }
+
+    // ==================== 🔽 EXPORT EXCEL (TIDAK ADA YANG DIHILANGKAN) 🔽 ====================
     public function export(Request $request)
     {
         $tab = $request->get('tab', 'bar');
         $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
         $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
 
+        // Tangkap data fisik & catatan yang dikirim dari React
+        $fisikData = json_decode($request->get('fisik', '{}'), true);
+        $catatanData = json_decode($request->get('catatan', '{}'), true);
+
         $items = $tab === 'bar'
             ? StokHarianMentah::with('item')->whereDate('tanggal', $mondayDate)->get()
             : StokHarianDapurMentah::with('item')->whereDate('tanggal', $mondayDate)->get();
 
-        // Nama file Excel (.xls)
         $divisionName = $tab === 'bar' ? 'Bar' : 'Dapur';
         $filename = "verifikasi-stok-{$tab}-{$mondayDate}.xls";
 
-        // Generate HTML Table untuk Excel
-        $html = $this->generateExcelHTML($items, $mondayDate, $divisionName);
+        $html = $this->generateExcelHTML($items, $mondayDate, $divisionName, $fisikData, $catatanData);
 
         return response($html, 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
@@ -73,28 +265,17 @@ class VerifikasiStokController extends Controller
         ]);
     }
 
-    /**
-     * Generate HTML table untuk Excel
-     */
-    private function generateExcelHTML($items, $date, $division)
+    private function generateExcelHTML($items, $date, $division, $fisikData = [], $catatanData = [])
     {
         $formattedDate = Carbon::parse($date)->locale('id')->isoFormat('D MMMM YYYY');
 
         $html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel">';
         $html .= '<head>';
         $html .= '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-        $html .= '<xml>';
-        $html .= '<x:ExcelWorkbook>';
-        $html .= '<x:ExcelWorksheets>';
-        $html .= '<x:ExcelWorksheet>';
+        $html .= '<xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
         $html .= '<x:Name>Verifikasi Stok</x:Name>';
-        $html .= '<x:WorksheetOptions>';
-        $html .= '<x:Print><x:ValidPrinterInfo/></x:Print>';
-        $html .= '</x:WorksheetOptions>';
-        $html .= '</x:ExcelWorksheet>';
-        $html .= '</x:ExcelWorksheets>';
-        $html .= '</x:ExcelWorkbook>';
-        $html .= '</xml>';
+        $html .= '<x:WorksheetOptions><x:Print><x:ValidPrinterInfo/></x:Print></x:WorksheetOptions>';
+        $html .= '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml>';
         $html .= '<style>';
         $html .= 'table { border-collapse: collapse; width: 100%; }';
         $html .= 'th { background-color: #8B5E3C; color: white; font-weight: bold; padding: 10px; text-align: center; border: 1px solid #000; }';
@@ -102,51 +283,39 @@ class VerifikasiStokController extends Controller
         $html .= '.text-center { text-align: center; }';
         $html .= '.title { font-size: 16px; font-weight: bold; text-align: center; padding: 10px; }';
         $html .= '.subtitle { font-size: 12px; text-align: center; padding: 5px; color: #666; }';
-        $html .= '</style>';
-        $html .= '</head>';
-        $html .= '<body>';
+        $html .= '</style></head><body>';
 
-        // Title
         $html .= '<div class="title">VERIFIKASI STOK MINGGUAN - ' . strtoupper($division) . '</div>';
-        $html .= '<div class="subtitle">Tanggal Acuan: ' . $formattedDate . ' (Senin)</div>';
-        $html .= '<br/>';
+        $html .= '<div class="subtitle">Tanggal Acuan: ' . $formattedDate . ' (Senin)</div><br/>';
 
-        $html .= '<table>';
+        $html .= '<table><thead><tr>';
+        $html .= '<th>No</th><th>Nama Item</th><th>Satuan</th><th>Stok Sistem (Senin)</th>';
+        $html .= '<th>Stok Fisik</th><th>Selisih</th><th>Status</th><th>Catatan</th>';
+        $html .= '</tr></thead><tbody>';
 
-        // Header
-        $html .= '<thead>';
-        $html .= '<tr>';
-        $html .= '<th>No</th>';
-        $html .= '<th>Nama Item</th>';
-        $html .= '<th>Satuan</th>';
-        $html .= '<th>Stok Sistem (Senin)</th>';
-        $html .= '<th>Stok Fisik</th>';
-        $html .= '<th>Selisih</th>';
-        $html .= '<th>Status</th>';
-        $html .= '</tr>';
-        $html .= '</thead>';
-
-        // Body
-        $html .= '<tbody>';
         foreach ($items as $index => $item) {
             $namaItem = htmlspecialchars(optional($item->item)->nama ?? '-');
             $satuan = htmlspecialchars($item->unit ?? optional($item->item)->satuan ?? '-');
             $stokSistem = $item->stok_akhir ?? 0;
+
+            // Membaca input fisik dari layar, jika kosong default ke stok sistem
+            $stokFisik = isset($fisikData[$item->id]) ? $fisikData[$item->id] : $stokSistem;
+            $selisih = $stokFisik - $stokSistem;
+            $status = $selisih == 0 ? 'Sesuai' : ($selisih > 0 ? 'Lebih' : 'Kurang');
+            $catatan = !empty($catatanData[$item->id]) ? htmlspecialchars($catatanData[$item->id]) : '-';
 
             $html .= '<tr>';
             $html .= '<td class="text-center">' . ($index + 1) . '</td>';
             $html .= '<td>' . $namaItem . '</td>';
             $html .= '<td class="text-center">' . $satuan . '</td>';
             $html .= '<td class="text-center">' . $stokSistem . '</td>';
-            $html .= '<td class="text-center"></td>'; // Kosong untuk diisi manual
-            $html .= '<td class="text-center"></td>'; // Kosong untuk diisi manual
-            $html .= '<td class="text-center"></td>'; // Kosong untuk diisi manual
+            $html .= '<td class="text-center">' . $stokFisik . '</td>';
+            $html .= '<td class="text-center">' . $selisih . '</td>';
+            $html .= '<td class="text-center">' . $status . '</td>';
+            $html .= '<td>' . $catatan . '</td>';
             $html .= '</tr>';
         }
-        $html .= '</tbody>';
-        $html .= '</table>';
-        $html .= '</body>';
-        $html .= '</html>';
+        $html .= '</tbody></table></body></html>';
 
         return $html;
     }

@@ -25,17 +25,11 @@ class StokHarianMenu extends Model
         'tanggal' => 'date',
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saving(function ($model) {
-            // Perbarui kolom is_submitted jika stok_keluar atau stok_masuk diubah
-            if ($model->isDirty(['stok_keluar', 'stok_masuk'])) {
-                $model->is_submitted = true;
-            }
-        });
-    }
+    // CATATAN: Boot event untuk auto-set is_submitted DIHAPUS.
+    // is_submitted sekarang HANYA di-set secara eksplisit di controller
+    // saat user benar-benar input pemakaian (storeMenu/updateMenu).
+    // Boot event sebelumnya menyebabkan false positive karena distributeStockToMenus
+    // mengupdate stok_masuk menu (dari input mentah), yang salah ditandai sebagai submitted.
 
     public function item()
     {

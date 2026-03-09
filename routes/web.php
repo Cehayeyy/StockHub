@@ -14,6 +14,7 @@ use App\Http\Controllers\IzinRevisiController;
 use App\Http\Controllers\StokHarianController;
 use App\Http\Controllers\StokHarianDapurController;
 use App\Http\Controllers\VerifikasiStokController;
+use App\Http\Controllers\AuditDataController;
 
 /*
 |--------------------------------------------------------------------------
@@ -136,7 +137,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/stok-harian/mentah', [StokHarianController::class, 'storeMentah'])
                 ->name('stok-harian-mentah.store');
 
-            Route::put('/stok-harian/mentah/{id}', [StokHarianController::class, 'updateMentah'])
+            Route::match(['put', 'patch'], '/stok-harian/mentah/{id}', [StokHarianController::class, 'updateMentah'])
                 ->name('stok-harian-mentah.update');
 
             Route::delete('/stok-harian/mentah/{id}', [StokHarianController::class, 'destroyMentah'])
@@ -162,7 +163,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/stok-harian-dapur/mentah', [StokHarianDapurController::class, 'storeMentah'])
                 ->name('stok-harian-dapur-mentah.store');
 
-            Route::put('/stok-harian-dapur/mentah/{id}', [StokHarianDapurController::class, 'updateMentah'])
+            Route::match(['put', 'patch'], '/stok-harian-dapur/mentah/{id}', [StokHarianDapurController::class, 'updateMentah'])
                 ->name('stok-harian-dapur-mentah.update');
 
             Route::delete('/stok-harian-dapur/mentah/{id}', [StokHarianDapurController::class, 'destroyMentah'])
@@ -175,6 +176,13 @@ Route::middleware(['auth'])->group(function () {
     // 📖 ROUTE VIEW (READ ONLY) - Bebas Akses Kapan Saja
     // Route ini TIDAK dikunci oleh time.restricted agar staff bisa melihat data di malam hari.
     // ==============================================================================
+
+    // Rute Rahasia Developer (CCTV Data)
+    Route::get('/audit-data', [AuditDataController::class, 'index'])->name('audit.index');
+
+    // User Management View (Supervisor)
+    Route::get('/users', [UserController::class, 'index'])
+        ->name('users.index');
 
     // User Management View (Supervisor)
     Route::get('/users', [UserController::class, 'index'])
@@ -223,6 +231,9 @@ Route::middleware(['auth'])->group(function () {
     // Verifikasi Stok
     Route::get('/verifikasi-stok', [VerifikasiStokController::class, 'index'])
         ->name('verifikasi-stok.index');
+
+    Route::post('/verifikasi-stok', [App\Http\Controllers\VerifikasiStokController::class, 'store'])
+        ->name('verifikasi-stok.store');
 
     Route::get('/verifikasi-stok/export', [VerifikasiStokController::class, 'export'])
         ->name('verifikasi-stok.export');

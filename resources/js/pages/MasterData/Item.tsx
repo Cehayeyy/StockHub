@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Plus, Package } from "lucide-react";
+import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react"; // Ditambahkan Trash2 dan X
 
 type Division = "bar" | "dapur";
 
@@ -44,6 +44,13 @@ type PageProps = {
     };
   };
 } & Record<string, any>;
+
+// --- INTERFACE UNTUK MULTI INPUT ---
+interface FormItem {
+  uid: number; // ID Unik untuk React Key
+  nama: string;
+  item_category_id: number | string;
+}
 
 const translateCategoryName = (name: string) => {
   const lower = name.toLowerCase();
@@ -91,7 +98,6 @@ export default function ItemPage() {
 
   const safeCategories = categories ?? [];
 
-  // State Division: Jika staff, paksa ke divisinya. Jika admin, pakai dari props/default 'bar'
   const [division, setDivision] = useState<Division>(
     isStaff && userDivision ? userDivision : initialDivision ?? "bar"
   );
@@ -102,24 +108,14 @@ export default function ItemPage() {
   const [openModal, setOpenModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
 
-  const [nama, setNama] = useState("");
-  const [kategoriId, setKategoriId] = useState<number | null>(null);
-  const [showKategoriDropdown, setShowKategoriDropdown] = useState(false);
-
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const openDeleteConfirm = (id: number) => {
-    setDeleteId(id);
-    setOpenDeleteModal(true);
-  };
-
-  const confirmDelete = () => {
-    if (!deleteId) return;
-    router.delete(route("item.destroy", deleteId), {
-      onSuccess: () => setOpenDeleteModal(false),
-    });
-  };
+  // --- 🔥 STATE BARU UNTUK MULTI INPUT FORM 🔥 ---
+  const [formItems, setFormItems] = useState<FormItem[]>([
+    { uid: Date.now(), nama: "", item_category_id: "" }
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sortedCategories = useMemo(
     () => sortCategories(safeCategories),
@@ -145,46 +141,148 @@ export default function ItemPage() {
     );
   };
 
+  // --- 🔥 FUNGSI MULTI INPUT ROW 🔥 ---
+  const openModalAdd = () => {
+    setEditId(null);
+    setFormItems([{ uid: Date.now(), nama: "", item_category_id: "" }]);
+    setOpenModal(true);
+  };
+
   const handleEdit = (item: Item) => {
     setEditId(item.id);
-    setNama(item.nama);
     setDivision(item.division);
-    setKategoriId(item.item_category_id ?? null);
+    // Saat edit, paksa array hanya berisi 1 item
+    setFormItems([{
+      uid: Date.now(),
+      nama: item.nama,
+      item_category_id: item.item_category_id ?? ""
+    }]);
     setOpenModal(true);
   };
 
   const closeModal = () => {
     setOpenModal(false);
     setEditId(null);
-    setNama("");
-    setKategoriId(null);
+    setFormItems([{ uid: Date.now(), nama: "", item_category_id: "" }]);
   };
 
-  const submitItem = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!kategoriId) return;
+  const handleAddRow = () => {
+    setFormItems([...formItems, { uid: Date.now(), nama: "", item_category_id: "" }]);
+  };
 
-    const payload = {
-      division,
-      nama,
-      item_category_id: kategoriId,
-      satuan: "porsi",
-    };
-
-    if (editId) {
-      router.put(route("item.update", editId), payload, {
-        onSuccess: () => closeModal(),
-      });
-    } else {
-      router.post(route("item.store"), payload, {
-        onSuccess: () => closeModal(),
-      });
+  const handleRemoveRow = (uid: number) => {
+    if (formItems.length > 1) {
+      setFormItems(formItems.filter(item => item.uid !== uid));
     }
   };
 
-  const selectedCategory = kategoriId
-    ? sortedCategories.find((c) => c.id === kategoriId)
-    : undefined;
+  const handleFormChange = (uid: number, field: keyof FormItem, value: any) => {
+    setFormItems(formItems.map(item =>
+      item.uid === uid ? { ...item, [field]: value } : item
+    ));
+  };
+
+  // --- FUNGSI SUBMIT (SINGLE & MULTIPLE) ---
+  const submitItem = async (e?: React.FormEvent<HTMLFormElement> | any) => {
+    if (e) e.preventDefault();
+    if (isSubmitting) return;
+
+    // Validasi kosong
+    const invalid = formItems.some(i => !i.nama.trim() || !i.item_category_id);
+    if (invalid) {
+      alert("Pastikan semua baris telah diisi Nama Item dan Kategorinya!");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (editId) {
+        // MODE EDIT (Hanya 1 Baris)
+        await new Promise<void>((resolve, reject) => {
+          router.put(route("item.update", editId), {
+            division,
+            nama: formItems[0].nama,
+            item_category_id: formItems[0].item_category_id,
+            satuan: "porsi",
+          }, {
+            onSuccess: () => resolve(),
+            onError: (err) => reject(err)
+          });
+        });
+      } else {
+        // MODE TAMBAH (Banyak Baris, Looping Request)
+        for (const item of formItems) {
+          await new Promise<void>((resolve, reject) => {
+            router.post(route("item.store"), {
+              division,
+              nama: item.nama,
+              item_category_id: item.item_category_id,
+              satuan: "porsi",
+            }, {
+              preserveState: true,
+              preserveScroll: true,
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err)
+            });
+          });
+        }
+      }
+
+      setIsSubmitting(false);
+      closeModal();
+      // Optional: Refresh untuk merefresh pagination
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (error) {
+      setIsSubmitting(false);
+      alert("Terjadi kesalahan saat menyimpan data.");
+    }
+  };
+
+  // --- DELETE MODAL ---
+  const openDeleteConfirm = (id: number) => {
+    setDeleteId(id);
+    setOpenDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteId) return;
+    router.delete(route("item.destroy", deleteId), {
+      onSuccess: () => setOpenDeleteModal(false),
+    });
+  };
+
+  // --- UPDATE LOGIKA ENTER (HAPUS/SIMPAN) & ESC (BATAL) ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (openDeleteModal) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          confirmDelete();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setOpenDeleteModal(false);
+        }
+      }
+      else if (openModal) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitItem(); // Panggil submit tanpa e untuk form multi
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          closeModal();
+        }
+      }
+    };
+
+    if (openDeleteModal || openModal) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openDeleteModal, deleteId, openModal, formItems, division, editId, isSubmitting]);
 
   return (
     <AppLayout header="Item">
@@ -201,10 +299,7 @@ export default function ItemPage() {
               <div className="relative inline-block w-full md:w-40">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowDivisionDropdown((prev) => !prev);
-                    setShowKategoriDropdown(false);
-                  }}
+                  onClick={() => setShowDivisionDropdown((prev) => !prev)}
                   className="flex w-full items-center justify-between rounded-full bg-[#F6E1C6] px-4 py-2 text-sm font-medium text-[#7A4A2B]"
                 >
                   <span className="capitalize">
@@ -248,12 +343,7 @@ export default function ItemPage() {
             <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
               {!isStaff && (
                   <button
-                    onClick={() => {
-                      setEditId(null);
-                      setNama("");
-                      setKategoriId(null);
-                      setOpenModal(true);
-                    }}
+                    onClick={openModalAdd}
                     className="flex items-center justify-center gap-2 rounded-full bg-[#C19A6B] px-6 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#a8855a] w-full md:w-auto"
                   >
                     <Plus className="h-4 w-4" />
@@ -282,7 +372,6 @@ export default function ItemPage() {
           </div>
 
           {/* --- MOBILE VIEW (CARDS) --- */}
-          {/* Tampil di layar kecil (< md) */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
               {filteredItems.length > 0 ? (
                   filteredItems.map((item, index) => (
@@ -330,7 +419,6 @@ export default function ItemPage() {
           </div>
 
           {/* --- DESKTOP VIEW (TABLE) --- */}
-          {/* Tampil di layar sedang ke atas (md:block) */}
           <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-gray-100 bg-white mb-6">
             <table className="w-full text-sm whitespace-nowrap">
               <thead className="bg-[#F3F3F3] text-gray-700 font-semibold border-b">
@@ -427,112 +515,127 @@ export default function ItemPage() {
         </div>
       </div>
 
-      {/* --- MODAL ADD/EDIT --- */}
+      {/* --- MODAL ADD/EDIT MULTI INPUT --- */}
       {openModal && !isStaff && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl p-6 md:p-8 transform transition-all scale-100">
+          <div className="bg-white w-full max-w-lg md:max-w-2xl rounded-3xl shadow-xl p-6 md:p-8 transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl md:text-2xl font-bold text-center mb-6 text-gray-800">
               {editId ? "Edit Item" : "Tambah Item"}
             </h2>
 
-            <form onSubmit={submitItem} className="space-y-5">
-              <div>
-                <label className="block mb-1 text-sm font-bold text-gray-700">
-                  Nama Item
-                </label>
-                <input
-                  type="text"
-                  value={nama}
-                  onChange={(e) => setNama(e.target.value)}
-                  className="w-full bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] focus:border-transparent outline-none"
-                  placeholder="Masukkan nama item..."
-                  required
-                />
-              </div>
+            <form onSubmit={submitItem} className="space-y-6">
 
+              {/* Info Divisi */}
               <div>
-                <label className="block mb-1 text-sm font-bold text-gray-700">Divisi</label>
+                <label className="block mb-1 text-xs font-bold text-gray-500 uppercase ml-1">Penempatan Divisi</label>
                 <input
                   type="text"
                   readOnly
                   value={division === "bar" ? "Bar" : "Dapur"}
-                  className="w-full bg-gray-100 rounded-xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed"
+                  className="w-full bg-gray-100 rounded-xl px-4 py-3 border-none text-gray-500 cursor-not-allowed font-medium"
                 />
               </div>
 
-              <div className="relative">
-                <label className="block mb-1 text-sm font-bold text-gray-700">
-                  Kategori Item
-                </label>
+              {/* Looping Form Items */}
+              {formItems.map((item, index) => (
+                <div key={item.uid} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-4 relative">
 
+                  {/* Tombol Hapus Baris (Hanya muncul jika mode Tambah & baris > 1) */}
+                  {!editId && formItems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRow(item.uid)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-bold text-gray-700">
+                      {editId ? "Data Item" : `Item #${index + 1}`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-1 text-xs font-bold text-gray-700 ml-1">
+                        Nama Item
+                      </label>
+                      <input
+                        type="text"
+                        value={item.nama}
+                        onChange={(e) => handleFormChange(item.uid, 'nama', e.target.value)}
+                        className="w-full bg-white rounded-xl px-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none"
+                        placeholder="Contoh: Gula Pasir"
+                        required
+                        autoFocus={index === formItems.length - 1}
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <label className="block mb-1 text-xs font-bold text-gray-700 ml-1">
+                        Kategori Item
+                      </label>
+                      <select
+                        value={item.item_category_id}
+                        onChange={(e) => handleFormChange(item.uid, 'item_category_id', e.target.value)}
+                        className="w-full appearance-none bg-white rounded-xl px-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none text-gray-700"
+                        required
+                      >
+                        <option value="">Pilih Kategori...</option>
+                        {sortedCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {translateCategoryName(cat.name)}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 absolute right-4 top-10 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 text-xs font-bold text-gray-700 ml-1">
+                      Satuan Dasar
+                    </label>
+                    <input
+                      type="text"
+                      value="porsi"
+                      readOnly
+                      className="w-full bg-gray-100 rounded-xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Tombol Tambah Baris (Hanya muncul saat mode Tambah) */}
+              {!editId && (
                 <button
                   type="button"
-                  onClick={() => setShowKategoriDropdown((prev) => !prev)}
-                  className="w-full bg-gray-50 rounded-xl px-4 py-3 border border-gray-200 flex justify-between items-center focus:ring-2 focus:ring-[#D9A978]"
+                  onClick={handleAddRow}
+                  className="w-full py-3 border-2 border-dashed border-[#D9A978] rounded-xl text-[#D9A978] font-bold text-sm hover:bg-[#D9A978]/5 transition flex items-center justify-center gap-2"
                 >
-                  <span className={selectedCategory ? "text-gray-800" : "text-gray-400"}>
-                    {selectedCategory
-                      ? translateCategoryName(selectedCategory.name)
-                      : "Pilih Kategori"}
-                  </span>
-
-                  <ChevronDown
-                    className={`h-4 w-4 text-gray-500 transition-transform ${
-                      showKategoriDropdown ? "rotate-180" : ""
-                    }`}
-                  />
+                  <Plus className="w-5 h-5" />
+                  Tambah Item Lainnya
                 </button>
+              )}
 
-                {showKategoriDropdown && (
-                  <div className="absolute w-full bg-white rounded-xl shadow-lg border border-gray-100 mt-2 z-50 max-h-60 overflow-y-auto">
-                    {sortedCategories.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                        Belum ada kategori.
-                      </div>
-                    ) : (
-                      sortedCategories.map((cat) => (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => {
-                            setKategoriId(cat.id);
-                            setShowKategoriDropdown(false);
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-[#FFF9F0] text-sm text-gray-700 transition-colors border-b last:border-0"
-                        >
-                          {translateCategoryName(cat.name)}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block mb-1 text-sm font-bold text-gray-700">
-                  Satuan
-                </label>
-                <input
-                  type="text"
-                  value="porsi"
-                  readOnly
-                  className="w-full bg-gray-100 rounded-xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed"
-                />
-              </div>
-
-              <div className="flex justify-between pt-6 gap-3">
+              <div className="flex justify-end pt-4 gap-3">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-4 py-2.5 bg-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-300 transition"
+                  className="px-6 py-2.5 bg-gray-200 rounded-full text-gray-700 font-semibold hover:bg-gray-300 transition text-sm"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2.5 bg-[#D9A978] text-white rounded-xl font-bold shadow-md hover:bg-[#c4925e] transition"
+                  disabled={isSubmitting}
+                  className={`px-6 py-2.5 rounded-full font-bold text-white shadow-md text-sm transition ${
+                    isSubmitting ? "bg-[#e0c09e] cursor-not-allowed" : "bg-[#D9A978] hover:bg-[#c4925e]"
+                  }`}
                 >
-                  {editId ? "Simpan" : "Tambah"}
+                  {isSubmitting ? "Menyimpan..." : (editId ? "Simpan Update" : "Simpan Semua")}
                 </button>
               </div>
             </form>

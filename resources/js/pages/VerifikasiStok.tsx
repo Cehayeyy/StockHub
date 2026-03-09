@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, router, usePage } from "@inertiajs/react";
-import { Search, Calendar, CheckCircle, AlertCircle, Save, Package, Pencil, X } from "lucide-react"; // Ditambahkan Pencil, X
+import { Search, Calendar, CheckCircle, AlertCircle, Save, Package, Pencil, X } from "lucide-react";
 
 interface VerificationItem {
   id: number;
@@ -24,7 +24,6 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
   const [fisik, setFisik] = useState<string | number>(initialFisik ?? "");
   const [catatan, setCatatan] = useState(initialCatatan || "");
 
-  // Kalkulasi Real-time di dalam Modal
   const stokSistem = item.stok_sistem;
   const stokFisikNum = fisik === "" ? 0 : Number(fisik);
   const selisih = stokFisikNum - stokSistem;
@@ -45,7 +44,6 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100">
-        {/* Header */}
         <div className="bg-[#8B5E3C] p-6 flex justify-between items-center">
           <h3 className="text-white font-bold text-lg">Verifikasi Item</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white transition">
@@ -53,9 +51,7 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-6 space-y-5">
-          {/* Info Dasar */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase">No</label>
@@ -69,7 +65,6 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
 
           <hr className="border-gray-100" />
 
-          {/* Stok & Input */}
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-center">
               <label className="text-xs font-bold text-gray-500 block mb-1">Stok Sistem</label>
@@ -81,6 +76,7 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
                 type="number"
                 value={fisik}
                 onChange={(e) => setFisik(e.target.value)}
+                onWheel={(e) => (e.target as HTMLInputElement).blur()} // 🔥 SOLUSI POIN 3: Kunci Scroll
                 className="w-full border-2 border-[#D9A978] rounded-xl px-4 py-2 focus:ring-4 focus:ring-[#D9A978]/20 focus:outline-none font-bold text-gray-800"
                 placeholder="0"
                 autoFocus
@@ -88,7 +84,6 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
             </div>
           </div>
 
-          {/* Hasil Perhitungan */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-500 block mb-1">Selisih</label>
@@ -104,7 +99,6 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
             </div>
           </div>
 
-          {/* Catatan */}
           <div>
             <label className="text-xs font-bold text-gray-700 block mb-1">Catatan Supervisor</label>
             <textarea
@@ -117,7 +111,6 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
           </div>
         </div>
 
-        {/* Footer */}
         <div className="bg-gray-50 p-6 flex justify-end gap-3">
           <button onClick={onClose} className="px-6 py-2.5 rounded-full font-bold text-gray-500 hover:bg-gray-200 transition text-sm">
             Batal
@@ -136,10 +129,10 @@ export default function VerifikasiStok() {
   const { items, tab, tanggal_picker, tanggal_data } = usePage<any>().props as PageProps;
 
   const [physicalStocks, setPhysicalStocks] = useState<Record<number, number>>({});
-  const [notes, setNotes] = useState<Record<number, string>>({}); // State untuk catatan supervisor
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const [search, setSearch] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // State untuk Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<VerificationItem | null>(null);
   const [selectedNo, setSelectedNo] = useState<number>(0);
@@ -152,32 +145,45 @@ export default function VerifikasiStok() {
     );
   };
 
-  const handleExport = async () => {
-    const payload = {
-      tab,
-      tanggal: tanggal_picker,
-      fisik: physicalStocks,
-      catatan: notes, // Sertakan catatan dalam export
-    };
+  const handleExportAndSave = () => {
+    // 1. Siapkan data final: Jika Owner tidak mengisi, anggap stok fisik = stok sistem
+    const finalFisikData: Record<number, number> = {};
 
-    const query = new URLSearchParams(payload as any).toString();
-
-    const response = await fetch(route("verifikasi-stok.export") + "?" + query, {
-      method: "GET",
+    items.forEach(item => {
+      // Jika ada input manual pakai itu, jika kosong pakai angka sistem (biar tidak jadi 0)
+      finalFisikData[item.id] = physicalStocks[item.id] ?? item.stok_sistem;
     });
 
-    if (!response.ok) return alert("Gagal download laporan");
+    setIsProcessing(true);
 
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `verifikasi-stok-${tab}-${tanggal_picker}.xls`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  };
+    // 2. Kirim ke Backend
+    router.post(route('verifikasi-stok.store'), {
+        tab,
+        tanggal: tanggal_data,
+        fisik: finalFisikData, // Mengirim data lengkap (manual + default sistem)
+        catatan: notes
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // 3. Setelah sukses simpan, otomatis jalankan Export Excel
+            // Kita buat link download manual agar prosesnya mulus
+            const params = new URLSearchParams({
+                tab,
+                tanggal: tanggal_data,
+                fisik: JSON.stringify(finalFisikData),
+                catatan: JSON.stringify(notes)
+            });
+            window.location.href = route('verifikasi-stok.export') + '?' + params.toString();
+
+            alert("Stok Berhasil Disinkronkan & Laporan Diunduh!");
+            setIsProcessing(false);
+        },
+        onError: () => {
+            alert("Gagal sinkronisasi data.");
+            setIsProcessing(false);
+        }
+    });
+};
 
   const handleTabSwitch = (t: "bar" | "dapur") => {
     router.get(
@@ -194,14 +200,12 @@ export default function VerifikasiStok() {
     }));
   };
 
-  // Handler Buka Modal
   const handleEditClick = (item: VerificationItem, no: number) => {
     setSelectedItem(item);
     setSelectedNo(no);
     setIsModalOpen(true);
   };
 
-  // Handler Simpan dari Modal
   const handleModalSave = (id: number, val: number, note: string) => {
     setPhysicalStocks(prev => ({ ...prev, [id]: val }));
     setNotes(prev => ({ ...prev, [id]: note }));
@@ -261,11 +265,9 @@ export default function VerifikasiStok() {
             </div>
           </div>
 
-          {/* --- MOBILE VIEW --- */}
           <div className="grid grid-cols-1 gap-4 md:hidden">
             {filteredItems.map((item, i) => {
               const fisik = physicalStocks[item.id] ?? item.stok_sistem;
-              const selisih = fisik - item.stok_sistem;
               return (
                 <div key={item.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-3">
@@ -277,13 +279,11 @@ export default function VerifikasiStok() {
                       <Pencil className="w-4 h-4" />
                     </button>
                   </div>
-                  {/* ... mobile stats content ... */}
                 </div>
               );
             })}
           </div>
 
-          {/* --- DESKTOP VIEW (TABLE) --- */}
           <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-100">
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-700 font-semibold border-b">
@@ -294,7 +294,7 @@ export default function VerifikasiStok() {
                   <th className="p-4 text-center bg-yellow-50/50 w-40">Stok Fisik</th>
                   <th className="p-4 text-center">Selisih</th>
                   <th className="p-4 text-center">Status</th>
-                  <th className="p-4 text-center">Aksi</th> {/* Kolom Aksi */}
+                  <th className="p-4 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -316,6 +316,7 @@ export default function VerifikasiStok() {
                             type="number"
                             value={physicalStocks[item.id] ?? ''}
                             placeholder={String(item.stok_sistem)}
+                            onWheel={(e) => (e.target as HTMLInputElement).blur()} // 🔥 SOLUSI POIN 3: Kunci Scroll
                             className="w-24 text-center border border-gray-200 rounded-lg px-2 py-1 focus:ring-2 focus:ring-[#D9A978] bg-white"
                             onChange={(e) => handlePhysicalChange(item.id, e.target.value)}
                           />
@@ -354,10 +355,13 @@ export default function VerifikasiStok() {
 
           <div className="mt-6 flex justify-end gap-3">
             <button
-              className="w-full md:w-auto justify-center bg-[#C19A6B] hover:bg-[#a8855a] text-white px-6 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2 transition-all active:scale-95"
-              onClick={handleExport}
+              className={`w-full md:w-auto justify-center px-6 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2 transition-all ${
+                isProcessing ? "bg-gray-400 text-white cursor-wait" : "bg-[#C19A6B] hover:bg-[#a8855a] text-white active:scale-95"
+              }`}
+              onClick={handleExportAndSave}
+              disabled={isProcessing}
             >
-              <Save className="w-4 h-4" /> Simpan Laporan
+              <Save className="w-4 h-4" /> {isProcessing ? "Memproses..." : "Simpan & Cetak Laporan"}
             </button>
           </div>
         </div>

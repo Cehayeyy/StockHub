@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, User, Calendar, Edit, Trash2, Settings } from 'lucide-react';
 
 export default function Manajemen() {
@@ -220,6 +220,66 @@ export default function Manajemen() {
             },
         });
     };
+
+    // --- 🔥 UPDATE LOGIKA ENTER (HAPUS/SIMPAN) & ESC (BATAL) 🔥 ---
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // 1. Jika Modal Hapus terbuka
+            if (confirmDelete) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleDelete(); // Eksekusi Hapus
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setConfirmDelete(false); // Batal
+                }
+            }
+            // 2. Jika Modal Tambah terbuka
+            else if (showModal) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSave(e); // Eksekusi Simpan
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setShowModal(false); // Batal
+                }
+            }
+            // 3. Jika Modal Edit terbuka
+            else if (showEditModal) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleUpdate(e); // Eksekusi Update
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setShowEditModal(false); // Batal
+                }
+            }
+            // 4. Jika Modal Update Owner terbuka
+            else if (showSelfUpdateModal) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSelfUpdate(e); // Eksekusi Update Diri Sendiri
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setShowSelfUpdateModal(false); // Batal
+                }
+            }
+        };
+
+        // Pasang pendengar hanya saat salah satu modal aktif
+        if (confirmDelete || showModal || showEditModal || showSelfUpdateModal) {
+            window.addEventListener('keydown', handleKeyDown);
+        }
+
+        // Bersihkan listener dan masukkan semua state form ke dependency agar selalu update
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [
+        confirmDelete, showModal, showEditModal, showSelfUpdateModal, deleteId,
+        role, username, name, password, selfUsername, selfPassword, editId
+    ]);
+    // --- 🔥 SELESAI TAMBAHAN 🔥 ---
 
     // Helper badge role
     const getRoleBadgeClass = (role: string) => {

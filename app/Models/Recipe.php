@@ -11,22 +11,22 @@ class Recipe extends Model
 
     protected $fillable = [
         'item_id',
-        'category_id', // Agar category_id bisa disimpan
+        'category_id',
         'name',
         'division',
         'ingredients',
         'total_ingredients',
     ];
 
+    // 🔥 INI ADALAH PENERJEMAH AGAR JSON TERBACA SEBAGAI ARRAY 🔥
     protected $casts = [
         'ingredients' => 'array',
     ];
 
     /**
      * Relasi ke ItemCategory
-     * (Digunakan di Controller untuk mengambil nama kategori)
      */
-    public function category() // 🔥 PERBAIKAN: Arahkan ke ItemCategory
+    public function category()
     {
         return $this->belongsTo(ItemCategory::class, 'category_id');
     }

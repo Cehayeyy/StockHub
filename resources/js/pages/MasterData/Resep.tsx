@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router, Link } from "@inertiajs/react";
 import { Search, Trash, ChevronDown, Plus, BookOpen, Edit } from "lucide-react";
@@ -137,6 +137,47 @@ const Resep: React.FC = () => {
       onSuccess: () => setOpenDeleteModal(false),
     });
   };
+
+  // --- 🔥 TAMBAHAN LOGIKA ENTER (HAPUS) & ESC (BATAL) 🔥 ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Jika Modal Hapus terbuka
+      if (openDeleteModal) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          confirmDelete(); // Eksekusi Hapus
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setOpenDeleteModal(false); // Batal
+        }
+      }
+      // 2. Jika Modal Tambah terbuka
+      else if (showModal && e.key === "Escape") {
+        e.preventDefault();
+        setShowModal(false);
+      }
+      // 3. Jika Modal Edit terbuka
+      else if (openEditModal && e.key === "Escape") {
+        e.preventDefault();
+        setOpenEditModal(false);
+      }
+      // 4. Jika Modal View terbuka
+      else if (openViewModal && e.key === "Escape") {
+        e.preventDefault();
+        setOpenViewModal(false);
+      }
+    };
+
+    // Pasang pendengar hanya saat salah satu modal aktif
+    if (openDeleteModal || showModal || openEditModal || openViewModal) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openDeleteModal, showModal, openEditModal, openViewModal, deleteId]);
+  // --- 🔥 SELESAI TAMBAHAN 🔥 ---
 
   const openViewRecipe = (recipe: Recipe) => {
     setViewRecipe(recipe);
