@@ -424,9 +424,15 @@ class StokHarianController extends Controller
 
     private function distributeStockToMenus($rawItemId, $dummy, $date)
     {
-        $recipes = Recipe::where('ingredients', 'LIKE', '%"item_id":"' . $rawItemId . '"%')
-                     ->orWhere('ingredients', 'LIKE', '%"item_id":' . $rawItemId . '%')
-                     ->get();
+        // Cari resep yang mengandung bahan mentah ini
+        // Gunakan PHP filter karena format JSON bisa bervariasi (dengan/tanpa spasi)
+        $recipes = Recipe::all()->filter(function ($recipe) use ($rawItemId) {
+            if (!is_array($recipe->ingredients)) return false;
+            foreach ($recipe->ingredients as $ing) {
+                if (isset($ing['item_id']) && $ing['item_id'] == $rawItemId) return true;
+            }
+            return false;
+        });
         if ($recipes->isEmpty()) return;
 
         $menuItems = Item::whereIn('nama', $recipes->pluck('name'))->get();

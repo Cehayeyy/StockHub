@@ -66,6 +66,8 @@ export default function Dashboard() {
     totalStaff = 0,
     ownerData,
     stokAman = 0,
+    stokDate,
+    isStokFromPreviousDay = false,
     auth,
   } = usePage<any>().props;
 
@@ -177,7 +179,11 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                 <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B5E3C]" />
                 Status Stok Harian
               </h3>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">Klik untuk melihat detail stok</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                {isStokFromPreviousDay
+                  ? `Data terakhir: ${new Date(stokDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} (belum ada input hari ini)`
+                  : 'Klik untuk melihat detail stok'}
+              </p>
             </div>
           </div>
 

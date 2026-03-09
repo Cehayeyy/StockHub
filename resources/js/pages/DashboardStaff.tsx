@@ -125,6 +125,8 @@ export default function DashboardStaff() {
     izinApproved,
     canInput,
     itemDetails, // 🔥 PASTIKAN INI ADA
+    stokDate,
+    isStokFromPreviousDay,
   } = usePage<any>().props;
 
   // 🔥 STATE BARU UNTUK MODAL
@@ -195,7 +197,11 @@ export default function DashboardStaff() {
               <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B5E3C]" />
               Status Stok Harian
             </h3>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">Klik untuk melihat detail stok</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              {isStokFromPreviousDay
+                ? `Data terakhir: ${new Date(stokDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} (belum ada input hari ini)`
+                : 'Klik untuk melihat detail stok'}
+            </p>
           </div>
 
           <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6">

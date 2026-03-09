@@ -23,6 +23,45 @@ class DashboardController extends Controller
         $user = $request->user();
         $today = Carbon::today()->toDateString();
 
+        // ================= 0. TENTUKAN TANGGAL EFEKTIF UNTUK STOK =================
+        // Jika tidak ada data stok hari ini, gunakan tanggal terakhir yang memiliki data
+        $stokDate = $today;
+        $hasDataToday = DB::table('stok_harian_menu')->whereDate('tanggal', $today)->exists()
+            || DB::table('stok_harian_mentah')->whereDate('tanggal', $today)->exists();
+
+        if (!$hasDataToday) {
+            try {
+                $hasDataToday = DB::table('stok_harian_dapur_menu')->whereDate('tanggal', $today)->exists()
+                    || DB::table('stok_harian_dapur_mentah')->whereDate('tanggal', $today)->exists();
+            } catch (\Exception $e) {
+                // tabel dapur belum ada
+            }
+        }
+
+        if (!$hasDataToday) {
+            // Cari tanggal terakhir yang punya data dari semua tabel stok
+            $latestDates = collect();
+
+            $latestBar = DB::table('stok_harian_menu')->max('tanggal');
+            if ($latestBar) $latestDates->push($latestBar);
+
+            $latestBarMentah = DB::table('stok_harian_mentah')->max('tanggal');
+            if ($latestBarMentah) $latestDates->push($latestBarMentah);
+
+            try {
+                $latestDapur = DB::table('stok_harian_dapur_menu')->max('tanggal');
+                if ($latestDapur) $latestDates->push($latestDapur);
+
+                $latestDapurMentah = DB::table('stok_harian_dapur_mentah')->max('tanggal');
+                if ($latestDapurMentah) $latestDates->push($latestDapurMentah);
+            } catch (\Exception $e) {
+                // tabel dapur belum ada
+            }
+
+            if ($latestDates->isNotEmpty()) {
+                $stokDate = $latestDates->max();
+            }
+        }
 
         // ================= 1. CHECK STATUS INPUT HARI INI =================
         $alreadyInputToday = false;
@@ -51,35 +90,36 @@ class DashboardController extends Controller
         }
 
         // ================= 2. HITUNG STATISTIK BAR =================
-        $barMenu = DB::table('stok_harian_menu')->whereDate('tanggal', $today)->count();
+        // Gunakan $stokDate (bukan $today) untuk query stok agar data tetap muncul saat hari berganti
+        $barMenu = DB::table('stok_harian_menu')->whereDate('tanggal', $stokDate)->count();
         $barMenuHabis = DB::table('stok_harian_menu')
-            ->whereDate('tanggal', $today)
+            ->whereDate('tanggal', $stokDate)
             ->where('stok_akhir', '>', 0)
             ->where('stok_akhir', '<=', 7)
             ->count();
         $barMenuHabisTotal = DB::table('stok_harian_menu')
-            ->whereDate('tanggal', $today)
+            ->whereDate('tanggal', $stokDate)
             ->where('stok_akhir', '=', 0)
             ->count();
 
-        $barMentah = DB::table('stok_harian_mentah')->whereDate('tanggal', $today)->count();
+        $barMentah = DB::table('stok_harian_mentah')->whereDate('tanggal', $stokDate)->count();
         $barMentahHabis = DB::table('stok_harian_mentah')
-            ->whereDate('tanggal', $today)
+            ->whereDate('tanggal', $stokDate)
             ->where('stok_akhir', '>', 0)
             ->where('stok_akhir', '<=', 7)
             ->count();
         $barMentahHabisTotal = DB::table('stok_harian_mentah')
-            ->whereDate('tanggal', $today)
+            ->whereDate('tanggal', $stokDate)
             ->where('stok_akhir', '=', 0)
             ->count();
 
         // Hitung stok aman bar (stok_akhir > 7)
         $barMenuAman = DB::table('stok_harian_menu')
-            ->whereDate('tanggal', $today)
+            ->whereDate('tanggal', $stokDate)
             ->where('stok_akhir', '>', 7)
             ->count();
         $barMentahAman = DB::table('stok_harian_mentah')
-            ->whereDate('tanggal', $today)
+            ->whereDate('tanggal', $stokDate)
             ->where('stok_akhir', '>', 7)
             ->count();
 
@@ -94,39 +134,39 @@ class DashboardController extends Controller
         $dapurMentahAman = 0;
 
         try {
-            $dapurMenu = DB::table('stok_harian_dapur_menu')->whereDate('tanggal', $today)->count();
+            $dapurMenu = DB::table('stok_harian_dapur_menu')->whereDate('tanggal', $stokDate)->count();
 
             $dapurMenuHabis = DB::table('stok_harian_dapur_menu')
-                ->whereDate('tanggal', $today)
+                ->whereDate('tanggal', $stokDate)
                 ->where('stok_akhir', '>', 0)
                 ->where('stok_akhir', '<=', 7)
                 ->count();
 
             $dapurMenuHabisTotal = DB::table('stok_harian_dapur_menu')
-                ->whereDate('tanggal', $today)
+                ->whereDate('tanggal', $stokDate)
                 ->where('stok_akhir', '=', 0)
                 ->count();
 
-            $dapurMentah = DB::table('stok_harian_dapur_mentah')->whereDate('tanggal', $today)->count();
+            $dapurMentah = DB::table('stok_harian_dapur_mentah')->whereDate('tanggal', $stokDate)->count();
 
             $dapurMentahHabis = DB::table('stok_harian_dapur_mentah')
-                ->whereDate('tanggal', $today)
+                ->whereDate('tanggal', $stokDate)
                 ->where('stok_akhir', '>', 0)
                 ->where('stok_akhir', '<=', 7)
                 ->count();
 
             $dapurMentahHabisTotal = DB::table('stok_harian_dapur_mentah')
-                ->whereDate('tanggal', $today)
+                ->whereDate('tanggal', $stokDate)
                 ->where('stok_akhir', '=', 0)
                 ->count();
 
             // Hitung stok aman dapur (stok_akhir > 7)
             $dapurMenuAman = DB::table('stok_harian_dapur_menu')
-                ->whereDate('tanggal', $today)
+                ->whereDate('tanggal', $stokDate)
                 ->where('stok_akhir', '>', 7)
                 ->count();
             $dapurMentahAman = DB::table('stok_harian_dapur_mentah')
-                ->whereDate('tanggal', $today)
+                ->whereDate('tanggal', $stokDate)
                 ->where('stok_akhir', '>', 7)
                 ->count();
         } catch (\Exception $e) {
@@ -140,20 +180,19 @@ class DashboardController extends Controller
         $stokAman = $barMenuAman + $barMentahAman + $dapurMenuAman + $dapurMentahAman;
 
      // ================= 4.5 LIST NAMA ITEM UNTUK DETAIL (FINAL REVISI) =================
-        $today = Carbon::today()->toDateString();
 
         // 1. Helper untuk Ambil Data Tabel (Cek Singular/Plural)
-        $getDataSafe = function($singularName) use ($today) {
+        $getDataSafe = function($singularName) use ($stokDate) {
             $pluralName = $singularName . 's';
             try {
                 // Cek Plural dulu
-                $data = DB::table($pluralName)->whereDate('tanggal', $today)->get();
+                $data = DB::table($pluralName)->whereDate('tanggal', $stokDate)->get();
                 if ($data->isNotEmpty()) return $data;
                 // Cek Singular
-                return DB::table($singularName)->whereDate('tanggal', $today)->get();
+                return DB::table($singularName)->whereDate('tanggal', $stokDate)->get();
             } catch (\Exception $e) {
                 try {
-                    return DB::table($singularName)->whereDate('tanggal', $today)->get();
+                    return DB::table($singularName)->whereDate('tanggal', $stokDate)->get();
                 } catch (\Exception $ex) {
                     return collect([]);
                 }
@@ -335,9 +374,9 @@ class DashboardController extends Controller
 // ================= 4.5 AMBIL DETAIL NAMA ITEM (TAMBAHAN BARU) =================
 
         // Helper function: Ambil nama dan stok dari tabel stok harian
-        $getNames = function ($table) use ($today) {
+        $getNames = function ($table) use ($stokDate) {
             try {
-                $query = DB::table($table)->whereDate('tanggal', $today);
+                $query = DB::table($table)->whereDate('tanggal', $stokDate);
 
                 // stok_harian_dapur_menu pakai recipe_id (join ke recipes), sisanya pakai item_id (join ke items)
                 if ($table === 'stok_harian_dapur_menu') {
@@ -400,6 +439,8 @@ class DashboardController extends Controller
             'staffBelumInput'   => $staffBelumInput ?? [],
             'totalStaff'        => $allStaff->count(),
             'itemDetails'       => $itemDetails,
+            'stokDate'          => $stokDate,
+            'isStokFromPreviousDay' => $stokDate !== $today,
             'flash'             => [
                 'success' => session('success'),
                 'error'   => session('error'),

@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Models\IzinRevisi;
 
 class TimeRestrictedAccess
 {
@@ -33,6 +34,19 @@ class TimeRestrictedAccess
 
                 // Aksi GET (melihat halaman) tetap diizinkan
                 if (!$request->isMethod('get')) {
+
+                    // ✅ Cek apakah user punya izin revisi aktif
+                    $hasActivePermission = IzinRevisi::where('user_id', $user->id)
+                        ->where('status', 'approved')
+                        ->where('start_time', '<=', $now)
+                        ->where('end_time', '>=', $now)
+                        ->exists();
+
+                    // Jika punya izin revisi aktif, izinkan aksi
+                    if ($hasActivePermission) {
+                        return $next($request);
+                    }
+
                     return back()->with('error', 'Waktu operasional berakhir. Input/Edit/Hapus tidak diizinkan setelah pukul 21:00.');
                 }
             }
