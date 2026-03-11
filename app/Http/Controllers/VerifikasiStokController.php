@@ -199,7 +199,13 @@ class VerifikasiStokController extends Controller
     // --- Logika Sinkronisasi Menu Dapur ---
     private function syncMenuDapur($rawItemId, $date)
     {
-        $recipes = Recipe::where('division', 'dapur')->whereJsonContains('ingredients', [['item_id' => (int)$rawItemId]])->get();
+        $recipes = Recipe::where('division', 'dapur')->get()->filter(function ($recipe) use ($rawItemId) {
+            if (!is_array($recipe->ingredients)) return false;
+            foreach ($recipe->ingredients as $ing) {
+                if (isset($ing['item_id']) && $ing['item_id'] == $rawItemId) return true;
+            }
+            return false;
+        });
         if ($recipes->isEmpty()) return;
 
         $targetMenus = StokHarianDapurMenu::whereIn('recipe_id', $recipes->pluck('id'))->where('tanggal', $date)->get();

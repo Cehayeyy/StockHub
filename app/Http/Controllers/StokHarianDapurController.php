@@ -162,11 +162,11 @@ class StokHarianDapurController extends Controller
                 );
 
                 // 🔥 REM PENGAMAN: Hanya tarik otomatis JIKA hari ini BELUM ADA TRANSAKSI 🔥
-                /*if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
+                if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
                     $mentah->stok_awal = $stokKemarin;
                     $mentah->stok_akhir = $stokKemarin;
                     $mentah->save();
-                }*/
+                }
             }
         }
 
