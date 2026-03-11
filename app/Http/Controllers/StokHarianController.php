@@ -171,12 +171,11 @@ class StokHarianController extends Controller
                 );
 
                 // 🔥 REM PENGAMAN MENTAH BAR 🔥
-                /*if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
+                if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
                     $mentah->stok_awal = $stokKemarin;
                     $mentah->stok_akhir = $stokKemarin;
                     $mentah->save();
                 }
-                */
             }
         }
 

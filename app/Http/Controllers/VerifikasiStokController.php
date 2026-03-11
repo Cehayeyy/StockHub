@@ -155,9 +155,13 @@ class VerifikasiStokController extends Controller
     // --- Logika Sinkronisasi Menu Bar ---
     private function syncMenuBar($rawItemId, $date)
     {
-        $recipes = Recipe::where('ingredients', 'LIKE', '%"item_id":"' . $rawItemId . '"%')
-                 ->orWhere('ingredients', 'LIKE', '%"item_id":' . $rawItemId . '%')
-                 ->get();
+        $recipes = Recipe::all()->filter(function ($recipe) use ($rawItemId) {
+            if (!is_array($recipe->ingredients)) return false;
+            foreach ($recipe->ingredients as $ing) {
+                if (isset($ing['item_id']) && $ing['item_id'] == $rawItemId) return true;
+            }
+            return false;
+        });
         if ($recipes->isEmpty()) return;
 
         $menuItems = Item::whereIn('nama', $recipes->pluck('name'))->get();
