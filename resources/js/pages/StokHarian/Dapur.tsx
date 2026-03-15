@@ -251,9 +251,11 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
         }
       })
       .map(item => {
-        // 🔥 MAPPING AMAN (Pisahkan Menu dan Mentah)
+        // 🔥 MAPPING AMAN KHUSUS DAPUR 🔥
         if (tab === "menu") {
           return {
+            // PENTING: Gunakan 'item_id' sebagai key pengiriman karena Controller storeMenu
+            // mencari $row['item_id'], meskipun di database disave sebagai recipe_id.
             item_id: item.target_id.toString(),
             pemakaian: item.pemakaian.toString(),
           };
@@ -261,7 +263,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           return {
             item_id: item.target_id.toString(),
             stok_awal: item.stok_awal.toString(),
-            // Gunakan (item as any) untuk mencegah error TypeScript merah
+            // Pastikan stok_masuk bernilai string angka yang valid, default "0"
             stok_masuk: (item as any).stok_masuk ? (item as any).stok_masuk.toString() : "0",
           };
         }

@@ -162,11 +162,13 @@ class StokHarianDapurController extends Controller
                 );
 
                 // 🔥 REM PENGAMAN: Hanya tarik otomatis JIKA hari ini BELUM ADA TRANSAKSI 🔥
+                /*
                 if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
                     $mentah->stok_awal = $stokKemarin;
                     $mentah->stok_akhir = $stokKemarin;
                     $mentah->save();
                 }
+                */
             }
         }
 
@@ -314,7 +316,7 @@ class StokHarianDapurController extends Controller
         $request->validate([
             'tanggal' => 'required|date',
             'items'   => 'required|array',
-            'items.*.item_id'   => 'required|exists:items,id',
+            'items.*.item_id'   => 'required|exists:items,id', // Harus exists:items, bukan recipes
             'items.*.stok_awal' => 'required|numeric|min:0'
         ]);
 
@@ -323,7 +325,7 @@ class StokHarianDapurController extends Controller
                 foreach ($request->items as $row) {
                     $itemId = $row['item_id'];
                     $awal   = (float)$row['stok_awal'];
-                    $masuk  = (float)($row['stok_masuk'] ?? 0);
+                    $masuk  = (float)($row['stok_masuk'] ?? 0); // Ambil stok_masuk dengan aman
 
                     $mentah = StokHarianDapurMentah::firstOrNew([
                         'item_id' => $itemId,
@@ -332,11 +334,11 @@ class StokHarianDapurController extends Controller
 
                     $mentah->stok_awal = $awal;
                     $mentah->stok_masuk = $masuk;
-                    // Hitung stok akhir mentah
+                    // Hitung stok akhir mentah (Tersisa = Awal + Masuk - Keluar)
                     $mentah->stok_akhir = ($awal + $masuk) - (float)$mentah->stok_keluar;
                     $mentah->save();
 
-                    // Sinkronisasi ke porsi menu matang
+                    // Sinkronisasi otomatis ke porsi Menu (Matang)
                     $this->distributeStockToMenus($itemId, 0, $request->tanggal);
                 }
                 ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Input Mentah Dapur', 'description' => "Input borongan stok mentah dapur"]);
