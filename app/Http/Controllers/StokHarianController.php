@@ -98,7 +98,7 @@ class StokHarianController extends Controller
                         'id'         => $s->item_id,
                         'nama'       => $s->item->nama,
                         'satuan'     => $s->unit,
-                        'stok_awal'  => (float)$s->stok_awal, // Pastikan jadi angka
+                        'stok_awal'  => (float)$s->stok_akhir, // Pastikan jadi angka
                         'tersisa'    => (float)$s->stok_akhir,
                         'pemakaian'  => (float)$s->stok_keluar
                     ]);
@@ -110,7 +110,7 @@ class StokHarianController extends Controller
                         'id'         => $s->item_id,
                         'nama'       => $s->item->nama,
                         'satuan'     => $s->unit,
-                        'stok_awal'  => (float)$s->stok_awal,
+                        'stok_awal'  => (float)$s->stok_akhir,
                         'tersisa'    => (float)$s->stok_akhir
                     ]);
             }
@@ -171,11 +171,13 @@ class StokHarianController extends Controller
                 );
 
                 // 🔥 REM PENGAMAN MENTAH BAR 🔥
+                /*
                 if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
                     $mentah->stok_awal = $stokKemarin;
                     $mentah->stok_akhir = $stokKemarin;
                     $mentah->save();
                 }
+                    */
             }
         }
 
@@ -255,6 +257,24 @@ class StokHarianController extends Controller
                         ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]
                     );
 
+                    $totalTersedia = (float)$menu->stok_awal + (float)$menu->stok_masuk;
+                    $currentKeluar = (float)$menu->stok_keluar;
+                    $sisaStokSaatIni = (float)$menu->stok_akhir;
+
+                    // Aturan 1: Kunci total jika sisa sudah mencapai 5 atau kurang
+                    if ($sisaStokSaatIni <= 5) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'pemakaian' => "Stok '{$item->nama}' menipis (Sisa: {$sisaStokSaatIni}). Tidak bisa input! Minta Supervisor input Stok Masuk dahulu."
+                        ]);
+                    }
+
+                    // Aturan 2: Jaga-jaga jika stok 10 tapi staf maksa input 15
+                    if ($delta > $sisaStokSaatIni) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'pemakaian' => "Stok '{$item->nama}' tidak cukup! Sisa: {$sisaStokSaatIni}. Anda input: {$delta}."
+                        ]);
+                    }
+
                     // --- PROSES SIMPAN DATA (Kaku & Matematis) ---
                     $currentKeluar = (float)$menu->stok_keluar;
                     $menu->stok_keluar = $currentKeluar + $delta;
@@ -292,6 +312,8 @@ class StokHarianController extends Controller
 
             return back()->with('success', 'Berhasil! Data tersimpan dan card tertutup.');
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e; // 🔥 WAJIB ADA: Lempar pesan Satpam ke Pop-Up React!
         } catch (\Exception $e) {
             return back()->withErrors(['pemakaian' => 'Gagal simpan: ' . $e->getMessage()]);
         }

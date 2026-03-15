@@ -53,6 +53,8 @@ class VerifikasiStokController extends Controller
 
     // ==================== 🔽 SIMPAN KE DATABASE & SINKRONISASI 🔽 ====================
     // ==================== 🔽 SIMPAN KE DATABASE & EFEK DOMINO 🔽 ====================
+    // ==================== 🔽 SIMPAN KE DATABASE & EFEK DOMINO MURNI 🔽 ====================
+    // ==================== 🔽 SIMPAN KE DATABASE & EFEK DOMINO MURNI 🔽 ====================
     public function store(Request $request)
     {
         $tab = $request->input('tab', 'bar');
@@ -68,81 +70,92 @@ class VerifikasiStokController extends Controller
                         $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
                         $selisih = $stokFisik - $stokSistem;
 
+                        // 1. KOREKSI HARI VERIFIKASI (Hanya ubah keluar/masuk jika ada selisih)
                         if ($selisih != 0) {
-                            // 1. KOREKSI HARI VERIFIKASI
                             if ($selisih < 0) {
-                                // Jika fisik kurang, tambahkan ke pengeluaran/pemakaian
                                 $mentah->stok_keluar += abs($selisih);
                             } else {
-                                // Jika fisik lebih, tambahkan ke stok masuk
                                 $mentah->stok_masuk += $selisih;
                             }
-
-                            // PAKSA STOK AKHIR SAMA DENGAN FISIK
                             $mentah->stok_akhir = $stokFisik;
                             $mentah->save();
+                        }
 
-                            // Panggil sinkronisasi menu matang untuk hari ini
-                            $this->syncMenuBar($mentah->item_id, $mentah->tanggal);
+                        // Sinkronkan ke menu Bar
+                        $this->syncMenuBar($mentah->item_id, $mentah->tanggal);
 
-                            // 2. 🔥 EFEK DOMINO KE MASA DEPAN (Selasa - Sabtu, dst) 🔥
-                            // Terapkan selisih tersebut ke semua hari setelah tanggal verifikasi
-                            DB::table('stok_harian_mentah')
-                                ->where('item_id', $mentah->item_id)
-                                ->whereDate('tanggal', '>', $mentah->tanggal)
-                                ->update([
-                                    'stok_awal' => DB::raw("stok_awal + ($selisih)"),
-                                    'stok_akhir' => DB::raw("stok_akhir + ($selisih)")
-                                ]);
+                        // 2. 🔥 EFEK DOMINO MURNI (CASCADE) 🔥
+                        // DIKELUARKAN DARI SYARAT IF, AGAR SELALU JALAN SAAT DIKLIK SIMPAN!
+                        $startDate = Carbon::parse($mentah->tanggal)->addDay();
+                        $endDate = Carbon::now();
 
-                            // 3. Sinkronisasi Menu Matang untuk hari-hari masa depan tersebut
-                            $affectedDates = DB::table('stok_harian_mentah')
-                                ->where('item_id', $mentah->item_id)
-                                ->whereDate('tanggal', '>', $mentah->tanggal)
-                                ->pluck('tanggal');
+                        $stokEstafet = $stokFisik; // Bawa stok fisik terbaru (misal: 17)
 
-                            foreach($affectedDates as $affectedDate) {
-                                $this->syncMenuBar($mentah->item_id, $affectedDate);
-                            }
+                        for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
+                            $currentDateStr = $date->toDateString();
+
+                            // Cari atau Buat Jembatan
+                            $hariIni = StokHarianMentah::firstOrCreate(
+                                ['item_id' => $mentah->item_id, 'tanggal' => $currentDateStr],
+                                ['stok_masuk' => 0, 'stok_keluar' => 0, 'unit' => $mentah->unit]
+                            );
+
+                            // Timpa Stok Awal dengan estafet dari hari sebelumnya
+                            $hariIni->stok_awal = $stokEstafet;
+
+                            // Hitung ulang Stok Akhir
+                            $hariIni->stok_akhir = ($hariIni->stok_awal + $hariIni->stok_masuk) - $hariIni->stok_keluar;
+                            $hariIni->save();
+
+                            // Sinkronkan ke menu matang di hari tersebut
+                            $this->syncMenuBar($mentah->item_id, $currentDateStr);
+
+                            // Jadikan stok akhir hari ini sebagai estafet untuk besok
+                            $stokEstafet = $hariIni->stok_akhir;
                         }
                     }
                 } else {
-                    // LOGIKA YANG SAMA UNTUK DAPUR
+                    // LOGIKA EFEK DOMINO UNTUK DAPUR
                     $mentah = StokHarianDapurMentah::find($id);
                     if ($mentah) {
                         $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
                         $selisih = $stokFisik - $stokSistem;
 
+                        // 1. KOREKSI HARI VERIFIKASI (Hanya ubah keluar/masuk jika ada selisih)
                         if ($selisih != 0) {
                             if ($selisih < 0) {
                                 $mentah->stok_keluar += abs($selisih);
                             } else {
                                 $mentah->stok_masuk += $selisih;
                             }
-
-                            // PAKSA STOK AKHIR SAMA DENGAN FISIK
                             $mentah->stok_akhir = $stokFisik;
                             $mentah->save();
+                        }
 
-                            $this->syncMenuDapur($mentah->item_id, $mentah->tanggal);
+                        $this->syncMenuDapur($mentah->item_id, $mentah->tanggal);
 
-                            // 🔥 EFEK DOMINO DAPUR 🔥
-                            DB::table('stok_harian_dapur_mentah')
-                                ->where('item_id', $mentah->item_id)
-                                ->whereDate('tanggal', '>', $mentah->tanggal)
-                                ->update([
-                                    'stok_awal' => DB::raw("stok_awal + ($selisih)"),
-                                    'stok_akhir' => DB::raw("stok_akhir + ($selisih)")
-                                ]);
+                        // 2. 🔥 EFEK DOMINO MURNI DAPUR 🔥
+                        // DIKELUARKAN DARI SYARAT IF, AGAR SELALU JALAN SAAT DIKLIK SIMPAN!
+                        $startDate = Carbon::parse($mentah->tanggal)->addDay();
+                        $endDate = Carbon::now();
 
-                            $affectedDates = DB::table('stok_harian_dapur_mentah')
-                                ->where('item_id', $mentah->item_id)
-                                ->whereDate('tanggal', '>', $mentah->tanggal)
-                                ->pluck('tanggal');
+                        $stokEstafet = $stokFisik;
 
-                            foreach($affectedDates as $affectedDate) {
-                                $this->syncMenuDapur($mentah->item_id, $affectedDate);
-                            }
+                        for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
+                            $currentDateStr = $date->toDateString();
+
+                            $hariIni = StokHarianDapurMentah::firstOrCreate(
+                                ['item_id' => $mentah->item_id, 'tanggal' => $currentDateStr],
+                                ['stok_masuk' => 0, 'stok_keluar' => 0, 'unit' => $mentah->unit]
+                            );
+
+                            $hariIni->stok_awal = $stokEstafet;
+                            $hariIni->stok_akhir = ($hariIni->stok_awal + $hariIni->stok_masuk) - $hariIni->stok_keluar;
+                            $hariIni->save();
+
+                            $this->syncMenuDapur($mentah->item_id, $currentDateStr);
+
+                            $stokEstafet = $hariIni->stok_akhir;
                         }
                     }
                 }

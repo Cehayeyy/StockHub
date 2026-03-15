@@ -40,15 +40,27 @@ class UserController extends Controller
             default => $role,
         };
 
-        $lastUser = User::where('role', $role)
+        // 🔥 PERBAIKAN: Gunakan DB::table untuk menembus Soft Delete
+        // sehingga sistem bisa melihat username yang sudah dihapus sekalipun.
+        $usernames = \Illuminate\Support\Facades\DB::table('users')
+            ->where('role', $role)
             ->where('username', 'like', $prefix . '%')
-            ->orderBy('id', 'desc')
-            ->first();
+            ->pluck('username');
 
-        $nextNumber = 1;
-        if ($lastUser && preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/i', $lastUser->username, $m)) {
-            $nextNumber = ((int) $m[1]) + 1;
+        $maxNumber = 0;
+
+        // Looping untuk mencari angka paling besar (Tertinggi)
+        foreach ($usernames as $username) {
+            if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/i', $username, $m)) {
+                $num = (int) $m[1];
+                if ($num > $maxNumber) {
+                    $maxNumber = $num;
+                }
+            }
         }
+
+        // Angka selanjutnya adalah angka terbesar + 1
+        $nextNumber = $maxNumber + 1;
 
         return $prefix . $nextNumber;
     }

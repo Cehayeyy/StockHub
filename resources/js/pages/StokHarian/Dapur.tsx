@@ -159,6 +159,18 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // =======================================================
+  // 🔥 KODE TAMBAHAN: POP-UP PERINGATAN (SATPAM) 🔥
+  // =======================================================
+  useEffect(() => {
+    // Jika ada pesan error (dari Controller/Satpam) dan modal sedang terbuka
+    if (errorMessage && show) {
+      // Tampilkan sebagai Pop-Up Alert di tengah layar
+      alert("⚠️ PERINGATAN SISTEM DAPUR:\n\n" + errorMessage);
+    }
+  }, [errorMessage, show]);
+  // =======================================================
+
   useEffect(() => {
     if (show) {
       setItems([

@@ -90,7 +90,7 @@ class StokHarianDapurController extends Controller
                     'recipe_id'  => $s->recipe_id,
                     'nama'       => $s->recipe->name,
                     'satuan'     => $s->unit,
-                    'stok_awal'  => (float)$s->stok_awal,
+                    'stok_awal'  => (float)$s->stok_akhir,
                     'tersisa'    => (float)$s->stok_akhir,
                     'pemakaian'  => (float)$s->stok_keluar
                 ]);
@@ -99,7 +99,7 @@ class StokHarianDapurController extends Controller
             $inputableMenus = StokHarianDapurMentah::with('item')
                 ->whereDate('tanggal', $tanggal)->get()
                 ->map(fn ($s) => [
-                    'id' => $s->item_id, 'nama' => $s->item->nama, 'stok_awal' => (float)$s->stok_awal
+                    'id' => $s->item_id, 'nama' => $s->item->nama, 'stok_awal' => (float)$s->stok_akhir
                 ]);
         }
     }
@@ -203,11 +203,13 @@ class StokHarianDapurController extends Controller
             );
 
             // 🔥 REM PENGAMAN MENU DAPUR 🔥
+            /*
             if ($menu->stok_masuk == 0 && $menu->stok_keluar == 0 && $menu->stok_awal != $stokAwalFixed) {
                 $menu->stok_awal = $stokAwalFixed;
                 $menu->stok_akhir = $stokAwalFixed;
                 $menu->save();
             }
+                */
         }
     }
 
@@ -241,6 +243,27 @@ class StokHarianDapurController extends Controller
                         ['recipe_id' => $recipeId, 'tanggal' => $tanggal],
                         ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]
                     );
+
+                    // ========================================================
+                    // 🔥 KODE SATPAM V2: KUNCI STOK MINIMUM DAPUR 🔥
+                    // ========================================================
+                    // KUNCI UTAMA: Satpam melihat sisa botol/bahan aslinya!
+                    $sisaStokSaatIni = (float)$menu->stok_akhir;
+                    $namaMenu = $recipe ? $recipe->name : 'Menu';
+
+                    // Aturan 1: Kunci total jika sisa sudah mencapai 5 atau kurang
+                    if ($sisaStokSaatIni <= 5) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'pemakaian' => "Stok '{$namaMenu}' menipis (Sisa: {$sisaStokSaatIni}). Tidak bisa input! Minta Supervisor input Stok Masuk dahulu."
+                        ]);
+                    }
+
+                    // Aturan 2: Jaga-jaga jika stok 10 tapi staf maksa input 15
+                    if ($delta > $sisaStokSaatIni) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'pemakaian' => "Stok '{$namaMenu}' tidak cukup! Sisa: {$sisaStokSaatIni}. Anda input: {$delta}."
+                        ]);
+                    }
 
                     // --- PROSES SIMPAN DATA (Matematis) ---
                     $currentKeluar = (float)$menu->stok_keluar;
@@ -278,6 +301,9 @@ class StokHarianDapurController extends Controller
 
             return back()->with('success', 'Berhasil! Data dapur tersimpan dan card tertutup.');
 
+        // 🔥 WAJIB ADA: Penangkap Error untuk Pop-up React Dapur 🔥
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return back()->withErrors(['pemakaian' => 'Gagal simpan: ' . $e->getMessage()]);
         }
