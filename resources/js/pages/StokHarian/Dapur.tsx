@@ -157,19 +157,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
   ]);
 
   const [processing, setProcessing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // =======================================================
-  // 🔥 KODE TAMBAHAN: POP-UP PERINGATAN (SATPAM) 🔥
-  // =======================================================
-  useEffect(() => {
-    // Jika ada pesan error (dari Controller/Satpam) dan modal sedang terbuka
-    if (errorMessage && show) {
-      // Tampilkan sebagai Pop-Up Alert di tengah layar
-      alert("⚠️ PERINGATAN SISTEM DAPUR:\n\n" + errorMessage);
-    }
-  }, [errorMessage, show]);
-  // =======================================================
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (show) {
@@ -184,7 +172,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           selectedItemInfo: null,
         }
       ]);
-      setErrorMessage(null);
+      setWarningMessage(null);
     }
   }, [show, tanggal]);
 
@@ -239,7 +227,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(null);
+    setWarningMessage(null);
 
     const itemsToSubmit = items
       .filter(item => {
@@ -268,7 +256,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
       });
 
     if (itemsToSubmit.length === 0) {
-      setErrorMessage(tab === "menu" ? "Isi pemakaian menu!" : "Isi stok awal bahan!");
+      setWarningMessage(tab === "menu" ? "Isi pemakaian menu!" : "Isi stok awal bahan!");
       return;
     }
 
@@ -290,7 +278,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
       onError: (errors) => {
         setProcessing(false);
         const firstError = Object.values(errors)[0];
-        setErrorMessage(firstError as string || "Gagal menyimpan.");
+        setWarningMessage(firstError as string || "Gagal menyimpan.");
       },
       onFinish: () => setProcessing(false)
     });
@@ -316,33 +304,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
         <h3 className="font-bold text-lg text-center mb-6">
           Input Data Dapur ({tab === "menu" ? "Menu" : "Bahan Mentah"})
         </h3>
-
-        {/* Error Popup */}
-        <AnimatePresence>
-          {errorMessage && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="bg-red-50 border border-red-300 rounded-2xl p-4 flex items-start gap-3 mb-4"
-            >
-              <div className="flex-shrink-0 mt-0.5">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-red-700">Peringatan</p>
-                <p className="text-sm text-red-600 mt-1">{errorMessage}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setErrorMessage(null)}
-                className="flex-shrink-0 text-red-400 hover:text-red-600 transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <form onSubmit={submit} className="space-y-6">
           <div>
@@ -463,6 +424,55 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           </div>
         </form>
       </motion.div>
+
+      <AnimatePresence>
+        {warningMessage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 10, opacity: 0 }}
+              className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-red-100 p-6"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-red-700">Peringatan Sistem Dapur</p>
+                    <p className="text-xs text-red-500">Validasi stok harian</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWarningMessage(null)}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="mt-4 text-sm text-gray-700 leading-relaxed">{warningMessage}</p>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setWarningMessage(null)}
+                  className="px-5 py-2 rounded-full bg-[#D9A978] text-white font-bold text-sm hover:bg-[#C99968] transition"
+                >
+                  Mengerti
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
