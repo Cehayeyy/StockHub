@@ -147,37 +147,35 @@ class StokHarianController extends Controller
     private function ensureStokExists($tanggal)
     {
         $userId = Auth::id();
-        $kemarin = Carbon::parse($tanggal)->subDay()->toDateString();
 
         // =========================================================================
         // 1. GENERATE & SINKRONISASI AMAN STOK MENTAH BAR
         // =========================================================================
         $recipes = Recipe::where('division', 'bar')->get();
-        $ingredientIds = collect();
-        // KODE BARU (Lebih sakti untuk Hosting):
         $allIngredients = $recipes->pluck('ingredients')->flatten(1);
         $ingredientIds = $allIngredients->pluck('item_id')->unique();
 
-        foreach ($ingredientIds->unique() as $itemId) {
+        foreach ($ingredientIds as $itemId) {
+            if (!$itemId) continue;
             $itemInfo = Item::find($itemId);
             if ($itemInfo) {
-                $stokKemarin = StokHarianMentah::where('item_id', $itemId)
-                                ->where('tanggal', $kemarin)
-                                ->value('stok_akhir') ?? 0;
+                $lastMentah = StokHarianMentah::where('item_id', $itemId)
+                                ->where('tanggal', '<', $tanggal)
+                                ->orderBy('tanggal', 'desc')
+                                ->first();
+                $stokKemarin = $lastMentah ? (float)$lastMentah->stok_akhir : 0;
 
                 $mentah = StokHarianMentah::firstOrCreate(
                     ['item_id' => $itemId, 'tanggal' => $tanggal],
                     ['stok_awal' => $stokKemarin, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => $stokKemarin, 'unit' => $itemInfo->satuan ?? 'unit']
                 );
 
-                // 🔥 REM PENGAMAN MENTAH BAR 🔥
-                /*
-                if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
+                // 🔥 LOGIKA ANTI-GHOST BARU 🔥
+                if ($mentah->stok_awal == 0 && $stokKemarin > 0 && $mentah->stok_masuk == 0 && $mentah->stok_keluar == 0) {
                     $mentah->stok_awal = $stokKemarin;
                     $mentah->stok_akhir = $stokKemarin;
                     $mentah->save();
                 }
-                    */
             }
         }
 
@@ -186,40 +184,41 @@ class StokHarianController extends Controller
         // =========================================================================
         foreach ($recipes as $recipe) {
             $menuItem = Item::where('nama', $recipe->name)->where('division', 'bar')->first();
-
             if ($menuItem) {
-                $sisaMenuKemarin = StokHarianMenu::where('item_id', $menuItem->id)
-                                    ->where('tanggal', $kemarin)
-                                    ->value('stok_akhir') ?? 0;
+                $lastMenu = StokHarianMenu::where('item_id', $menuItem->id)
+                                ->where('tanggal', '<', $tanggal)
+                                ->orderBy('tanggal', 'desc')
+                                ->first();
+                $sisaMenuKemarin = $lastMenu ? (float)$lastMenu->stok_akhir : 0;
 
                 $kapasitasAwalPagi = 0;
                 if (is_array($recipe->ingredients)) {
                     $minCap = 999999;
                     foreach ($recipe->ingredients as $ing) {
-                        $raw = StokHarianMentah::where('item_id', $ing['item_id'])->where('tanggal', $tanggal)->first();
+                        $ingId = $ing['item_id'] ?? null;
+                        $amt = $ing['amount'] ?? 0;
+                        if (!$ingId || $amt == 0) continue;
+
+                        $raw = StokHarianMentah::where('item_id', $ingId)->where('tanggal', $tanggal)->first();
                         if ($raw) {
-                            $cap = floor($raw->stok_awal / ($ing['amount'] ?? 1));
+                            $cap = floor($raw->stok_awal / $amt);
                             $minCap = min($minCap, $cap);
                         } else { $minCap = 0; break; }
                     }
                     $kapasitasAwalPagi = ($minCap === 999999) ? 0 : $minCap;
                 }
 
-                if (is_array($recipe->ingredients) && count($recipe->ingredients) > 0) {
-                    $stokAwalFixed = $kapasitasAwalPagi;
-                } else {
-                    $stokAwalFixed = $sisaMenuKemarin;
-                }
+                $stokAwalFixed = (is_array($recipe->ingredients) && count($recipe->ingredients) > 0) ? $kapasitasAwalPagi : $sisaMenuKemarin;
 
                 $menu = StokHarianMenu::firstOrCreate(
                     ['item_id' => $menuItem->id, 'tanggal' => $tanggal],
                     ['stok_awal' => $stokAwalFixed, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => $stokAwalFixed, 'unit' => $menuItem->satuan ?? 'porsi', 'user_id' => $userId, 'is_submitted' => false]
                 );
 
-                // 🔥 REM PENGAMAN MENU BAR 🔥
-                if ($menu->stok_masuk == 0 && $menu->stok_keluar == 0 && $menu->stok_awal != $stokAwalFixed) {
+                // 🔥 MENU SELALU DI-SYNC ULANG 🔥
+                if ($menu->stok_awal != $stokAwalFixed) {
                     $menu->stok_awal = $stokAwalFixed;
-                    $menu->stok_akhir = $stokAwalFixed;
+                    $menu->stok_akhir = ($stokAwalFixed + $menu->stok_masuk) - $menu->stok_keluar;
                     $menu->save();
                 }
             }

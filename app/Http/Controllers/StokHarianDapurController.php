@@ -138,37 +138,37 @@ class StokHarianDapurController extends Controller
     private function ensureStokExists($tanggal)
     {
         $userId = Auth::id();
-        $kemarin = Carbon::parse($tanggal)->subDay()->toDateString();
 
         // =========================================================================
         // 1. GENERATE & SINKRONISASI AMAN STOK MENTAH DAPUR
         // =========================================================================
         $recipes = Recipe::where('division', 'dapur')->get();
-        $ingredientIds = collect();
-        // Ganti blok looping ingredients di Dapur dengan ini:
         $allIngredients = $recipes->pluck('ingredients')->flatten(1);
         $ingredientIds = $allIngredients->pluck('item_id')->unique();
 
-        foreach ($ingredientIds->unique() as $itemId) {
+        foreach ($ingredientIds as $itemId) {
+            if (!$itemId) continue;
             $itemInfo = Item::find($itemId);
             if ($itemInfo) {
-                $stokKemarin = StokHarianDapurMentah::where('item_id', $itemId)
-                                ->where('tanggal', $kemarin)
-                                ->value('stok_akhir') ?? 0;
+                // Cari rekam jejak TERAKHIR sebelum tanggal ini (Aman meski lompat hari libur)
+                $lastMentah = StokHarianDapurMentah::where('item_id', $itemId)
+                                ->where('tanggal', '<', $tanggal)
+                                ->orderBy('tanggal', 'desc')
+                                ->first();
+                $stokKemarin = $lastMentah ? (float)$lastMentah->stok_akhir : 0;
 
                 $mentah = StokHarianDapurMentah::firstOrCreate(
                     ['item_id' => $itemId, 'tanggal' => $tanggal],
                     ['stok_awal' => $stokKemarin, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => $stokKemarin, 'unit' => $itemInfo->satuan ?? 'unit']
                 );
 
-                // 🔥 REM PENGAMAN: Hanya tarik otomatis JIKA hari ini BELUM ADA TRANSAKSI 🔥
-                /*
-                if ($mentah->stok_masuk == 0 && $mentah->stok_keluar == 0 && $mentah->stok_awal != $stokKemarin) {
+                // 🔥 LOGIKA ANTI-GHOST BARU: Sangat simpel dan akurat 🔥
+                // Jika di layar terbaca 0, padahal sisa kemarin ada isinya, dan belum ada transaksi = ITU PASTI GHOST (Nyasar). Maka RESET ke sisa kemarin.
+                if ($mentah->stok_awal == 0 && $stokKemarin > 0 && $mentah->stok_masuk == 0 && $mentah->stok_keluar == 0) {
                     $mentah->stok_awal = $stokKemarin;
                     $mentah->stok_akhir = $stokKemarin;
                     $mentah->save();
                 }
-                */
             }
         }
 
@@ -176,42 +176,43 @@ class StokHarianDapurController extends Controller
         // 2. GENERATE & SINKRONISASI AMAN STOK MENU DAPUR
         // =========================================================================
         foreach ($recipes as $recipe) {
-            $sisaMenuKemarin = StokHarianDapurMenu::where('recipe_id', $recipe->id)
-                                ->where('tanggal', $kemarin)
-                                ->value('stok_akhir') ?? 0;
+            $lastMenu = StokHarianDapurMenu::where('recipe_id', $recipe->id)
+                            ->where('tanggal', '<', $tanggal)
+                            ->orderBy('tanggal', 'desc')
+                            ->first();
+            $sisaMenuKemarin = $lastMenu ? (float)$lastMenu->stok_akhir : 0;
 
             $kapasitasAwalPagi = 0;
             if (is_array($recipe->ingredients)) {
                 $minCap = 999999;
                 foreach ($recipe->ingredients as $ing) {
-                    $raw = StokHarianDapurMentah::where('item_id', $ing['item_id'])->where('tanggal', $tanggal)->first();
+                    $ingId = $ing['item_id'] ?? null;
+                    $amt = $ing['amount'] ?? 0;
+                    if (!$ingId || $amt == 0) continue;
+
+                    $raw = StokHarianDapurMentah::where('item_id', $ingId)->where('tanggal', $tanggal)->first();
                     if ($raw) {
-                        $cap = floor($raw->stok_awal / ($ing['amount'] ?? 1));
+                        $cap = floor($raw->stok_awal / $amt);
                         $minCap = min($minCap, $cap);
                     } else { $minCap = 0; break; }
                 }
                 $kapasitasAwalPagi = ($minCap === 999999) ? 0 : $minCap;
             }
 
-            if (is_array($recipe->ingredients) && count($recipe->ingredients) > 0) {
-                $stokAwalFixed = $kapasitasAwalPagi;
-            } else {
-                $stokAwalFixed = $sisaMenuKemarin;
-            }
+            $stokAwalFixed = (is_array($recipe->ingredients) && count($recipe->ingredients) > 0) ? $kapasitasAwalPagi : $sisaMenuKemarin;
 
             $menu = StokHarianDapurMenu::firstOrCreate(
                 ['recipe_id' => $recipe->id, 'tanggal' => $tanggal],
                 ['stok_awal' => $stokAwalFixed, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => $stokAwalFixed, 'unit' => 'porsi', 'user_id' => $userId, 'is_submitted' => false]
             );
 
-            // 🔥 REM PENGAMAN MENU DAPUR 🔥
-            /*
-            if ($menu->stok_masuk == 0 && $menu->stok_keluar == 0 && $menu->stok_awal != $stokAwalFixed) {
+            // 🔥 LOGIKA MENU: Karena Awal Menu dihitung dari Mentah (bukan diedit manual manusia),
+            // maka ALWAYS SYNC (Selalu samakan dengan Mentah) tiap kali reload! 🔥
+            if ($menu->stok_awal != $stokAwalFixed) {
                 $menu->stok_awal = $stokAwalFixed;
-                $menu->stok_akhir = $stokAwalFixed;
+                $menu->stok_akhir = ($stokAwalFixed + $menu->stok_masuk) - $menu->stok_keluar;
                 $menu->save();
             }
-                */
         }
     }
 
@@ -350,6 +351,52 @@ class StokHarianDapurController extends Controller
         }
     }
 
+    public function updateMenu(Request $request, $id)
+    {
+        $menu = StokHarianDapurMenu::with('recipe')->findOrFail($id);
+        $newKeluar = $request->input('stok_keluar') ?? $request->input('pemakaian') ?? $menu->stok_keluar;
+
+        // --- 🔥 KODE SATPAM (VALIDASI UPDATE) 🔥 ---
+        $stokTersedia = $menu->stok_awal + $menu->stok_masuk;
+
+        if ($newKeluar > $stokTersedia) {
+             throw \Illuminate\Validation\ValidationException::withMessages([
+                'pemakaian' => "Gagal Update! Stok Hanya: $stokTersedia. Anda mencoba input keluar: $newKeluar"
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $menu, $newKeluar) {
+            $delta = $newKeluar - $menu->stok_keluar;
+
+            $menu->stok_keluar = $newKeluar;
+            $menu->stok_akhir = $menu->stok_awal + $menu->stok_masuk - $newKeluar;
+            $menu->is_submitted = 1;
+            $menu->save();
+
+            if ($delta != 0) {
+                $recipe = $menu->recipe;
+                if ($recipe && is_array($recipe->ingredients)) {
+                    foreach ($recipe->ingredients as $ing) {
+                        $qty = $delta * (float)($ing['amount'] ?? 0);
+                        if ($qty == 0) continue;
+
+                        $mentah = StokHarianDapurMentah::where(['item_id' => $ing['item_id'], 'tanggal' => $menu->tanggal])->first();
+                        if ($mentah) {
+                            $mentah->update([
+                                'stok_keluar' => max(0, $mentah->stok_keluar + $qty),
+                                'stok_akhir' => max(0, $mentah->stok_awal + $mentah->stok_masuk - ($mentah->stok_keluar + $qty))
+                            ]);
+                            $this->distributeStockToMenus($mentah->item_id, 0, $menu->tanggal);
+                        }
+                    }
+                }
+            }
+            ActivityLog::create(['user_id' => Auth::id(), 'activity' => 'Update Menu Dapur', 'description' => "Update penjualan '{$menu->recipe->name}'. Terjual: {$newKeluar}."]);
+        });
+
+        return back()->with('success', 'Data pemakaian diperbarui.');
+    }
+    
     public function updateMentah(Request $request, $id)
     {
         // 1. Validasi input
