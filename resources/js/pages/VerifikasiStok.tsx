@@ -148,10 +148,13 @@ export default function VerifikasiStok() {
   const handleExportAndSave = () => {
     // 1. Siapkan data final: Jika Owner tidak mengisi, anggap stok fisik = stok sistem
     const finalFisikData: Record<number, number> = {};
+    const finalSistemData: Record<number, number> = {};
 
     items.forEach(item => {
       // Jika ada input manual pakai itu, jika kosong pakai angka sistem (biar tidak jadi 0)
       finalFisikData[item.id] = physicalStocks[item.id] ?? item.stok_sistem;
+      // Snapshot stok sistem sebelum proses simpan dijalankan
+      finalSistemData[item.id] = item.stok_sistem;
     });
 
     setIsProcessing(true);
@@ -171,6 +174,7 @@ export default function VerifikasiStok() {
                 tab,
                 tanggal: tanggal_data,
                 fisik: JSON.stringify(finalFisikData),
+              sistem: JSON.stringify(finalSistemData),
                 catatan: JSON.stringify(notes)
             });
             window.location.href = route('verifikasi-stok.export') + '?' + params.toString();

@@ -8,10 +8,12 @@ use App\Models\StokHarianMentah;
 use App\Models\StokHarianDapurMentah;
 use App\Models\StokHarianMenu;
 use App\Models\StokHarianDapurMenu;
+use App\Models\ActivityLog;
 use App\Models\Recipe;
 use App\Models\Item;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class VerifikasiStokController extends Controller
 {
@@ -58,6 +60,7 @@ class VerifikasiStokController extends Controller
     public function store(Request $request)
     {
         $tab = $request->input('tab', 'bar');
+        $tanggal = $request->input('tanggal') ?: Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $fisikData = $request->input('fisik', []);
 
         DB::transaction(function () use ($tab, $fisikData) {
@@ -161,6 +164,17 @@ class VerifikasiStokController extends Controller
                 }
             }
         });
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'activity' => 'Verifikasi Stok',
+            'description' => sprintf(
+                'Verifikasi stok opname %s pada %s untuk %d item.',
+                $tab === 'bar' ? 'bar' : 'dapur',
+                Carbon::parse($tanggal)->format('Y-m-d'),
+                count($fisikData)
+            ),
+        ]);
 
         return back()->with('success', 'Stok berhasil diverifikasi dan disinkronkan ke semua hari!');
     }
@@ -268,6 +282,7 @@ class VerifikasiStokController extends Controller
 
         // Tangkap data fisik & catatan yang dikirim dari React
         $fisikData = json_decode($request->get('fisik', '{}'), true);
+        $sistemData = json_decode($request->get('sistem', '{}'), true);
         $catatanData = json_decode($request->get('catatan', '{}'), true);
 
         $items = $tab === 'bar'
@@ -277,7 +292,7 @@ class VerifikasiStokController extends Controller
         $divisionName = $tab === 'bar' ? 'Bar' : 'Dapur';
         $filename = "verifikasi-stok-{$tab}-{$mondayDate}.xls";
 
-        $html = $this->generateExcelHTML($items, $mondayDate, $divisionName, $fisikData, $catatanData);
+        $html = $this->generateExcelHTML($items, $mondayDate, $divisionName, $fisikData, $catatanData, $sistemData);
 
         return response($html, 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
@@ -288,7 +303,7 @@ class VerifikasiStokController extends Controller
         ]);
     }
 
-    private function generateExcelHTML($items, $date, $division, $fisikData = [], $catatanData = [])
+    private function generateExcelHTML($items, $date, $division, $fisikData = [], $catatanData = [], $sistemData = [])
     {
         $formattedDate = Carbon::parse($date)->locale('id')->isoFormat('D MMMM YYYY');
 
@@ -319,12 +334,14 @@ class VerifikasiStokController extends Controller
         foreach ($items as $index => $item) {
             $namaItem = htmlspecialchars(optional($item->item)->nama ?? '-');
             $satuan = htmlspecialchars($item->unit ?? optional($item->item)->satuan ?? '-');
-            $stokSistem = $item->stok_akhir ?? 0;
+            // Gunakan snapshot stok sistem dari frontend agar tidak berubah setelah proses simpan sinkronisasi
+            $stokSistem = isset($sistemData[$item->id]) ? (float) $sistemData[$item->id] : ($item->stok_akhir ?? 0);
 
             // Membaca input fisik dari layar, jika kosong default ke stok sistem
             $stokFisik = isset($fisikData[$item->id]) ? $fisikData[$item->id] : $stokSistem;
             $selisih = $stokFisik - $stokSistem;
             $status = $selisih == 0 ? 'Sesuai' : ($selisih > 0 ? 'Lebih' : 'Kurang');
+            $selisihDisplay = $selisih > 0 ? '+' . $selisih : (string) $selisih;
             $catatan = !empty($catatanData[$item->id]) ? htmlspecialchars($catatanData[$item->id]) : '-';
 
             $html .= '<tr>';
@@ -333,7 +350,7 @@ class VerifikasiStokController extends Controller
             $html .= '<td class="text-center">' . $satuan . '</td>';
             $html .= '<td class="text-center">' . $stokSistem . '</td>';
             $html .= '<td class="text-center">' . $stokFisik . '</td>';
-            $html .= '<td class="text-center">' . $selisih . '</td>';
+            $html .= '<td class="text-center">' . $selisihDisplay . '</td>';
             $html .= '<td class="text-center">' . $status . '</td>';
             $html .= '<td>' . $catatan . '</td>';
             $html .= '</tr>';

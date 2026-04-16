@@ -39,6 +39,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
+    Route::middleware(['role:owner'])->group(function () {
+        Route::get('/dashboard/owner/report-stok-7-hari/pdf', [DashboardController::class, 'exportOwnerWeeklyStockPdf'])
+            ->name('dashboard.owner.stock-report.pdf');
+    });
+
     // ===========================
     // IZIN REVISI STOK
     // ===========================

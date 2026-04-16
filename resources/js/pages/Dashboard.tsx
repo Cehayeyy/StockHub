@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Box, Layers, Users, BookOpen, TrendingUp, AlertTriangle, CheckCircle2, Clock, ShieldCheck, X, Calendar, Timer, XCircle, UserCheck, UserX, ClipboardCheck, Activity, Monitor, Smartphone, Globe, Shield, Eye, LogIn, LogOut, BarChart3, UserCog, Crown } from "lucide-react";
+import { Box, Layers, Users, BookOpen, TrendingUp, AlertTriangle, CheckCircle2, Clock, ShieldCheck, X, Calendar, Timer, XCircle, UserCheck, UserX, ClipboardCheck, Activity, Monitor, Smartphone, Globe, Shield, Eye, LogIn, LogOut, BarChart3, UserCog, Crown, Download } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -484,10 +484,19 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#8B5E3C] rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
                   <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg sm:text-xl font-bold text-gray-800">Ringkasan Eksekutif</h3>
                   <p className="text-gray-500 text-xs sm:text-sm">Pemantauan & Analisis khusus Owner</p>
                 </div>
+                <a
+                  href={route('dashboard.owner.stock-report.pdf')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#8B5E3C] text-white text-xs sm:text-sm font-semibold hover:bg-[#6F4E37] transition"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Report 7 Hari (PDF)</span>
+                </a>
               </div>
 
               {/* Executive Stats Cards - RESPONSIVE */}

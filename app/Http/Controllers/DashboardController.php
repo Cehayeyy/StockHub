@@ -14,7 +14,10 @@ use App\Models\LoginHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class DashboardController extends Controller
 {
@@ -620,6 +623,221 @@ class DashboardController extends Controller
 
         // Fallback View
         return Inertia::render('DashboardStaff', $data);
+    }
+
+    public function exportOwnerWeeklyStockPdf(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || $user->role !== 'owner') {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $endDate = Carbon::today();
+        $startDate = $endDate->copy()->subDays(6);
+
+        $barMenuRows = DB::table('stok_harian_menu')
+            ->leftJoin('items', 'stok_harian_menu.item_id', '=', 'items.id')
+            ->leftJoin('users', 'stok_harian_menu.user_id', '=', 'users.id')
+            ->whereBetween('stok_harian_menu.tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+            ->selectRaw("
+                stok_harian_menu.tanggal as tanggal,
+                'Bar' as divisi,
+                'Menu' as jenis,
+                COALESCE(items.nama, '-') as nama_stok,
+                COALESCE(stok_harian_menu.unit, '-') as unit,
+                stok_harian_menu.stok_awal as stok_awal,
+                stok_harian_menu.stok_masuk as stok_masuk,
+                COALESCE(stok_harian_menu.pemakaian, stok_harian_menu.stok_keluar, 0) as stok_pemakaian,
+                stok_harian_menu.stok_akhir as stok_tersisa,
+                COALESCE(users.name, '-') as staff_input
+            ")
+            ->get();
+
+        $barMentahRows = DB::table('stok_harian_mentah')
+            ->leftJoin('items', 'stok_harian_mentah.item_id', '=', 'items.id')
+            ->whereBetween('stok_harian_mentah.tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+            ->selectRaw("
+                stok_harian_mentah.tanggal as tanggal,
+                'Bar' as divisi,
+                'Mentah' as jenis,
+                COALESCE(items.nama, '-') as nama_stok,
+                COALESCE(stok_harian_mentah.unit, '-') as unit,
+                stok_harian_mentah.stok_awal as stok_awal,
+                stok_harian_mentah.stok_masuk as stok_masuk,
+                COALESCE(stok_harian_mentah.stok_keluar, 0) as stok_pemakaian,
+                stok_harian_mentah.stok_akhir as stok_tersisa,
+                '-' as staff_input
+            ")
+            ->get();
+
+        $dapurMenuRows = DB::table('stok_harian_dapur_menu')
+            ->leftJoin('recipes', 'stok_harian_dapur_menu.recipe_id', '=', 'recipes.id')
+            ->leftJoin('users', 'stok_harian_dapur_menu.user_id', '=', 'users.id')
+            ->whereBetween('stok_harian_dapur_menu.tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+            ->selectRaw("
+                stok_harian_dapur_menu.tanggal as tanggal,
+                'Dapur' as divisi,
+                'Menu' as jenis,
+                COALESCE(recipes.name, '-') as nama_stok,
+                COALESCE(stok_harian_dapur_menu.unit, '-') as unit,
+                stok_harian_dapur_menu.stok_awal as stok_awal,
+                stok_harian_dapur_menu.stok_masuk as stok_masuk,
+                COALESCE(stok_harian_dapur_menu.stok_keluar, 0) as stok_pemakaian,
+                stok_harian_dapur_menu.stok_akhir as stok_tersisa,
+                COALESCE(users.name, '-') as staff_input
+            ")
+            ->get();
+
+        $dapurMentahRows = DB::table('stok_harian_dapur_mentah')
+            ->leftJoin('items', 'stok_harian_dapur_mentah.item_id', '=', 'items.id')
+            ->whereBetween('stok_harian_dapur_mentah.tanggal', [$startDate->toDateString(), $endDate->toDateString()])
+            ->selectRaw("
+                stok_harian_dapur_mentah.tanggal as tanggal,
+                'Dapur' as divisi,
+                'Mentah' as jenis,
+                COALESCE(items.nama, '-') as nama_stok,
+                COALESCE(stok_harian_dapur_mentah.unit, '-') as unit,
+                stok_harian_dapur_mentah.stok_awal as stok_awal,
+                stok_harian_dapur_mentah.stok_masuk as stok_masuk,
+                COALESCE(stok_harian_dapur_mentah.stok_keluar, 0) as stok_pemakaian,
+                stok_harian_dapur_mentah.stok_akhir as stok_tersisa,
+                '-' as staff_input
+            ")
+            ->get();
+
+        $reportRows = $barMenuRows
+            ->merge($barMentahRows)
+            ->merge($dapurMenuRows)
+            ->merge($dapurMentahRows)
+            ->sortBy(function ($row) {
+                return sprintf('%s|%s|%s|%s', $row->tanggal, $row->divisi, $row->jenis, $row->nama_stok);
+            })
+            ->values();
+
+        $dateRange = collect(range(0, 6))
+            ->map(fn (int $offset) => $startDate->copy()->addDays($offset)->toDateString());
+
+        $rowsByDate = $reportRows->groupBy('tanggal');
+
+        $normalizedRows = collect();
+        foreach ($dateRange as $date) {
+            $rowsOnDate = $rowsByDate->get($date, collect());
+
+            if ($rowsOnDate->isEmpty()) {
+                $placeholder = (object) [
+                    'tanggal' => $date,
+                    'divisi' => '-',
+                    'jenis' => '-',
+                    'nama_stok' => 'Tidak ada input stok pada tanggal ini',
+                    'unit' => '-',
+                    'stok_awal' => 0,
+                    'stok_masuk' => 0,
+                    'stok_pemakaian' => 0,
+                    'stok_tersisa' => 0,
+                    'staff_input' => '-',
+                    'is_placeholder' => true,
+                ];
+                $normalizedRows->push($placeholder);
+                continue;
+            }
+
+            foreach ($rowsOnDate as $row) {
+                $row->is_placeholder = false;
+                $normalizedRows->push($row);
+            }
+        }
+
+        $dailySummary = $dateRange->map(function ($date) use ($rowsByDate) {
+            $rowsOnDate = $rowsByDate->get($date, collect());
+            $validRows = $rowsOnDate->filter(function ($row) {
+                return !empty($row->nama_stok) && $row->nama_stok !== '-';
+            });
+
+            $uniqueStaff = $rowsOnDate
+                ->pluck('staff_input')
+                ->filter(fn ($staff) => !empty($staff) && $staff !== '-')
+                ->unique()
+                ->values();
+
+            return [
+                'tanggal' => $date,
+                'jumlah_baris' => $validRows->count(),
+                'jumlah_staff' => $uniqueStaff->count(),
+                'status' => $validRows->isNotEmpty() ? 'Ada Input' : 'Tidak Ada Input',
+            ];
+        })->values();
+
+        $mondayDatesInRange = collect(range(0, 6))
+            ->map(fn (int $offset) => $startDate->copy()->addDays($offset))
+            ->filter(fn (Carbon $date) => $date->isMonday())
+            ->map(fn (Carbon $date) => $date->toDateString())
+            ->values();
+
+        $mondayOpnameLogs = ActivityLog::with('user:id,name,role')
+            ->where('activity', 'Verifikasi Stok')
+            ->whereBetween('created_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
+            ->when($mondayDatesInRange->isNotEmpty(), function ($query) use ($mondayDatesInRange) {
+                $query->whereIn(DB::raw('DATE(created_at)'), $mondayDatesInRange->all());
+            })
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($log) {
+                $description = (string) ($log->description ?? '');
+                $descriptionLower = Str::lower($description);
+
+                $divisi = 'Tidak Diketahui';
+                if (Str::contains($descriptionLower, 'bar')) {
+                    $divisi = 'Bar';
+                } elseif (Str::contains($descriptionLower, 'dapur')) {
+                    $divisi = 'Dapur';
+                }
+
+                return [
+                    'waktu' => $log->created_at,
+                    'divisi' => $divisi,
+                    'staff' => $log->user?->name ?? '-',
+                    'keterangan' => $description,
+                ];
+            })
+            ->values();
+
+        $staffInputSummary = $normalizedRows
+            ->filter(fn ($row) => !empty($row->staff_input) && $row->staff_input !== '-')
+            ->groupBy('staff_input')
+            ->map(function ($rows, $staffName) {
+                return [
+                    'staff' => $staffName,
+                    'jumlah_input' => $rows->count(),
+                ];
+            })
+            ->sortByDesc('jumlah_input')
+            ->values();
+
+        $html = view('reports.owner-stock-seven-days', [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'generatedAt' => Carbon::now(),
+            'dailySummary' => $dailySummary,
+            'reportRows' => $normalizedRows,
+            'mondayOpnameLogs' => $mondayOpnameLogs,
+            'staffInputSummary' => $staffInputSummary,
+        ])->render();
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', false);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        $fileName = 'report_stok_7_hari_' . $endDate->format('Ymd') . '.pdf';
+
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
     }
 
     /**
