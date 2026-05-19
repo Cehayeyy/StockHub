@@ -65,6 +65,7 @@ export default function Dashboard() {
     staffBelumInput = [],
     totalStaff = 0,
     ownerData,
+    todayStockReport,
     stokAman = 0,
     stokDate,
     isStokFromPreviousDay = false,
@@ -566,6 +567,149 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                 </div>
               </div>
             </motion.div>
+
+            {/* Report Hari Ini (Stok Masuk & Terpakai) */}
+            {todayStockReport && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100"
+              >
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B5E3C]" />
+                      Report Hari Ini
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                      {new Date(todayStockReport.date + 'T00:00:00').toLocaleDateString('id-ID', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                  {/* Tabel Stok Masuk */}
+                  <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-3 sm:px-4 py-2 sm:py-3 bg-[#8B5E3C] border-b border-[#6F4E37]">
+                      <p className="text-sm font-semibold text-white">Stok Masuk</p>
+                      <p className="text-xs text-white/80">Bahan apa yang masuk hari ini</p>
+                    </div>
+
+                    {todayStockReport.rows &&
+                    todayStockReport.rows.some((r: any) => (r?.jenis ?? '') === 'Mentah' && (r?.masuk ?? 0) > 0) ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-[#F9F6F3]">
+                            <tr>
+                              <th className="text-left px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600">Divisi</th>
+                              <th className="text-left px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600">Nama</th>
+                              <th className="text-right px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600">Masuk</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {todayStockReport.rows
+                              .filter((r: any) => (r?.jenis ?? '') === 'Mentah' && (r?.masuk ?? 0) > 0)
+                              .map((r: any, idx: number) => (
+                                <tr
+                                  key={`masuk-${r.divisi}-${r.jenis}-${r.nama}-${idx}`}
+                                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} hover:bg-[#8B5E3C]/5 transition-colors`}
+                                >
+                                  <td className="px-3 sm:px-4 py-2 text-gray-700 whitespace-nowrap">{r.divisi}</td>
+                                  <td className="px-3 sm:px-4 py-2 text-gray-800">
+                                    <div className="font-medium">{r.nama}</div>
+                                    <div className="mt-0.5 flex flex-wrap gap-1.5 text-[11px] leading-4">
+                                      {r.jenis ? (
+                                        <span className="inline-flex items-center rounded-full border border-[#8B5E3C]/20 bg-[#8B5E3C]/10 px-2 py-0.5 font-medium text-[#8B5E3C]">
+                                          {r.jenis}
+                                        </span>
+                                      ) : null}
+                                      {r.staff && r.staff !== '-' ? (
+                                        <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 font-medium text-gray-600">
+                                          Input: {r.staff}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 sm:px-4 py-2 text-right font-semibold text-gray-800 whitespace-nowrap">
+                                    {r.masuk} <span className="text-xs text-gray-400 font-normal">{r.unit}</span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center">
+                        <p className="text-sm text-gray-600 font-medium">Belum ada stok masuk hari ini</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tabel Stok Pemakaian */}
+                  <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-3 sm:px-4 py-2 sm:py-3 bg-[#8B5E3C] border-b border-[#6F4E37]">
+                      <p className="text-sm font-semibold text-white">Stok Pemakaian</p>
+                      <p className="text-xs text-white/80">Bahan apa yang terpakai hari ini</p>
+                    </div>
+
+                    {todayStockReport.rows &&
+                    todayStockReport.rows.some((r: any) => (r?.jenis ?? '') === 'Menu' && (r?.terpakai ?? 0) > 0) ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-[#F9F6F3]">
+                            <tr>
+                              <th className="text-left px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600">Divisi</th>
+                              <th className="text-left px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600">Nama</th>
+                              <th className="text-right px-3 sm:px-4 py-2 text-xs font-semibold text-gray-600">Terpakai</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {todayStockReport.rows
+                              .filter((r: any) => (r?.jenis ?? '') === 'Menu' && (r?.terpakai ?? 0) > 0)
+                              .map((r: any, idx: number) => (
+                                <tr
+                                  key={`pakai-${r.divisi}-${r.jenis}-${r.nama}-${idx}`}
+                                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} hover:bg-[#8B5E3C]/5 transition-colors`}
+                                >
+                                  <td className="px-3 sm:px-4 py-2 text-gray-700 whitespace-nowrap">{r.divisi}</td>
+                                  <td className="px-3 sm:px-4 py-2 text-gray-800">
+                                    <div className="font-medium">{r.nama}</div>
+                                    <div className="mt-0.5 flex flex-wrap gap-1.5 text-[11px] leading-4">
+                                      {r.jenis ? (
+                                        <span className="inline-flex items-center rounded-full border border-[#8B5E3C]/20 bg-[#8B5E3C]/10 px-2 py-0.5 font-medium text-[#8B5E3C]">
+                                          {r.jenis}
+                                        </span>
+                                      ) : null}
+                                      {r.staff && r.staff !== '-' ? (
+                                        <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 font-medium text-gray-600">
+                                          Input: {r.staff}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 sm:px-4 py-2 text-right font-semibold text-gray-800 whitespace-nowrap">
+                                    {r.terpakai} <span className="text-xs text-gray-400 font-normal">{r.unit}</span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center">
+                        <p className="text-sm text-gray-600 font-medium">Belum ada pemakaian stok hari ini</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Grafik Aktivitas & Distribusi Pengguna - RESPONSIVE */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

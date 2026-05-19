@@ -14,6 +14,7 @@ use App\Models\LoginHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
@@ -599,6 +600,138 @@ class DashboardController extends Controller
                 'supervisorList' => $supervisorList,
                 'izinProcessedThisMonth' => $izinProcessedThisMonth,
                 'izinProcessedList' => $izinProcessedList,
+            ];
+        }
+
+        // ================= 7.5 REPORT STOK HARI INI (KHUSUS OWNER) =================
+        if ($user->role === 'owner') {
+            $reportDate = $today;
+
+            $buildDailyStockRows = function (string $table, string $divisi, string $jenis) use ($reportDate) {
+                try {
+                    if (!Schema::hasTable($table)) {
+                        return collect([]);
+                    }
+
+                    $hasUserId = Schema::hasColumn($table, 'user_id');
+                    $hasPemakaian = Schema::hasColumn($table, 'pemakaian');
+                    $hasUnit = Schema::hasColumn($table, 'unit');
+
+                    $isMentahTable = in_array($table, ['stok_harian_mentah', 'stok_harian_dapur_mentah'], true);
+
+                    $query = DB::table($table)->whereDate($table . '.tanggal', $reportDate);
+
+                    // join nama stok
+                    if ($table === 'stok_harian_dapur_menu') {
+                        $query->leftJoin('recipes', $table . '.recipe_id', '=', 'recipes.id');
+                        $nameExpr = "COALESCE(recipes.name, '-')";
+                    } else {
+                        $query->leftJoin('items', $table . '.item_id', '=', 'items.id');
+                        $nameExpr = "COALESCE(items.nama, '-')";
+                    }
+
+                    // unit (beberapa table lama belum punya kolom unit)
+                    if ($hasUnit) {
+                        $unitExpr = "COALESCE($table.unit, '-')";
+                    } elseif ($table === 'stok_harian_dapur_menu') {
+                        $unitExpr = "'porsi'";
+                    } else {
+                        $unitExpr = "COALESCE(items.satuan, '-')";
+                    }
+
+                    // join staff (kalau ada user_id)
+                    if ($hasUserId) {
+                        $query->leftJoin('users', $table . '.user_id', '=', 'users.id');
+                        $staffExpr = "COALESCE(users.name, '-')";
+                    } else {
+                        $staffExpr = "'-'";
+                    }
+
+                    // pemakaian: stok_harian_menu bisa punya kolom pemakaian
+                    // Catatan: beberapa tabel punya kolom `pemakaian` default 0, sementara nilai real tersimpan di `stok_keluar`.
+                    // Gunakan pemakaian hanya jika > 0; kalau 0, fallback ke stok_keluar.
+                    $usageExpr = $hasPemakaian
+                        ? "COALESCE(NULLIF($table.pemakaian, 0), $table.stok_keluar, 0)"
+                        : "COALESCE($table.stok_keluar, 0)";
+
+                    // stok masuk: untuk tabel mentah, kalau user hanya mengisi stok_awal (tanpa stok_masuk),
+                    // kita anggap selisih stok_awal vs stok_akhir terakhir (hari sebelumnya) sebagai 'masuk' bila naik.
+                    $masukExpr = "COALESCE($table.stok_masuk, 0)";
+                    $prevAkhirExpr = "NULL";
+                    if ($isMentahTable) {
+                        $prevAkhirExpr = "(SELECT tprev.stok_akhir FROM $table as tprev WHERE tprev.item_id = $table.item_id AND tprev.tanggal < $table.tanggal ORDER BY tprev.tanggal DESC LIMIT 1)";
+                        $masukExpr = "CASE\n"
+                            . "  WHEN COALESCE($table.stok_masuk, 0) > 0 THEN COALESCE($table.stok_masuk, 0)\n"
+                            . "  WHEN ($table.stok_awal - COALESCE($prevAkhirExpr, 0)) > 0 THEN ($table.stok_awal - COALESCE($prevAkhirExpr, 0))\n"
+                            . "  ELSE 0\n"
+                            . "END";
+                    }
+
+                    // Hanya tampilkan yang ada perubahan masuk / terpakai
+                    $query->where(function ($q) use ($table, $hasPemakaian, $isMentahTable, $prevAkhirExpr) {
+                        $q->where($table . '.stok_masuk', '>', 0)
+                            ->orWhere($table . '.stok_keluar', '>', 0);
+
+                        if ($hasPemakaian) {
+                            $q->orWhere($table . '.pemakaian', '>', 0);
+                        }
+
+                        // Untuk mentah: tampilkan juga jika stok_awal dikoreksi (beda dari stok_akhir terakhir)
+                        if ($isMentahTable) {
+                            $q->orWhereRaw("$table.stok_awal <> COALESCE($prevAkhirExpr, $table.stok_awal)");
+                        }
+                    });
+
+                    return $query
+                        ->selectRaw(
+                            "? as divisi, ? as jenis, $nameExpr as nama_stok, $unitExpr as unit, $masukExpr as stok_masuk, $usageExpr as stok_terpakai, $staffExpr as staff_input",
+                            [$divisi, $jenis]
+                        )
+                        ->orderBy('nama_stok')
+                        ->get();
+                } catch (\Exception $e) {
+                    return collect([]);
+                }
+            };
+
+            $rows = collect()
+                ->merge($buildDailyStockRows('stok_harian_menu', 'Bar', 'Menu'))
+                ->merge($buildDailyStockRows('stok_harian_mentah', 'Bar', 'Mentah'))
+                ->merge($buildDailyStockRows('stok_harian_dapur_menu', 'Dapur', 'Menu'))
+                ->merge($buildDailyStockRows('stok_harian_dapur_mentah', 'Dapur', 'Mentah'))
+                ->values();
+
+            $normalizedRows = $rows->map(function ($row) {
+                return [
+                    'divisi' => (string) ($row->divisi ?? '-'),
+                    'jenis' => (string) ($row->jenis ?? '-'),
+                    'nama' => (string) ($row->nama_stok ?? '-'),
+                    'unit' => (string) ($row->unit ?? '-'),
+                    'masuk' => (int) ($row->stok_masuk ?? 0),
+                    'terpakai' => (int) ($row->stok_terpakai ?? 0),
+                    'staff' => (string) ($row->staff_input ?? '-'),
+                ];
+            });
+
+            $byDivisi = $normalizedRows
+                ->groupBy('divisi')
+                ->map(function ($group, $divisi) {
+                    return [
+                        'divisi' => $divisi,
+                        'masuk' => (int) $group->sum('masuk'),
+                        'terpakai' => (int) $group->sum('terpakai'),
+                    ];
+                })
+                ->values();
+
+            $data['todayStockReport'] = [
+                'date' => $reportDate,
+                'rows' => $normalizedRows,
+                'summary' => [
+                    'totalMasuk' => (int) $normalizedRows->sum('masuk'),
+                    'totalTerpakai' => (int) $normalizedRows->sum('terpakai'),
+                    'byDivisi' => $byDivisi,
+                ],
             ];
         }
 
