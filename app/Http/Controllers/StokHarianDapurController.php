@@ -255,20 +255,21 @@ class StokHarianDapurController extends Controller
                     $namaMenu = $recipe ? $recipe->name : 'Menu';
 
                     // Aturan 1: Kunci total jika sisa sudah mencapai 5 atau kurang
-                    if ($sisaStokSaatIni <= 5) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'pemakaian' => "Stok '{$namaMenu}' menipis (Sisa: {$sisaStokSaatIni}). Tidak bisa input! Minta Supervisor input Stok Masuk dahulu."
-                        ]);
-                    }
+                    // if ($sisaStokSaatIni <= 5) {
+                    //     throw \Illuminate\Validation\ValidationException::withMessages([
+                    //         'pemakaian' => "Stok '{$namaMenu}' menipis (Sisa: {$sisaStokSaatIni}). Tidak bisa input! Minta Supervisor input Stok Masuk dahulu."
+                    //     ]);
+                    // }
 
                     // Aturan 2: Jaga-jaga jika stok 10 tapi staf maksa input 15
-                    if ($delta > $sisaStokSaatIni) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'pemakaian' => "Stok '{$namaMenu}' tidak cukup! Sisa: {$sisaStokSaatIni}. Anda input: {$delta}."
-                        ]);
-                    }
+                    // if ($delta > $sisaStokSaatIni) {
+                    //     throw \Illuminate\Validation\ValidationException::withMessages([
+                    //         'pemakaian' => "Stok '{$namaMenu}' tidak cukup! Sisa: {$sisaStokSaatIni}. Anda input: {$delta}."
+                    //     ]);
+                    // }
 
                     // --- PROSES SIMPAN DATA (Matematis) ---
+
                     $currentKeluar = (float)$menu->stok_keluar;
                     $menu->stok_keluar = $currentKeluar + $delta;
 
@@ -357,13 +358,13 @@ class StokHarianDapurController extends Controller
         $newKeluar = $request->input('stok_keluar') ?? $request->input('pemakaian') ?? $menu->stok_keluar;
 
         // --- 🔥 KODE SATPAM (VALIDASI UPDATE) 🔥 ---
-        $stokTersedia = $menu->stok_awal + $menu->stok_masuk;
+        // $stokTersedia = $menu->stok_awal + $menu->stok_masuk;
 
-        if ($newKeluar > $stokTersedia) {
-             throw \Illuminate\Validation\ValidationException::withMessages([
-                'pemakaian' => "Gagal Update! Stok Hanya: $stokTersedia. Anda mencoba input keluar: $newKeluar"
-            ]);
-        }
+        // if ($newKeluar > $stokTersedia) {
+        //      throw \Illuminate\Validation\ValidationException::withMessages([
+        //         'pemakaian' => "Gagal Update! Stok Hanya: $stokTersedia. Anda mencoba input keluar: $newKeluar"
+        //     ]);
+        // }
 
         DB::transaction(function () use ($request, $menu, $newKeluar) {
             $delta = $newKeluar - $menu->stok_keluar;
@@ -396,7 +397,7 @@ class StokHarianDapurController extends Controller
 
         return back()->with('success', 'Data pemakaian diperbarui.');
     }
-    
+
     public function updateMentah(Request $request, $id)
     {
         // 1. Validasi input

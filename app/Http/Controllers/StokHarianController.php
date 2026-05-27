@@ -261,18 +261,18 @@ class StokHarianController extends Controller
                     $sisaStokSaatIni = (float)$menu->stok_akhir;
 
                     // Aturan 1: Kunci total jika sisa sudah mencapai 5 atau kurang
-                    if ($sisaStokSaatIni <= 5) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'pemakaian' => "Stok '{$item->nama}' menipis (Sisa: {$sisaStokSaatIni}). Tidak bisa input! Minta Supervisor input Stok Masuk dahulu."
-                        ]);
-                    }
+                    // if ($sisaStokSaatIni <= 5) {
+                    //     throw \Illuminate\Validation\ValidationException::withMessages([
+                    //         'pemakaian' => "Stok '{$item->nama}' menipis (Sisa: {$sisaStokSaatIni}). Tidak bisa input! Minta Supervisor input Stok Masuk dahulu."
+                    //     ]);
+                    // }
 
                     // Aturan 2: Jaga-jaga jika stok 10 tapi staf maksa input 15
-                    if ($delta > $sisaStokSaatIni) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'pemakaian' => "Stok '{$item->nama}' tidak cukup! Sisa: {$sisaStokSaatIni}. Anda input: {$delta}."
-                        ]);
-                    }
+                    // if ($delta > $sisaStokSaatIni) {
+                    //     throw \Illuminate\Validation\ValidationException::withMessages([
+                    //         'pemakaian' => "Stok '{$item->nama}' tidak cukup! Sisa: {$sisaStokSaatIni}. Anda input: {$delta}."
+                    //     ]);
+                    // }
 
                     // --- PROSES SIMPAN DATA (Kaku & Matematis) ---
                     $currentKeluar = (float)$menu->stok_keluar;
@@ -370,16 +370,16 @@ class StokHarianController extends Controller
         $menu = StokHarianMenu::with('item')->findOrFail($id);
         $newKeluar = $request->input('stok_keluar') ?? $request->input('pemakaian') ?? $menu->stok_keluar;
 
-        // --- ðŸ”¥ [MULAI] KODE SATPAM (VALIDASI UPDATE) ðŸ”¥ ---
-        $stokTersedia = $menu->stok_awal + $menu->stok_masuk;
+        // --- 🔥 [MULAI] KODE SATPAM (VALIDASI UPDATE) 🔥 ---
+        // $stokTersedia = $menu->stok_awal + $menu->stok_masuk;
 
-        if ($newKeluar > $stokTersedia) {
-             throw \Illuminate\Validation\ValidationException::withMessages([
-                'pemakaian' => "Gagal Update! Stok Hanya: $stokTersedia. Anda mencoba input keluar: $newKeluar"
-            ]);
-        }
-        // --- ðŸ”¥ [SELESAI] KODE SATPAM ðŸ”¥ ---
-
+        // if ($newKeluar > $stokTersedia) {
+        //      throw \Illuminate\Validation\ValidationException::withMessages([
+        //         'pemakaian' => "Gagal Update! Stok Hanya: $stokTersedia. Anda mencoba input keluar: $newKeluar"
+        //     ]);
+        // }
+        // --- 🔥 [SELESAI] KODE SATPAM 🔥 ---
+        
         DB::transaction(function () use ($request, $menu, $newKeluar) {
             $delta = $newKeluar - $menu->stok_keluar;
             $menu->stok_keluar = $newKeluar;

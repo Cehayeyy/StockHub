@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # Service untuk Aplikasi Laravel StockHub
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - db
+
+  # Service untuk Simulasi Database MariaDB lokal sebelum pindah ke AWS RDS
+  db:
+    image: mariadb:10.11
+    restart: always
+    environment:
+      MARIADB_DATABASE: stockhub
+      MARIADB_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"

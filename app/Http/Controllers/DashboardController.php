@@ -760,6 +760,9 @@ class DashboardController extends Controller
 
     public function exportOwnerWeeklyStockPdf(Request $request)
     {
+        ini_set('memory_limit', '2048M');
+        ini_set('max_execution_time', '300');
+        
         $user = $request->user();
 
         if (!$user || $user->role !== 'owner') {
