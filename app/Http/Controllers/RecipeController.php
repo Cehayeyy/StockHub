@@ -27,7 +27,13 @@ class RecipeController extends Controller
             $division = $request->input('division', 'bar');
         }
 
-        $categories = ItemCategory::where('division', $division)->get();
+        // --- ADAPTASI PENCARIAN DROPDOWN: Menyelaraskan relasi string dapur/kitchen ---
+        $searchDivision = $division;
+        if (config('database.default') === 'sqlite' && $division === 'dapur') {
+            $searchDivision = 'kitchen';
+        }
+
+        $categories = ItemCategory::where('division', $searchDivision)->get();
 
         $recipes = Recipe::where('division', $division)
             ->when($request->input('search'), function ($query, $search) {
