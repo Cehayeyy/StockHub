@@ -29,14 +29,13 @@ class RecipeController extends Controller
 
         $categories = ItemCategory::where('division', $division)->get();
 
-        // 🔥 LOGIKA PAGINATION (SERVER SIDE)
         $recipes = Recipe::where('division', $division)
             ->when($request->input('search'), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
             })
             ->latest()
-            ->paginate(10) // Batasi 10 item per halaman
-            ->withQueryString() // Jaga filter search saat ganti halaman
+            ->paginate(10)
+            ->withQueryString()
             ->through(fn ($r) => [
                 'id'                => $r->id,
                 'name'              => $r->name,
@@ -75,10 +74,10 @@ class RecipeController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'division'          => 'required|in:bar,dapur',
-            'category_id'       => 'required|exists:item_categories,id',
-            'ingredients'       => 'required|array|min:1',
+            'name'                  => 'required|string|max:255',
+            'division'              => 'required|in:bar,dapur',
+            'category_id'           => 'required|exists:item_categories,id',
+            'ingredients'           => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
@@ -98,7 +97,8 @@ class RecipeController extends Controller
                 'total_ingredients' => count($validated['ingredients']),
             ]);
 
-            $tanggal = session('stok_tanggal') ?? now()->toDateString();
+            $sessionTanggal = session('stok_tanggal');
+            $tanggal = $sessionTanggal ? Carbon::parse($sessionTanggal)->startOfDay()->toDateTimeString() : Carbon::now()->startOfDay()->toDateTimeString();
 
             if ($validated['division'] === 'dapur') {
                 StokHarianDapurMenu::firstOrCreate(
@@ -147,10 +147,10 @@ class RecipeController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'division'          => 'required|in:bar,dapur',
-            'category_id'       => 'required|exists:item_categories,id',
-            'ingredients'       => 'required|array|min:1',
+            'name'                  => 'required|string|max:255',
+            'division'              => 'required|in:bar,dapur',
+            'category_id'           => 'required|exists:item_categories,id',
+            'ingredients'           => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
@@ -171,7 +171,8 @@ class RecipeController extends Controller
                 'total_ingredients' => count($validated['ingredients']),
             ]);
 
-            $tanggal = session('stok_tanggal') ?? now()->toDateString();
+            $sessionTanggal = session('stok_tanggal');
+            $tanggal = $sessionTanggal ? Carbon::parse($sessionTanggal)->startOfDay()->toDateTimeString() : Carbon::now()->startOfDay()->toDateTimeString();
 
             foreach ($validated['ingredients'] as $ing) {
                 if ($validated['division'] === 'dapur') {
@@ -209,11 +210,11 @@ class RecipeController extends Controller
     {
         $division = $recipe->division;
         $name = $recipe->name;
-        $tanggal  = session('stok_tanggal') ?? now()->toDateString();
+        $sessionTanggal = session('stok_tanggal');
+        $tanggal = $sessionTanggal ? Carbon::parse($sessionTanggal)->startOfDay()->toDateTimeString() : Carbon::now()->startOfDay()->toDateTimeString();
         $user = request()->user();
 
         DB::transaction(function () use ($recipe, $division, $tanggal, $name, $user) {
-
             if ($division === 'dapur') {
                 StokHarianDapurMenu::where('recipe_id', $recipe->id)
                     ->where('tanggal', $tanggal)
