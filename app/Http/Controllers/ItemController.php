@@ -42,7 +42,13 @@ class ItemController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $categories = ItemCategory::where('division', $division)
+        // --- ADAPTASI DROPDOWN FORM TAMBAH ITEM: Jika dapur, cari data 'kitchen' di SQLite ---
+        $searchDivision = $division;
+        if (config('database.default') === 'sqlite' && $division === 'dapur') {
+            $searchDivision = 'kitchen';
+        }
+
+        $categories = ItemCategory::where('division', $searchDivision) // Gunakan $searchDivision agar tidak kosong
             ->orderBy('name')
             ->get(['id', 'name']);
 
