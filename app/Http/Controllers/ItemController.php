@@ -62,19 +62,26 @@ class ItemController extends Controller
             $division = 'bar';
         }
 
-        $categories = ItemCategory::where('division', $division)
+        // --- ADAPTASI PENCARIAN: Jika dapur, cari juga yang bernilai 'kitchen' di SQLite ---
+        $searchDivision = $division;
+        if (config('database.default') === 'sqlite' && $division === 'dapur') {
+            $searchDivision = 'kitchen';
+        }
+
+        $categories = ItemCategory::where('division', $searchDivision) // Pakai $searchDivision
             ->orderBy('name')
             ->get()
             ->map(function (ItemCategory $cat) use ($division) {
+                // Di dalam query relasi items juga disesuaikan
                 $items = $cat->items()
-                    ->where('division', $division)
+                    ->where('division', $cat->division) 
                     ->orderBy('nama')
                     ->get(['id', 'nama']);
 
                 return [
                     'id'          => $cat->id,
                     'name'        => $cat->name,
-                    'division'    => $cat->division,
+                    'division'    => $division, // Tetap kembalikan 'dapur' agar dipahami oleh Inertia/React front-end
                     'total_items' => $items->count(),
                     'items'       => $items,
                 ];
