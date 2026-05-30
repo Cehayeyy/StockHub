@@ -3,67 +3,59 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        // 1. UPDATE TABEL BAR (stok_harian_menu)
         Schema::table('stok_harian_menu', function (Blueprint $table) {
             if (!Schema::hasColumn('stok_harian_menu', 'user_id')) {
-                $table->foreignId('user_id')
-                      ->nullable()
-                      ->after('id')
-                      ->constrained('users')
-                      ->onDelete('cascade');
+                $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
             }
             if (!Schema::hasColumn('stok_harian_menu', 'is_submitted')) {
-                $table->boolean('is_submitted')->default(false)->after('unit');
+                $table->boolean('is_submitted')->default(false);
             }
         });
 
-        // 2. UPDATE TABEL DAPUR (stok_harian_dapur_menu)
-        // Cek dulu apakah tabelnya ada (untuk jaga-jaga)
-        if (Schema::hasTable('stok_harian_dapur_menu')) {
-            Schema::table('stok_harian_dapur_menu', function (Blueprint $table) {
-                if (!Schema::hasColumn('stok_harian_dapur_menu', 'user_id')) {
-                    $table->foreignId('user_id')
-                          ->nullable()
-                          ->after('id')
-                          ->constrained('users')
-                          ->onDelete('cascade');
+        // 🛠️ FIX CROSS-DATABASE INDEX CHECK (Aman untuk SQLite AWS & MySQL Rumahweb)
+        $indexExists = false;
+
+        if (config('database.default') === 'sqlite') {
+            $indexes = DB::select("PRAGMA index_list('stok_harian_menu')");
+            foreach ($indexes as $index) {
+                if ($index->name === 'stok_menu_user_day_unique') {
+                    $indexExists = true;
+                    break;
                 }
-                if (!Schema::hasColumn('stok_harian_dapur_menu', 'is_submitted')) {
-                    $table->boolean('is_submitted')->default(false)->after('unit');
-                }
+            }
+        } else {
+            // Jalur MySQL untuk Hosting Rumahweb kalian
+            $indexes = DB::select("SHOW INDEXES FROM stok_harian_menu WHERE Key_name = 'stok_menu_user_day_unique'");
+            $indexExists = count($indexes) > 0;
+        }
+
+        if (!$indexExists) {
+            Schema::table('stok_harian_menu', function (Blueprint $table) {
+                $table->unique(['item_id', 'tanggal'], 'stok_menu_user_day_unique');
             });
         }
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        // ROLLBACK BAR
         Schema::table('stok_harian_menu', function (Blueprint $table) {
-            if (Schema::hasColumn('stok_harian_menu', 'user_id')) {
-                $table->dropForeign(['user_id']);
-                $table->dropColumn('user_id');
+            if (config('database.default') !== 'sqlite') {
+                $table->dropUnique('stok_menu_user_day_unique');
             }
-            if (Schema::hasColumn('stok_harian_menu', 'is_submitted')) {
-                $table->dropColumn('is_submitted');
-            }
+            $table->dropForeign(['user_id']);
+            $table->dropColumn(['user_id', 'is_submitted']);
         });
-
-        // ROLLBACK DAPUR
-        if (Schema::hasTable('stok_harian_dapur_menu')) {
-            Schema::table('stok_harian_dapur_menu', function (Blueprint $table) {
-                if (Schema::hasColumn('stok_harian_dapur_menu', 'user_id')) {
-                    $table->dropForeign(['user_id']);
-                    $table->dropColumn('user_id');
-                }
-                if (Schema::hasColumn('stok_harian_dapur_menu', 'is_submitted')) {
-                    $table->dropColumn('is_submitted');
-                }
-            });
-        }
     }
 };
