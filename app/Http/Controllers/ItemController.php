@@ -74,20 +74,20 @@ class ItemController extends Controller
             $searchDivision = 'kitchen';
         }
 
-        $categories = ItemCategory::where('division', $searchDivision) // Pakai $searchDivision
+        $categories = ItemCategory::where('division', $searchDivision)
             ->orderBy('name')
             ->get()
             ->map(function (ItemCategory $cat) use ($division) {
-                // Di dalam query relasi items juga disesuaikan
+                // 🛠️ FIX FIX: Pakai variabel $division ('dapur'/'bar') dari request, bukan $cat->division
                 $items = $cat->items()
-                    ->where('division', $cat->division) 
+                    ->where('division', $division) 
                     ->orderBy('nama')
                     ->get(['id', 'nama']);
 
                 return [
                     'id'          => $cat->id,
                     'name'        => $cat->name,
-                    'division'    => $division, // Tetap kembalikan 'dapur' agar dipahami oleh Inertia/React front-end
+                    'division'    => $division, 
                     'total_items' => $items->count(),
                     'items'       => $items,
                 ];
