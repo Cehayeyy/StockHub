@@ -12,7 +12,7 @@
 /.zed
 /bootstrap/ssr
 /node_modules
-/public/build
+# /public/build   <-- TAMBAHKAN TANDA PAGAR (#) DI DEPANNYA
 /public/hot
 /public/storage
 /storage/*.key
