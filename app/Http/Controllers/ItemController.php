@@ -38,9 +38,14 @@ class ItemController extends Controller
             $query->where('nama', 'like', '%' . $request->search . '%');
         }
 
+        // 🛠️ FIX PAGINATION MACET: Paksa query string mengikat parameter division yang sedang aktif
         $items = $query->orderBy('nama')
             ->paginate(10)
-            ->withQueryString();
+            ->appends(['division' => $division]);
+
+        if ($request->search) {
+            $items->appends(['search' => $request->search]);
+        }
 
         // --- ADAPTASI DROPDOWN FORM TAMBAH ITEM: Jika dapur, cari data 'kitchen' di SQLite ---
         $searchDivision = $division;
@@ -78,7 +83,7 @@ class ItemController extends Controller
             ->orderBy('name')
             ->get()
             ->map(function (ItemCategory $cat) use ($division) {
-                // 🛠️ FIX FIX: Pakai variabel $division ('dapur'/'bar') dari request, bukan $cat->division
+                // 🛠️ FIX COUNTER: Pakai variabel $division ('dapur'/'bar') dari request, bukan $cat->division
                 $items = $cat->items()
                     ->where('division', $division) 
                     ->orderBy('nama')
