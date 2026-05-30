@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
-import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react"; // Ditambahkan Trash2 dan X
+import { Head, usePage, router, Link } from "@inertiajs/react"; // Ditambahkan Link
+import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react"; 
 
 type Division = "bar" | "dapur";
 
@@ -45,9 +45,8 @@ type PageProps = {
   };
 } & Record<string, any>;
 
-// --- INTERFACE UNTUK MULTI INPUT ---
 interface FormItem {
-  uid: number; // ID Unik untuk React Key
+  uid: number; 
   nama: string;
   item_category_id: number | string;
 }
@@ -84,7 +83,6 @@ export default function ItemPage() {
   const { items, division: initialDivision, categories, auth } =
     usePage<PageProps>().props;
 
-  // --- LOGIKA ROLE & DIVISION (MERGED) ---
   const role = auth?.user?.role;
   const isStaff = role === "bar" || role === "dapur";
   const userDivision = isStaff ? (role as Division) : null;
@@ -111,7 +109,6 @@ export default function ItemPage() {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  // --- 🔥 STATE BARU UNTUK MULTI INPUT FORM 🔥 ---
   const [formItems, setFormItems] = useState<FormItem[]>([
     { uid: Date.now(), nama: "", item_category_id: "" }
   ]);
@@ -141,7 +138,6 @@ export default function ItemPage() {
     );
   };
 
-  // --- 🔥 FUNGSI MULTI INPUT ROW 🔥 ---
   const openModalAdd = () => {
     setEditId(null);
     setFormItems([{ uid: Date.now(), nama: "", item_category_id: "" }]);
@@ -151,7 +147,6 @@ export default function ItemPage() {
   const handleEdit = (item: Item) => {
     setEditId(item.id);
     setDivision(item.division);
-    // Saat edit, paksa array hanya berisi 1 item
     setFormItems([{
       uid: Date.now(),
       nama: item.nama,
@@ -182,12 +177,10 @@ export default function ItemPage() {
     ));
   };
 
-  // --- FUNGSI SUBMIT (SINGLE & MULTIPLE) ---
   const submitItem = async (e?: React.FormEvent<HTMLFormElement> | any) => {
     if (e) e.preventDefault();
     if (isSubmitting) return;
 
-    // Validasi kosong
     const invalid = formItems.some(i => !i.nama.trim() || !i.item_category_id);
     if (invalid) {
       alert("Pastikan semua baris telah diisi Nama Item dan Kategorinya!");
@@ -198,7 +191,6 @@ export default function ItemPage() {
 
     try {
       if (editId) {
-        // MODE EDIT (Hanya 1 Baris)
         await new Promise<void>((resolve, reject) => {
           router.put(route("item.update", editId), {
             division,
@@ -211,7 +203,6 @@ export default function ItemPage() {
           });
         });
       } else {
-        // MODE TAMBAH (Banyak Baris, Looping Request)
         for (const item of formItems) {
           await new Promise<void>((resolve, reject) => {
             router.post(route("item.store"), {
@@ -231,7 +222,6 @@ export default function ItemPage() {
 
       setIsSubmitting(false);
       closeModal();
-      // Optional: Refresh untuk merefresh pagination
       window.history.replaceState({}, document.title, window.location.pathname);
     } catch (error) {
       setIsSubmitting(false);
@@ -239,7 +229,6 @@ export default function ItemPage() {
     }
   };
 
-  // --- DELETE MODAL ---
   const openDeleteConfirm = (id: number) => {
     setDeleteId(id);
     setOpenDeleteModal(true);
@@ -252,7 +241,6 @@ export default function ItemPage() {
     });
   };
 
-  // --- UPDATE LOGIKA ENTER (HAPUS/SIMPAN) & ESC (BATAL) ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (openDeleteModal) {
@@ -267,7 +255,7 @@ export default function ItemPage() {
       else if (openModal) {
         if (e.key === "Enter") {
           e.preventDefault();
-          submitItem(); // Panggil submit tanpa e untuk form multi
+          submitItem(); 
         } else if (e.key === "Escape") {
           e.preventDefault();
           closeModal();
@@ -492,18 +480,15 @@ export default function ItemPage() {
                     if (label.includes('&raquo;')) label = 'Next';
 
                     return (
-                      <button
+                      <Link
                         key={i}
-                        disabled={!link.url}
-                        onClick={() =>
-                          link.url &&
-                          router.get(link.url, {}, { preserveScroll: true })
-                        }
+                        href={link.url || '#'}
+                        preserveScroll
                         className={`px-3 sm:px-4 py-2 rounded-full text-xs font-medium transition-all ${
                           link.active
                             ? "bg-[#D9A978] text-white shadow-md"
                             : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
-                        } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
+                        } ${!link.url ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
                         dangerouslySetInnerHTML={{ __html: label }}
                       />
                     );
@@ -540,7 +525,7 @@ export default function ItemPage() {
               {formItems.map((item, index) => (
                 <div key={item.uid} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-4 relative">
 
-                  {/* Tombol Hapus Baris (Hanya muncul jika mode Tambah & baris > 1) */}
+                  {/* Tombol Hapus Baris */}
                   {!editId && formItems.length > 1 && (
                     <button
                       type="button"
@@ -608,7 +593,7 @@ export default function ItemPage() {
                 </div>
               ))}
 
-              {/* Tombol Tambah Baris (Hanya muncul saat mode Tambah) */}
+              {/* Tombol Tambah Baris */}
               {!editId && (
                 <button
                   type="button"
