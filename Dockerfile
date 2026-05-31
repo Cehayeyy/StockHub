@@ -1,33 +1,33 @@
-# 1. Menggunakan base image PHP 8.3 dengan Apache
-FROM php:8.3-apache
+# Menggunakan base image PHP 8.2 dengan Apache (web server)
+FROM php:8.2-apache
 
-# 2. Instal dependensi sistem dan ekstensi PHP yang dibutuhkan Laravel
+# Menginstal dependensi sistem dan ekstensi PHP yang dibutuhkan Laravel & AWS SDK
 RUN apt-get update && apt-get install -y \
     libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
     zip \
     unzip \
     git \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql gd
+    curl \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# 3. Aktifkan modul mod_rewrite milik Apache untuk routing Laravel
+# Mengaktifkan modul Apache Rewrite (wajib untuk routing Laravel)
 RUN a2enmod rewrite
 
-# 4. Ubah Document Root Apache agar mengarah ke folder public Laravel
+# Mengubah DocumentRoot Apache agar mengarah ke folder /public Laravel
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# 5. Tentukan working directory di dalam kontainer
+# Menginstal Composer secara global
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Menetapkan direktori kerja di dalam kontainer
 WORKDIR /var/www/html
 
-# 6. Salin seluruh source code proyek StockHub ke dalam kontainer
+# Menyalin seluruh kode proyek ke dalam kontainer
 COPY . .
 
-# 7. Berikan hak akses (permissions) folder storage dan bootstrap cache ke Apache
+# Memberikan hak akses folder storage dan cache ke web server
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-
-# 8. Jalankan Apache di port 80
-EXPOSE 80
