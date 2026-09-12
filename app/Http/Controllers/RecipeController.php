@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
 class RecipeController extends Controller
@@ -38,13 +39,18 @@ class RecipeController extends Controller
             ->paginate(10) // Batasi 10 item per halaman
             ->withQueryString() // Jaga filter search saat ganti halaman
             ->through(fn ($r) => [
-                'id'                => $r->id,
-                'name'              => $r->name,
-                'category_id'       => $r->category_id,
-                'category_name'     => $r->category->name ?? '-',
-                'ingredients'       => $r->ingredients,
-                'total_ingredients' => $r->total_ingredients,
-                'created_at'        => $r->created_at?->format('d/m/Y'),
+                'id'                   => $r->id,
+                'name'                 => $r->name,
+                'category_id'          => $r->category_id,
+                'category_name'        => $r->category->name ?? '-',
+                'ingredients'          => $r->ingredients,
+                'total_ingredients'    => $r->total_ingredients,
+                'total_hpp'            => $r->total_hpp,
+                'target_margin'        => $r->target_margin,
+                'harga_jual_hitungan'  => $r->harga_jual_hitungan,
+                'harga_jual_real'      => $r->harga_jual_real,
+                'profit_real'          => $r->profit_real,
+                'created_at'           => $r->created_at?->format('d/m/Y'),
             ]);
 
         $items = Item::with('itemCategory')
@@ -53,10 +59,11 @@ class RecipeController extends Controller
             ->unique('nama')
             ->values()
             ->map(fn ($i) => [
-                'id'       => $i->id,
-                'name'     => $i->nama,
-                'unit'     => $i->satuan,
-                'category' => $i->itemCategory->name ?? null,
+                'id'          => $i->id,
+                'name'        => $i->nama,
+                'unit'        => $i->satuan,
+                'harga_dasar' => $i->harga_dasar,
+                'category'    => $i->itemCategory->name ?? null,
             ]);
 
         return Inertia::render('MasterData/Resep', [
@@ -82,6 +89,8 @@ class RecipeController extends Controller
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
+            'target_margin'     => 'nullable|numeric|min:0',
+            'harga_jual_real'   => 'nullable|numeric|min:0',
         ]);
 
         if (($user->role === 'bar' && $validated['division'] !== 'bar') ||
@@ -89,13 +98,31 @@ class RecipeController extends Controller
             abort(403, 'Anda tidak memiliki akses untuk divisi ini.');
         }
 
+        $this->validateRecipeReferences($validated);
+
         DB::transaction(function () use ($validated, $user) {
+            // 🔥 HITUNG HPP OTOMATIS
+            [$ingredients, $totalHpp] = $this->buildIngredientCostSnapshot($validated['ingredients']);
+            $targetMargin   = (float)($validated['target_margin'] ?? 0);
+            $hargaJualHitungan = $totalHpp > 0
+                ? round($totalHpp * (1 + $targetMargin / 100), 2)
+                : null;
+            $hargaJualReal  = isset($validated['harga_jual_real']) ? (float)$validated['harga_jual_real'] : null;
+            $profitReal     = ($hargaJualReal !== null && $totalHpp > 0)
+                ? round($hargaJualReal - $totalHpp, 2)
+                : null;
+
             $recipe = Recipe::create([
-                'name'              => $validated['name'],
-                'division'          => $validated['division'],
-                'category_id'       => $validated['category_id'],
-                'ingredients'       => $validated['ingredients'],
-                'total_ingredients' => count($validated['ingredients']),
+                'name'                => $validated['name'],
+                'division'            => $validated['division'],
+                'category_id'         => $validated['category_id'],
+                'ingredients'         => $ingredients,
+                'total_ingredients'   => count($ingredients),
+                'total_hpp'           => $totalHpp ?: null,
+                'target_margin'       => $targetMargin,
+                'harga_jual_hitungan' => $hargaJualHitungan,
+                'harga_jual_real'     => $hargaJualReal,
+                'profit_real'         => $profitReal,
             ]);
 
             $tanggal = session('stok_tanggal') ?? now()->toDateString();
@@ -105,7 +132,7 @@ class RecipeController extends Controller
                     ['recipe_id' => $recipe->id, 'tanggal' => $tanggal],
                     ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => 'porsi']
                 );
-                foreach ($validated['ingredients'] as $ing) {
+                foreach ($ingredients as $ing) {
                     StokHarianDapurMentah::firstOrCreate(
                         ['item_id' => $ing['item_id'], 'tanggal' => $tanggal],
                         ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => $ing['unit']]
@@ -122,7 +149,7 @@ class RecipeController extends Controller
                         ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0]
                     );
                 }
-                foreach ($validated['ingredients'] as $ing) {
+                foreach ($ingredients as $ing) {
                     StokHarianMentah::firstOrCreate(
                         ['item_id' => $ing['item_id'], 'tanggal' => $tanggal],
                         ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'unit' => $ing['unit']]
@@ -154,6 +181,8 @@ class RecipeController extends Controller
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
+            'target_margin'     => 'nullable|numeric|min:0',
+            'harga_jual_real'   => 'nullable|numeric|min:0',
         ]);
 
         if (($user->role === 'bar' && $validated['division'] !== 'bar') ||
@@ -161,19 +190,38 @@ class RecipeController extends Controller
             abort(403, 'Anda tidak memiliki akses.');
         }
 
+        $this->validateRecipeReferences($validated);
+
         DB::transaction(function () use ($validated, $recipe, $user) {
             $oldName = $recipe->name;
+
+            // 🔥 HITUNG HPP OTOMATIS
+            [$ingredients, $totalHpp] = $this->buildIngredientCostSnapshot($validated['ingredients']);
+            $targetMargin   = (float)($validated['target_margin'] ?? 0);
+            $hargaJualHitungan = $totalHpp > 0
+                ? round($totalHpp * (1 + $targetMargin / 100), 2)
+                : null;
+            $hargaJualReal  = isset($validated['harga_jual_real']) ? (float)$validated['harga_jual_real'] : null;
+            $profitReal     = ($hargaJualReal !== null && $totalHpp > 0)
+                ? round($hargaJualReal - $totalHpp, 2)
+                : null;
+
             $recipe->update([
-                'name'              => $validated['name'],
-                'division'          => $validated['division'],
-                'category_id'       => $validated['category_id'],
-                'ingredients'       => $validated['ingredients'],
-                'total_ingredients' => count($validated['ingredients']),
+                'name'                => $validated['name'],
+                'division'            => $validated['division'],
+                'category_id'         => $validated['category_id'],
+                'ingredients'         => $ingredients,
+                'total_ingredients'   => count($ingredients),
+                'total_hpp'           => $totalHpp ?: null,
+                'target_margin'       => $targetMargin,
+                'harga_jual_hitungan' => $hargaJualHitungan,
+                'harga_jual_real'     => $hargaJualReal,
+                'profit_real'         => $profitReal,
             ]);
 
             $tanggal = session('stok_tanggal') ?? now()->toDateString();
 
-            foreach ($validated['ingredients'] as $ing) {
+            foreach ($ingredients as $ing) {
                 if ($validated['division'] === 'dapur') {
                     StokHarianDapurMentah::firstOrCreate(
                         ['item_id' => $ing['item_id'], 'tanggal' => $tanggal],
@@ -312,6 +360,61 @@ class RecipeController extends Controller
                 'unit'        => 'porsi'
             ]);
         }
+    }
+
+    /**
+     * Hitung total HPP berdasarkan bahan mentah × harga dasar
+     */
+    private function validateRecipeReferences(array $validated): void
+    {
+        $categoryIsValid = ItemCategory::whereKey($validated['category_id'])
+            ->where('division', $validated['division'])
+            ->exists();
+
+        if (!$categoryIsValid) {
+            throw ValidationException::withMessages([
+                'category_id' => 'Kategori harus sesuai dengan divisi resep.',
+            ]);
+        }
+
+        $itemIds = collect($validated['ingredients'])->pluck('item_id')->unique()->values();
+        $items = Item::with('itemCategory')->whereIn('id', $itemIds)->get();
+        $hasInvalidItem = $items->count() !== $itemIds->count()
+            || $items->contains(fn (Item $item) => $item->division !== $validated['division']
+                || !in_array(strtolower(trim((string) optional($item->itemCategory)->name)), ['mentah', 'raw'], true));
+
+        if ($hasInvalidItem) {
+            throw ValidationException::withMessages([
+                'ingredients' => 'Setiap bahan resep harus berupa item Mentah dari divisi yang sama.',
+            ]);
+        }
+    }
+
+    private function buildIngredientCostSnapshot(array $ingredients): array
+    {
+        $items = Item::whereIn('id', collect($ingredients)->pluck('item_id')->unique())
+            ->get()
+            ->keyBy('id');
+        $totalHpp = 0;
+
+        $snapshot = collect($ingredients)->map(function (array $ingredient) use ($items, &$totalHpp) {
+            $item = $items->get($ingredient['item_id']);
+            $amount = (float) $ingredient['amount'];
+            $hargaDasar = (float) $item->harga_dasar;
+            $subtotal = round($amount * $hargaDasar, 2);
+            $totalHpp += $subtotal;
+
+            return [
+                'item_id' => $item->id,
+                'item_name' => $item->nama,
+                'amount' => $amount,
+                'unit' => $ingredient['unit'],
+                'harga_dasar' => $hargaDasar,
+                'subtotal' => $subtotal,
+            ];
+        })->values()->all();
+
+        return [$snapshot, round($totalHpp, 2)];
     }
 
     private function calculateCapacity($ingredients, $division, $tanggal)

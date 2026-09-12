@@ -15,6 +15,11 @@ class Item extends Model
         'division',
         'satuan',
         'kategori_item',
+        'harga_dasar',
+    ];
+
+    protected $casts = [
+        'harga_dasar' => 'float',
     ];
 
     public function itemCategory()

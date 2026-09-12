@@ -16,11 +16,21 @@ class Recipe extends Model
         'division',
         'ingredients',
         'total_ingredients',
+        'total_hpp',
+        'target_margin',
+        'harga_jual_hitungan',
+        'harga_jual_real',
+        'profit_real',
     ];
 
     // 🔥 INI ADALAH PENERJEMAH AGAR JSON TERBACA SEBAGAI ARRAY 🔥
     protected $casts = [
-        'ingredients' => 'array',
+        'ingredients'       => 'array',
+        'total_hpp'         => 'float',
+        'target_margin'     => 'float',
+        'harga_jual_hitungan' => 'float',
+        'harga_jual_real'   => 'float',
+        'profit_real'       => 'float',
     ];
 
     /**

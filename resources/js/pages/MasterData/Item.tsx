@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
 import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react"; // Ditambahkan Trash2 dan X
+import CustomSelect from "@/components/CustomSelect";
 
 type Division = "bar" | "dapur";
 
@@ -15,11 +16,13 @@ type Item = {
   division: Division;
   nama: string;
   satuan?: string | null;
+  harga_dasar?: number | string | null;
   item_category_id?: number | null;
   item_category?: {
     id: number;
     name: string;
   } | null;
+  kategori_item?: string | null;
 };
 
 type PaginatedItems = {
@@ -50,6 +53,7 @@ interface FormItem {
   uid: number; // ID Unik untuk React Key
   nama: string;
   item_category_id: number | string;
+  harga_dasar?: number | string;
 }
 
 const translateCategoryName = (name: string) => {
@@ -57,6 +61,30 @@ const translateCategoryName = (name: string) => {
   if (lower === "finish") return "Menu";
   if (lower === "raw") return "Mentah";
   return name;
+};
+
+const isCategoryMentah = (categoryName?: string | null) => {
+  if (!categoryName) return false;
+  const lower = translateCategoryName(categoryName).trim().toLowerCase();
+  return lower === "mentah" || lower === "raw";
+};
+
+const formatRupiah = (value: number | string | null | undefined): string => {
+  if (value === null || value === undefined || value === "") return "-";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "-";
+  return `Rp ${new Intl.NumberFormat("id-ID").format(num)}`;
+};
+
+const cleanNumericInput = (val: string) => {
+  return val.replace(/[^0-9]/g, "");
+};
+
+const formatNumberDisplay = (val: string | number | undefined | null) => {
+  if (val === undefined || val === null || val === "") return "";
+  const clean = String(val).replace(/[^0-9]/g, "");
+  if (!clean) return "";
+  return new Intl.NumberFormat("id-ID").format(Number(clean));
 };
 
 const sortCategories = (categories: ItemCategory[]) => {
@@ -113,7 +141,7 @@ export default function ItemPage() {
 
   // --- 🔥 STATE BARU UNTUK MULTI INPUT FORM 🔥 ---
   const [formItems, setFormItems] = useState<FormItem[]>([
-    { uid: Date.now(), nama: "", item_category_id: "" }
+    { uid: Date.now(), nama: "", item_category_id: "", harga_dasar: "" }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -144,18 +172,23 @@ export default function ItemPage() {
   // --- 🔥 FUNGSI MULTI INPUT ROW 🔥 ---
   const openModalAdd = () => {
     setEditId(null);
-    setFormItems([{ uid: Date.now(), nama: "", item_category_id: "" }]);
+    setFormItems([{ uid: Date.now(), nama: "", item_category_id: "", harga_dasar: "" }]);
     setOpenModal(true);
   };
 
   const handleEdit = (item: Item) => {
     setEditId(item.id);
     setDivision(item.division);
+
+    const itemCat = safeCategories.find(c => c.id === item.item_category_id) || item.item_category;
+    const isMentah = isCategoryMentah(itemCat?.name ?? item.kategori_item);
+
     // Saat edit, paksa array hanya berisi 1 item
     setFormItems([{
       uid: Date.now(),
       nama: item.nama,
-      item_category_id: item.item_category_id ?? ""
+      item_category_id: item.item_category_id ?? "",
+      harga_dasar: isMentah && item.harga_dasar != null ? String(item.harga_dasar).replace(/\.00$/, '') : "",
     }]);
     setOpenModal(true);
   };
@@ -163,11 +196,11 @@ export default function ItemPage() {
   const closeModal = () => {
     setOpenModal(false);
     setEditId(null);
-    setFormItems([{ uid: Date.now(), nama: "", item_category_id: "" }]);
+    setFormItems([{ uid: Date.now(), nama: "", item_category_id: "", harga_dasar: "" }]);
   };
 
   const handleAddRow = () => {
-    setFormItems([...formItems, { uid: Date.now(), nama: "", item_category_id: "" }]);
+    setFormItems([...formItems, { uid: Date.now(), nama: "", item_category_id: "", harga_dasar: "" }]);
   };
 
   const handleRemoveRow = (uid: number) => {
@@ -177,9 +210,22 @@ export default function ItemPage() {
   };
 
   const handleFormChange = (uid: number, field: keyof FormItem, value: any) => {
-    setFormItems(formItems.map(item =>
-      item.uid === uid ? { ...item, [field]: value } : item
-    ));
+    setFormItems(formItems.map(item => {
+      if (item.uid !== uid) return item;
+
+      if (field === 'item_category_id') {
+        const selectedCat = safeCategories.find(c => String(c.id) === String(value));
+        const isMentah = isCategoryMentah(selectedCat?.name);
+        return {
+          ...item,
+          item_category_id: value,
+          // Jika kategori bukan Mentah, reset harga_dasar
+          harga_dasar: isMentah ? item.harga_dasar : "",
+        };
+      }
+
+      return { ...item, [field]: value };
+    }));
   };
 
   // --- FUNGSI SUBMIT (SINGLE & MULTIPLE) ---
@@ -194,17 +240,35 @@ export default function ItemPage() {
       return;
     }
 
+    // Validasi Harga Dasar untuk kategori Mentah
+    for (const i of formItems) {
+      const selectedCat = safeCategories.find(c => String(c.id) === String(i.item_category_id));
+      const isMentah = isCategoryMentah(selectedCat?.name);
+      if (isMentah) {
+        const cleanPrice = String(i.harga_dasar ?? "").replace(/[^0-9]/g, "");
+        if (!cleanPrice) {
+          alert(`Item "${i.nama || 'Mentah'}" memiliki kategori Mentah, Harga Dasar wajib diisi!`);
+          return;
+        }
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
       if (editId) {
         // MODE EDIT (Hanya 1 Baris)
+        const selectedCat = safeCategories.find(c => String(c.id) === String(formItems[0].item_category_id));
+        const isMentah = isCategoryMentah(selectedCat?.name);
+        const cleanPrice = isMentah ? String(formItems[0].harga_dasar ?? "").replace(/[^0-9]/g, "") : null;
+
         await new Promise<void>((resolve, reject) => {
           router.put(route("item.update", editId), {
             division,
             nama: formItems[0].nama,
             item_category_id: formItems[0].item_category_id,
             satuan: "porsi",
+            harga_dasar: isMentah ? (cleanPrice !== null && cleanPrice !== "" ? Number(cleanPrice) : null) : null,
           }, {
             onSuccess: () => resolve(),
             onError: (err) => reject(err)
@@ -213,12 +277,17 @@ export default function ItemPage() {
       } else {
         // MODE TAMBAH (Banyak Baris, Looping Request)
         for (const item of formItems) {
+          const selectedCat = safeCategories.find(c => String(c.id) === String(item.item_category_id));
+          const isMentah = isCategoryMentah(selectedCat?.name);
+          const cleanPrice = isMentah ? String(item.harga_dasar ?? "").replace(/[^0-9]/g, "") : null;
+
           await new Promise<void>((resolve, reject) => {
             router.post(route("item.store"), {
               division,
               nama: item.nama,
               item_category_id: item.item_category_id,
               satuan: "porsi",
+              harga_dasar: isMentah ? (cleanPrice !== null && cleanPrice !== "" ? Number(cleanPrice) : null) : null,
             }, {
               preserveState: true,
               preserveScroll: true,
@@ -374,7 +443,12 @@ export default function ItemPage() {
           {/* --- MOBILE VIEW (CARDS) --- */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
               {filteredItems.length > 0 ? (
-                  filteredItems.map((item, index) => (
+                  filteredItems.map((item, index) => {
+                      const isMentah = isCategoryMentah(
+                        item.item_category?.name ?? item.kategori_item
+                      );
+
+                      return (
                       <div key={item.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
                           <div className="flex justify-between items-start mb-2">
                               <div className="flex items-center gap-3">
@@ -383,9 +457,16 @@ export default function ItemPage() {
                                   </div>
                                   <div>
                                       <h4 className="font-bold text-gray-800 text-sm">{item.nama}</h4>
-                                      <span className="text-xs text-gray-500">
-                                          {item.item_category ? translateCategoryName(item.item_category.name) : "-"}
-                                      </span>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                          <span className="text-xs text-gray-500">
+                                              {item.item_category ? translateCategoryName(item.item_category.name) : "-"}
+                                          </span>
+                                          {isMentah && (
+                                              <span className="text-xs font-semibold text-[#7A4A2B] bg-[#F6E1C6] px-2 py-0.5 rounded-full">
+                                                  {formatRupiah(item.harga_dasar)}
+                                              </span>
+                                          )}
+                                      </div>
                                   </div>
                               </div>
                               <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md">
@@ -410,7 +491,8 @@ export default function ItemPage() {
                               </div>
                           )}
                       </div>
-                  ))
+                      );
+                  })
               ) : (
                   <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                       <p className="text-gray-500 text-sm">Tidak ada item ditemukan</p>
@@ -427,13 +509,19 @@ export default function ItemPage() {
                   <th className="p-3 border-r">Nama Item</th>
                   <th className="p-3 border-r w-40">Kategori</th>
                   <th className="p-3 border-r w-32">Satuan</th>
+                  <th className="p-3 border-r w-40 text-right">Harga Dasar</th>
                   <th className="p-3 text-center w-40">Aksi</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-gray-100">
                 {filteredItems.length > 0 ? (
-                  filteredItems.map((item, index) => (
+                  filteredItems.map((item, index) => {
+                    const isMentah = isCategoryMentah(
+                      item.item_category?.name ?? item.kategori_item
+                    );
+
+                    return (
                     <tr key={item.id} className="hover:bg-[#FFF7EC] transition">
                       <td className="p-3 border-r text-center text-gray-500">
                           {(safeItems.current_page - 1) * safeItems.per_page + index + 1}
@@ -446,6 +534,9 @@ export default function ItemPage() {
                       </td>
                       <td className="p-3 border-r text-gray-600">
                         {item.satuan ?? "porsi"}
+                      </td>
+                      <td className="p-3 border-r text-right font-medium text-gray-700">
+                        {isMentah ? formatRupiah(item.harga_dasar) : "-"}
                       </td>
                       <td className="p-3 text-center">
                         <div className="flex justify-center gap-2">
@@ -470,10 +561,11 @@ export default function ItemPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-gray-400">
+                    <td colSpan={6} className="p-8 text-center text-gray-400">
                       Tidak ada data ditemukan.
                     </td>
                   </tr>
@@ -518,7 +610,7 @@ export default function ItemPage() {
       {/* --- MODAL ADD/EDIT MULTI INPUT --- */}
       {openModal && !isStaff && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-lg md:max-w-2xl rounded-3xl shadow-xl p-6 md:p-8 transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-lg md:max-w-3xl rounded-3xl shadow-xl p-6 md:p-8 transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl md:text-2xl font-bold text-center mb-6 text-gray-800">
               {editId ? "Edit Item" : "Tambah Item"}
             </h2>
@@ -537,7 +629,11 @@ export default function ItemPage() {
               </div>
 
               {/* Looping Form Items */}
-              {formItems.map((item, index) => (
+              {formItems.map((item, index) => {
+                const selectedCat = safeCategories.find(c => String(c.id) === String(item.item_category_id));
+                const isMentah = isCategoryMentah(selectedCat?.name);
+
+                return (
                 <div key={item.uid} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-4 relative">
 
                   {/* Tombol Hapus Baris (Hanya muncul jika mode Tambah & baris > 1) */}
@@ -557,7 +653,7 @@ export default function ItemPage() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid grid-cols-1 ${isMentah ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
                     <div>
                       <label className="block mb-1 text-xs font-bold text-gray-700 ml-1">
                         Nama Item
@@ -567,31 +663,51 @@ export default function ItemPage() {
                         value={item.nama}
                         onChange={(e) => handleFormChange(item.uid, 'nama', e.target.value)}
                         className="w-full bg-white rounded-xl px-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none"
-                        placeholder="Contoh: Gula Pasir"
+                        placeholder="Contoh: Sambal"
                         required
                         autoFocus={index === formItems.length - 1}
                       />
                     </div>
 
-                    <div className="relative">
+                    <div>
                       <label className="block mb-1 text-xs font-bold text-gray-700 ml-1">
                         Kategori Item
                       </label>
-                      <select
+                      <CustomSelect
                         value={item.item_category_id}
-                        onChange={(e) => handleFormChange(item.uid, 'item_category_id', e.target.value)}
-                        className="w-full appearance-none bg-white rounded-xl px-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none text-gray-700"
-                        required
-                      >
-                        <option value="">Pilih Kategori...</option>
-                        {sortedCategories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {translateCategoryName(cat.name)}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 absolute right-4 top-10 text-gray-400 pointer-events-none" />
+                        onChange={(val) => handleFormChange(item.uid, 'item_category_id', val)}
+                        options={sortedCategories.map((cat) => ({
+                          value: cat.id,
+                          label: translateCategoryName(cat.name),
+                        }))}
+                        placeholder="Pilih Kategori..."
+                      />
                     </div>
+
+                    {isMentah && (
+                      <div>
+                        <label className="block mb-1 text-xs font-bold text-gray-700 ml-1">
+                          Harga Dasar <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-500">
+                            Rp
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={formatNumberDisplay(item.harga_dasar)}
+                            onChange={(e) => {
+                              const rawVal = cleanNumericInput(e.target.value);
+                              handleFormChange(item.uid, 'harga_dasar', rawVal);
+                            }}
+                            className="w-full bg-white rounded-xl pl-12 pr-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none font-medium text-gray-800"
+                            placeholder="0"
+                            required
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -606,7 +722,8 @@ export default function ItemPage() {
                     />
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {/* Tombol Tambah Baris (Hanya muncul saat mode Tambah) */}
               {!editId && (

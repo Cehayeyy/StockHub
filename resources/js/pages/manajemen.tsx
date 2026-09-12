@@ -2,6 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { Plus, User, Calendar, Edit, Trash2, Settings } from 'lucide-react';
+import CustomSelect from '@/components/CustomSelect';
 
 export default function Manajemen() {
     // Pastikan users memiliki struktur paginasi atau array biasa
@@ -516,22 +517,22 @@ export default function Manajemen() {
                                 <label className="block text-sm font-bold text-gray-700 mb-1">
                                     Bagian
                                 </label>
-                                <select
+                                <CustomSelect
                                     value={role}
-                                    onChange={(e) => {
-                                        const value = e.target.value;
+                                    onChange={(value) => {
                                         setRole(value);
                                         setUsername(value ? getNextUsername(value) : '');
                                     }}
-                                    className={`w-full bg-gray-50 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-[#D9A978] outline-none ${validationErrors.role ? 'border-red-500' : 'border-gray-200'}`}
-                                    required
-                                >
-                                    <option value="">-- Pilih Bagian --</option>
-                                    {allowedRoles?.includes('owner') && <option value="owner">Owner</option>}
-                                    {allowedRoles?.includes('supervisor') && <option value="supervisor">Supervisor</option>}
-                                    {allowedRoles?.includes('bar') && <option value="bar">Bar</option>}
-                                    {allowedRoles?.includes('dapur') && <option value="dapur">Dapur</option>}
-                                </select>
+                                    options={[
+                                        ...(allowedRoles?.includes('owner') ? [{ value: 'owner', label: 'Owner' }] : []),
+                                        ...(allowedRoles?.includes('supervisor') ? [{ value: 'supervisor', label: 'Supervisor' }] : []),
+                                        ...(allowedRoles?.includes('bar') ? [{ value: 'bar', label: 'Bar' }] : []),
+                                        ...(allowedRoles?.includes('dapur') ? [{ value: 'dapur', label: 'Dapur' }] : []),
+                                    ]}
+                                    placeholder="-- Pilih Bagian --"
+                                    error={validationErrors.role}
+                                    buttonClassName="bg-gray-50 py-2.5"
+                                />
                                 {validationErrors.role && (
                                     <p className="text-red-500 text-xs mt-1">{validationErrors.role}</p>
                                 )}
@@ -615,16 +616,17 @@ export default function Manajemen() {
                                 <label className="block text-sm font-bold text-gray-700 mb-1">
                                     Bagian
                                 </label>
-                                <select
+                                <CustomSelect
                                     value={role}
-                                    onChange={(e) => setRole(e.target.value)}
-                                    className="w-full bg-gray-50 rounded-xl px-4 py-2 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none"
-                                    required
-                                >
-                                    {allowedRoles?.includes('bar') && <option value="bar">Bar</option>}
-                                    {allowedRoles?.includes('dapur') && <option value="dapur">Dapur</option>}
-                                    {allowedRoles?.includes('supervisor') && <option value="supervisor">Supervisor</option>}
-                                </select>
+                                    onChange={(value) => setRole(value)}
+                                    options={[
+                                        ...(allowedRoles?.includes('bar') ? [{ value: 'bar', label: 'Bar' }] : []),
+                                        ...(allowedRoles?.includes('dapur') ? [{ value: 'dapur', label: 'Dapur' }] : []),
+                                        ...(allowedRoles?.includes('supervisor') ? [{ value: 'supervisor', label: 'Supervisor' }] : []),
+                                    ]}
+                                    placeholder="-- Pilih Bagian --"
+                                    buttonClassName="bg-gray-50 py-2.5"
+                                />
                             </div>
 
                             <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">

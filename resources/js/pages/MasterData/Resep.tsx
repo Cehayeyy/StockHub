@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AppLayout from "@/layouts/app-layout";
-import { Head, usePage, router, Link } from "@inertiajs/react";
-import { Search, Trash, ChevronDown, Plus, BookOpen, Edit } from "lucide-react";
+import { Head, usePage, router } from "@inertiajs/react";
+import { Search, Trash, ChevronDown, Plus, BookOpen, Calculator, TrendingUp, DollarSign, ReceiptText, Percent } from "lucide-react";
+import CustomSelect from "@/components/CustomSelect";
 
 // --- INTERFACES ---
 interface Category {
@@ -15,12 +16,19 @@ interface Recipe {
   category_id?: number;
   category_name?: string;
   total_ingredients: number;
+  total_hpp?: number | null;
+  target_margin?: number | null;
+  harga_jual_hitungan?: number | null;
+  harga_jual_real?: number | null;
+  profit_real?: number | null;
   created_at: string | null;
   ingredients?: {
     item_id: number;
     item_name: string;
     amount: number;
     unit: string;
+    harga_dasar?: number | null;
+    subtotal?: number | null;
   }[];
 }
 
@@ -28,6 +36,7 @@ interface Item {
   id: number;
   name: string;
   unit?: string;
+  harga_dasar?: number | null;
 }
 
 interface Ingredient {
@@ -59,6 +68,48 @@ interface PageProps {
   };
 }
 
+interface CostSummaryProps {
+  totalHpp: number;
+  targetMargin: string;
+  onTargetMarginChange: (value: string) => void;
+  hargaJualReal: string;
+  onHargaJualRealChange: (value: string) => void;
+  hargaJualHitungan: number;
+  profitReal: number;
+  formatRupiah: (value: number | null | undefined) => string;
+  formatInputRupiah: (value: string | number) => string;
+}
+
+const CostSummary: React.FC<CostSummaryProps> = ({
+  totalHpp,
+  targetMargin,
+  onTargetMarginChange,
+  hargaJualReal,
+  onHargaJualRealChange,
+  hargaJualHitungan,
+  profitReal,
+  formatRupiah,
+  formatInputRupiah,
+}) => (
+  <div className="space-y-4 border-t border-gray-100 pt-5">
+    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400"><Calculator className="h-4 w-4" /> Kalkulasi Harga &amp; Profit</div>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label className="text-xs font-semibold text-gray-600">Target margin (%)
+        <input type="number" min="0" step="0.01" value={targetMargin} onChange={(e) => onTargetMarginChange(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm" placeholder="Contoh: 30" />
+      </label>
+      <label className="text-xs font-semibold text-gray-600">Harga jual aktual
+        <div className="relative mt-1"><span className="absolute left-3 top-2 text-sm text-gray-500">Rp</span><input type="text" inputMode="numeric" value={formatInputRupiah(hargaJualReal)} onChange={(e) => onHargaJualRealChange(e.target.value.replace(/[^0-9]/g, ""))} className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm" placeholder="0" /></div>
+      </label>
+    </div>
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs sm:grid-cols-4">
+      <div><span className="block text-gray-500">Total HPP</span><strong className="text-sm text-gray-800">{formatRupiah(totalHpp)}</strong></div>
+      <div><span className="block text-gray-500">Harga hitungan</span><strong className="text-sm text-gray-800">{formatRupiah(hargaJualHitungan)}</strong></div>
+      <div><span className="block text-gray-500">Profit real</span><strong className={`text-sm ${profitReal < 0 ? "text-red-500" : "text-emerald-600"}`}>{formatRupiah(profitReal)}</strong></div>
+      <div><span className="block text-gray-500">Margin aktual</span><strong className="text-sm text-gray-800">{totalHpp > 0 && hargaJualReal ? `${((profitReal / totalHpp) * 100).toFixed(1)}%` : "-"}</strong></div>
+    </div>
+  </div>
+);
+
 const Resep: React.FC = () => {
   const {
     recipes, // Data Pagination dari server
@@ -85,6 +136,8 @@ const Resep: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([
     { id: 1, item_id: null, item_name: "", amount: 1, unit: "porsi" },
   ]);
+  const [targetMargin, setTargetMargin] = useState<string>("");
+  const [hargaJualReal, setHargaJualReal] = useState<string>("");
 
   // === VIEW/EDIT/DELETE STATE ===
   const [openViewModal, setOpenViewModal] = useState(false);
@@ -98,6 +151,8 @@ const Resep: React.FC = () => {
   const [editName, setEditName] = useState("");
   const [editCategoryId, setEditCategoryId] = useState<number | string>("");
   const [editIngredients, setEditIngredients] = useState<Ingredient[]>([]);
+  const [editTargetMargin, setEditTargetMargin] = useState<string>("");
+  const [editHargaJualReal, setEditHargaJualReal] = useState<string>("");
 
   // --- HELPERS ---
   const findRawItemById = (id: number | null) => bahan_mentah.find((it) => it.id === id);
@@ -105,6 +160,53 @@ const Resep: React.FC = () => {
     bahan_mentah.find((it) => it.name.trim().toLowerCase() === name.trim().toLowerCase());
   const findMenuByName = (name: string) =>
     bahan_menu.find((it) => it.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+  // --- HPP HELPERS ---
+  const formatRupiah = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return "-";
+    return `Rp ${new Intl.NumberFormat("id-ID").format(value)}`;
+  };
+  const parseRupiahInput = (val: string): number => parseFloat(val.replace(/[^0-9.]/g, "")) || 0;
+  const formatInputRupiah = (val: string | number): string => {
+    const clean = String(val).replace(/[^0-9]/g, "");
+    if (!clean) return "";
+    return new Intl.NumberFormat("id-ID").format(Number(clean));
+  };
+  const profitColor = (profit: number | null | undefined) => {
+    if (profit == null) return "text-gray-400";
+    if (profit > 0) return "text-emerald-600 font-bold";
+    if (profit < 0) return "text-red-500 font-bold";
+    return "text-gray-500";
+  };
+
+  // --- COMPUTED HPP PREVIEW ---
+  const computeTotalHpp = (ings: Ingredient[]): number =>
+    ings.reduce((sum, ing) => {
+      const item = findRawItemById(ing.item_id);
+      return sum + (ing.amount > 0 ? ing.amount * (item?.harga_dasar ?? 0) : 0);
+    }, 0);
+
+  // ADD form previews
+  const totalHppPreview = useMemo(() => computeTotalHpp(ingredients), [ingredients, bahan_mentah]);
+  const hargaJualHitunganPreview = useMemo(() => {
+    const m = parseFloat(targetMargin) || 0;
+    return totalHppPreview > 0 ? totalHppPreview * (1 + m / 100) : 0;
+  }, [totalHppPreview, targetMargin]);
+  const profitRealPreview = useMemo(() => {
+    const real = parseRupiahInput(hargaJualReal);
+    return totalHppPreview > 0 && real > 0 ? real - totalHppPreview : 0;
+  }, [totalHppPreview, hargaJualReal]);
+
+  // EDIT form previews
+  const editTotalHppPreview = useMemo(() => computeTotalHpp(editIngredients), [editIngredients, bahan_mentah]);
+  const editHargaJualHitunganPreview = useMemo(() => {
+    const m = parseFloat(editTargetMargin) || 0;
+    return editTotalHppPreview > 0 ? editTotalHppPreview * (1 + m / 100) : 0;
+  }, [editTotalHppPreview, editTargetMargin]);
+  const editProfitRealPreview = useMemo(() => {
+    const real = parseRupiahInput(editHargaJualReal);
+    return editTotalHppPreview > 0 && real > 0 ? real - editTotalHppPreview : 0;
+  }, [editTotalHppPreview, editHargaJualReal]);
 
   // --- HANDLERS ---
   const changeDivision = (div: "bar" | "dapur") => {
@@ -236,6 +338,8 @@ const Resep: React.FC = () => {
           amount: i.amount,
           unit: i.unit,
         })),
+        target_margin: parseFloat(targetMargin) || 0,
+        harga_jual_real: parseRupiahInput(hargaJualReal) || null,
       },
       {
         onSuccess: () => {
@@ -243,6 +347,8 @@ const Resep: React.FC = () => {
           setMenuName("");
           setCategoryId("");
           setIngredients([{ id: 1, item_id: null, item_name: "", amount: 1, unit: "porsi" }]);
+          setTargetMargin("");
+          setHargaJualReal("");
         },
       }
     );
@@ -262,6 +368,8 @@ const Resep: React.FC = () => {
         unit: ing.unit,
       })) ?? []
     );
+    setEditTargetMargin(recipe.target_margin != null ? String(recipe.target_margin) : "");
+    setEditHargaJualReal(recipe.harga_jual_real != null ? String(Math.round(recipe.harga_jual_real)) : "");
     setOpenEditModal(true);
   };
 
@@ -304,7 +412,7 @@ const Resep: React.FC = () => {
     if (!editCategoryId) return alert("Silakan pilih kategori terlebih dahulu.");
 
     router.put(
-      route("resep.update", editId),
+      route("resep.update", editId!),
       {
         name: editName,
         division: selectedDivision,
@@ -314,6 +422,8 @@ const Resep: React.FC = () => {
           amount: ing.amount,
           unit: ing.unit,
         })),
+        target_margin: parseFloat(editTargetMargin) || 0,
+        harga_jual_real: parseRupiahInput(editHargaJualReal) || null,
       },
       { onSuccess: () => setOpenEditModal(false) }
     );
@@ -458,14 +568,14 @@ const Resep: React.FC = () => {
           </div>
 
           {/* --- DESKTOP VIEW (TABLE) --- */}
-          <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-gray-100 bg-white">
+          <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-gray-100 bg-white [&_tbody_td:nth-child(5)]:hidden [&_tbody_td:nth-child(6)]:hidden">
             <table className="w-full text-sm whitespace-nowrap text-left">
               <thead className="bg-[#F3F3F3] text-gray-700 font-bold border-b">
                 <tr>
-                  <th className="p-4 w-16 text-center">No</th>
+                  <th className="p-4 w-12 text-center">No</th>
                   <th className="p-4">Menu Jadi</th>
                   <th className="p-4">Kategori</th>
-                  <th className="p-4">Total Bahan</th>
+                  <th className="p-4 text-center">Total Bahan</th>
                   <th className="p-4">Dibuat</th>
                   <th className="p-4 text-center">Aksi</th>
                 </tr>
@@ -473,52 +583,46 @@ const Resep: React.FC = () => {
               <tbody className="divide-y divide-gray-100">
                 {recipes.data.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-gray-400">
-                      Belum ada resep.
-                    </td>
+                    <td colSpan={6} className="p-8 text-center text-gray-400">Belum ada resep.</td>
                   </tr>
                 ) : (
                   recipes.data.map((r, i) => (
                     <tr key={r.id} className="hover:bg-[#FFF7EC] transition">
                       <td className="p-4 text-center text-gray-500">
-                        {/* UPDATE LOGIC PENOMORAN HALAMAN */}
                         {(recipes.current_page - 1) * recipes.per_page + i + 1}
                       </td>
                       <td className="p-4 font-medium text-gray-800">{r.name}</td>
-                      <td className="p-4 text-gray-600">
+                      <td className="p-4">
                         {r.category_name ? (
-                          <span className="bg-[#F6E1C6] text-[#7A4A2B] px-2 py-1 rounded-lg text-xs font-medium">
-                            {r.category_name}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
+                          <span className="bg-[#F6E1C6] text-[#7A4A2B] px-2 py-1 rounded-lg text-xs font-medium">{r.category_name}</span>
+                        ) : "-"}
                       </td>
-                      <td className="p-4 text-gray-600">{r.total_ingredients} bahan</td>
+                      <td className="p-4 text-right">
+                        {true
+                          ? <span className="font-semibold text-gray-600">{r.total_ingredients} bahan</span>
+                          : <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                      <td className="p-4 text-right">
+                        {r.harga_jual_real != null
+                          ? <span className="font-semibold text-gray-800">{formatRupiah(r.harga_jual_real)}</span>
+                          : r.harga_jual_hitungan != null
+                            ? <span className="text-blue-500 text-xs">{formatRupiah(r.harga_jual_hitungan)} <span className="text-gray-400">(hitungan)</span></span>
+                            : <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className={`text-sm ${profitColor(r.profit_real)}`}>
+                          {r.profit_real != null ? formatRupiah(r.profit_real) : <span className="text-gray-300 text-xs">—</span>}
+                        </span>
+                      </td>
                       <td className="p-4 text-gray-600">{r.created_at || "-"}</td>
                       <td className="p-4 text-center">
                         <div className="flex justify-center gap-2">
                           {!isStaff && (
-                            <button
-                              onClick={() => openEdit(r)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs hover:bg-blue-600 transition"
-                            >
-                              Edit
-                            </button>
+                            <button onClick={() => openEdit(r)} className="px-3 py-1 bg-[#C19A6B] text-white rounded-full text-xs hover:bg-[#a8855a] transition">Edit</button>
                           )}
-                          <button
-                            onClick={() => openViewRecipe(r)}
-                            className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs hover:bg-blue-600 transition"
-                          >
-                            View
-                          </button>
+                          <button onClick={() => openViewRecipe(r)} className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs hover:bg-blue-600 transition">View</button>
                           {!isStaff && (
-                            <button
-                              onClick={() => openDeleteConfirm(r.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition"
-                            >
-                              Hapus
-                            </button>
+                            <button onClick={() => openDeleteConfirm(r.id)} className="px-3 py-1 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition">Hapus</button>
                           )}
                         </div>
                       </td>
@@ -565,24 +669,23 @@ const Resep: React.FC = () => {
       {/* --- MODAL TAMBAH RESEP --- */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-xl overflow-y-auto max-h-[90vh]">
-            <h3 className="text-xl font-semibold text-center mb-4">Tambah Resep</h3>
-            <form onSubmit={saveRecipe} className="space-y-5">
+          <div className="bg-white p-6 md:p-7 rounded-2xl w-full max-w-2xl shadow-xl overflow-y-auto max-h-[90vh]">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="w-full text-center text-xl font-bold text-gray-800">Tambah Resep</h3>
+              <button type="button" onClick={() => setShowModal(false)} className="-ml-6 text-xl leading-none text-gray-400 hover:text-gray-700" aria-label="Tutup">×</button>
+            </div>
+            <form onSubmit={saveRecipe} className="space-y-4">
               <div>
-                <label className="font-semibold text-sm">Pilih Kategori</label>
-                <select
-                  className="w-full bg-gray-100 px-4 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#D9A978] mt-1"
+                <label className="font-semibold text-sm block mb-1">Pilih Kategori</label>
+                <CustomSelect
                   value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  required
-                >
-                  <option value="">-- Pilih Kategori --</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setCategoryId(val)}
+                  options={categories.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                  }))}
+                  placeholder="-- Pilih Kategori --"
+                />
               </div>
               <div>
                 <label className="font-semibold text-sm">Nama Menu Jadi</label>
@@ -591,22 +694,23 @@ const Resep: React.FC = () => {
                   list="menu-datalist"
                   value={menuName}
                   onChange={(e) => setMenuName(e.target.value)}
-                  className="w-full bg-gray-100 px-4 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                   placeholder="Pilih atau ketik nama menu..."
                   required
                 />
               </div>
               <div>
                 <p className="font-semibold text-sm">Bahan Mentah</p>
-                {ingredients.map((ing, idx) => (
-                  <div key={ing.id} className="bg-gray-100 p-2 rounded-xl flex flex-wrap gap-2 items-center mb-2">
+                {ingredients.map((ing, idx) => {
+                  const raw = findRawItemById(ing.item_id);
+                  return <div key={ing.id} className="mb-2 grid grid-cols-[16px_minmax(110px,1fr)_50px_54px_auto_18px] items-center gap-2">
                     <span className="text-xs font-bold text-gray-500 w-4">{idx + 1}.</span>
                     <input
                       type="text"
                       list="raw-datalist"
                       value={ing.item_name}
                       onChange={(e) => changeIngredient(ing.id, "item_name", e.target.value)}
-                      className="flex-1 bg-white rounded px-2 py-1 text-xs border border-gray-200 min-w-[120px]"
+                      className="min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs"
                       placeholder="pilih bahan..."
                       required
                     />
@@ -614,7 +718,7 @@ const Resep: React.FC = () => {
                       type="number"
                       value={ing.amount}
                       onChange={(e) => changeIngredient(ing.id, "amount", Number(e.target.value))}
-                      className="w-16 bg-white rounded px-2 py-1 text-xs border border-gray-200"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-center text-xs"
                       placeholder="Jml"
                       required
                       step="0.01"
@@ -623,24 +727,41 @@ const Resep: React.FC = () => {
                       type="text"
                       value={ing.unit}
                       onChange={(e) => changeIngredient(ing.id, "unit", e.target.value)}
-                      className="w-16 bg-white rounded px-2 py-1 text-xs border border-gray-200"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-1 py-2 text-center text-[10px] text-gray-500"
                       placeholder="Satuan"
                       readOnly
                     />
-                    <button type="button" onClick={() => removeIngredient(ing.id)} className="text-red-500">
+                    <div className="whitespace-nowrap text-right text-[11px] text-gray-500">
+                      {raw?.harga_dasar != null
+                        ? `${formatRupiah(raw.harga_dasar)} × ${ing.amount} = ${formatRupiah((raw.harga_dasar ?? 0) * ing.amount)}`
+                        : "Harga dasar belum diisi"}
+                    </div>
+                    <button type="button" onClick={() => removeIngredient(ing.id)} className="text-red-400 hover:text-red-600">
                       <Trash className="w-4 h-4" />
                     </button>
-                  </div>
-                ))}
-                <button type="button" onClick={addIngredient} className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition w-full md:w-auto">
-                  Tambah Bahan
+                  </div>;
+                })}
+                <button type="button" onClick={addIngredient} className="mt-2 inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                  <Plus className="h-3.5 w-3.5" /> Tambah Bahan
                 </button>
               </div>
-              <div className="flex justify-between pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 bg-gray-300 rounded-xl hover:bg-gray-400 transition">
+              <div className="flex justify-end border-b border-gray-100 pb-4 text-sm text-gray-500">Total HPP: <strong className="ml-2 text-base text-gray-800">{formatRupiah(totalHppPreview)}</strong></div>
+              <CostSummary
+                totalHpp={totalHppPreview}
+                targetMargin={targetMargin}
+                onTargetMarginChange={setTargetMargin}
+                hargaJualReal={hargaJualReal}
+                onHargaJualRealChange={setHargaJualReal}
+                hargaJualHitungan={hargaJualHitunganPreview}
+                profitReal={profitRealPreview}
+                formatRupiah={formatRupiah}
+                formatInputRupiah={formatInputRupiah}
+              />
+              <div className="flex justify-between pt-5">
+                <button type="button" onClick={() => setShowModal(false)} className="rounded-lg bg-gray-100 px-5 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-200 transition">
                   Batal
                 </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">
+                <button type="submit" className="rounded-lg bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition">
                   Simpan
                 </button>
               </div>
@@ -656,20 +777,16 @@ const Resep: React.FC = () => {
             <h3 className="text-xl font-semibold text-center mb-4">Edit Resep</h3>
             <form onSubmit={updateRecipe} className="space-y-5">
               <div>
-                <label className="font-semibold text-sm">Pilih Kategori</label>
-                <select
-                  className="w-full bg-gray-100 px-4 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#D9A978] mt-1"
+                <label className="font-semibold text-sm block mb-1">Pilih Kategori</label>
+                <CustomSelect
                   value={editCategoryId}
-                  onChange={(e) => setEditCategoryId(e.target.value)}
-                  required
-                >
-                  <option value="">-- Pilih Kategori --</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setEditCategoryId(val)}
+                  options={categories.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                  }))}
+                  placeholder="-- Pilih Kategori --"
+                />
               </div>
               <div>
                 <label className="font-semibold text-sm">Nama Menu Jadi</label>
@@ -684,8 +801,9 @@ const Resep: React.FC = () => {
               </div>
               <div>
                 <p className="font-semibold text-sm">Bahan Mentah</p>
-                {editIngredients.map((ing, idx) => (
-                  <div key={ing.id} className="bg-gray-100 p-2 rounded-xl flex flex-wrap gap-2 items-center mb-2">
+                {editIngredients.map((ing, idx) => {
+                  const raw = findRawItemById(ing.item_id);
+                  return <div key={ing.id} className="bg-gray-100 p-2 rounded-xl flex flex-wrap gap-2 items-center mb-2">
                     <span className="text-xs font-bold text-gray-500 w-4">{idx + 1}.</span>
                     <input
                       type="text"
@@ -707,37 +825,46 @@ const Resep: React.FC = () => {
                       className="w-16 bg-white rounded px-2 py-1 text-xs border border-gray-200"
                       readOnly
                     />
+                    <div className="w-full text-right text-[11px] text-gray-500 md:w-auto">
+                      {raw?.harga_dasar != null
+                        ? `${formatRupiah(raw.harga_dasar)} × ${ing.amount} = ${formatRupiah((raw.harga_dasar ?? 0) * ing.amount)}`
+                        : "Harga dasar belum diisi"}
+                    </div>
                     <button type="button" onClick={() => removeEditIngredient(ing.id)} className="text-red-500">
                       <Trash className="w-4 h-4" />
                     </button>
-                  </div>
-                ))}
+                  </div>;
+                })}
                 <button type="button" onClick={addEditIngredient} className="mt-2 px-3 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300 transition w-full md:w-auto">
                   Tambah Bahan
                 </button>
               </div>
+              <CostSummary
+                totalHpp={editTotalHppPreview}
+                targetMargin={editTargetMargin}
+                onTargetMarginChange={setEditTargetMargin}
+                hargaJualReal={editHargaJualReal}
+                onHargaJualRealChange={setEditHargaJualReal}
+                hargaJualHitungan={editHargaJualHitunganPreview}
+                profitReal={editProfitRealPreview}
+                formatRupiah={formatRupiah}
+                formatInputRupiah={formatInputRupiah}
+              />
               <div className="flex justify-between pt-4">
-                <button type="button" onClick={() => setOpenEditModal(false)} className="px-4 py-2 bg-gray-300 rounded-xl hover:bg-gray-400 transition">
-                  Batal
-                </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">
-                  Update
-                </button>
+                <button type="button" onClick={() => setOpenEditModal(false)} className="px-4 py-2 bg-gray-300 rounded-xl hover:bg-gray-400 transition">Batal</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">Update</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* --- MODAL VIEW --- */}
       {openViewModal && viewRecipe && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-3xl w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between mb-4">
               <h2 className="text-xl font-bold">Detail Resep — {viewRecipe.name}</h2>
-              <button onClick={() => setOpenViewModal(false)} className="text-black font-bold text-xl">
-                ×
-              </button>
+              <button onClick={() => setOpenViewModal(false)} className="text-black font-bold text-xl">×</button>
             </div>
             <p className="font-semibold mb-2">Menu item: {viewRecipe.name}</p>
             <p className="font-semibold mb-2">Kategori: {viewRecipe.category_name || "-"}</p>
@@ -745,36 +872,29 @@ const Resep: React.FC = () => {
             <div className="space-y-1 mt-2 mb-4">
               {viewRecipe.ingredients?.map((ing, i) => {
                 const raw = findRawItemById(ing.item_id);
-                return (
-                  <p key={i}>
-                    • {raw ? raw.name : ing.item_name} — {ing.amount} {ing.unit}
-                  </p>
-                );
+                return <p key={i}>• {raw ? raw.name : ing.item_name} — {ing.amount} {ing.unit}</p>;
               })}
             </div>
             <p className="font-semibold">Total {viewRecipe.ingredients?.length ?? 0} bahan</p>
-            <div className="flex justify-center mt-6">
-              <button onClick={() => setOpenViewModal(false)} className="px-6 py-2 bg-gray-300 rounded-xl hover:bg-gray-400 transition">
-                Tutup
-              </button>
+            <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-[#FFF7EC] p-4 text-sm">
+              <div><span className="block text-xs text-gray-500">Total HPP</span><strong>{formatRupiah(viewRecipe.total_hpp)}</strong></div>
+              <div><span className="block text-xs text-gray-500">Harga jual</span><strong>{formatRupiah(viewRecipe.harga_jual_real ?? viewRecipe.harga_jual_hitungan)}</strong></div>
+              <div><span className="block text-xs text-gray-500">Target margin</span><strong>{viewRecipe.target_margin ?? 0}%</strong></div>
+              <div><span className="block text-xs text-gray-500">Profit aktual</span><strong className={profitColor(viewRecipe.profit_real)}>{formatRupiah(viewRecipe.profit_real)}</strong></div>
             </div>
+            <div className="flex justify-center mt-6"><button onClick={() => setOpenViewModal(false)} className="px-6 py-2 bg-gray-300 rounded-xl hover:bg-gray-400 transition">Tutup</button></div>
           </div>
         </div>
       )}
 
-      {/* --- MODAL DELETE --- */}
       {openDeleteModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white p-8 rounded-3xl w-full max-w-sm text-center shadow-xl">
             <h2 className="text-xl font-bold text-gray-900 mb-2">Hapus Resep?</h2>
             <p className="text-gray-500 text-sm mb-6">Menghapus resep ini akan menghapus semua data bahan terkait. Tindakan ini tidak dapat dibatalkan.</p>
             <div className="flex justify-center gap-4">
-              <button onClick={() => setOpenDeleteModal(false)} className="px-6 py-2 bg-gray-300 rounded-xl hover:bg-gray-400 transition">
-                Batal
-              </button>
-              <button onClick={confirmDelete} className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition">
-                Hapus
-              </button>
+              <button onClick={() => setOpenDeleteModal(false)} className="px-6 py-2 bg-gray-300 rounded-xl hover:bg-gray-400 transition">Batal</button>
+              <button onClick={confirmDelete} className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition">Hapus</button>
             </div>
           </div>
         </div>

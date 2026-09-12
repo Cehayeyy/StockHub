@@ -114,13 +114,28 @@ class ItemController extends Controller
             ->with('success', 'Kategori berhasil ditambahkan!');
     }
 
+    private function isCategoryMentah(string $categoryName): bool
+    {
+        $lower = strtolower(trim($categoryName));
+        return in_array($lower, ['mentah', 'raw']);
+    }
+
     public function store(Request $request)
     {
+        $categoryId = $request->input('item_category_id');
+        $category = $categoryId ? ItemCategory::find($categoryId) : null;
+        $isMentah = $category && $this->isCategoryMentah($category->name);
+
         $data = $request->validate([
             'nama'             => 'required|string|max:255',
             'item_category_id' => 'required|exists:item_categories,id',
             'division'         => 'required|in:bar,dapur',
             'satuan'           => 'nullable|string|max:50',
+            'harga_dasar'      => $isMentah ? 'required|numeric|min:0' : 'nullable',
+        ], [
+            'harga_dasar.required' => 'Harga dasar wajib diisi untuk kategori Mentah.',
+            'harga_dasar.numeric'  => 'Harga dasar harus berupa angka.',
+            'harga_dasar.min'      => 'Harga dasar tidak boleh kurang dari 0.',
         ]);
 
         $category = ItemCategory::findOrFail($data['item_category_id']);
@@ -133,6 +148,11 @@ class ItemController extends Controller
         }
 
         $data['kategori_item'] = $category->name;
+
+        // Pastikan hanya kategori Mentah yang menyimpan harga_dasar
+        if (!$this->isCategoryMentah($category->name)) {
+            $data['harga_dasar'] = null;
+        }
 
         $item = Item::create($data);
 
@@ -149,11 +169,20 @@ class ItemController extends Controller
 
     public function update(Request $request, Item $item)
     {
+        $categoryId = $request->input('item_category_id');
+        $category = $categoryId ? ItemCategory::find($categoryId) : null;
+        $isMentah = $category && $this->isCategoryMentah($category->name);
+
         $data = $request->validate([
             'nama'             => 'required|string|max:255',
             'item_category_id' => 'required|exists:item_categories,id',
             'division'         => 'required|in:bar,dapur',
             'satuan'           => 'nullable|string|max:50',
+            'harga_dasar'      => $isMentah ? 'required|numeric|min:0' : 'nullable',
+        ], [
+            'harga_dasar.required' => 'Harga dasar wajib diisi untuk kategori Mentah.',
+            'harga_dasar.numeric'  => 'Harga dasar harus berupa angka.',
+            'harga_dasar.min'      => 'Harga dasar tidak boleh kurang dari 0.',
         ]);
 
         $category = ItemCategory::findOrFail($data['item_category_id']);
@@ -166,6 +195,12 @@ class ItemController extends Controller
         }
 
         $data['kategori_item'] = $category->name;
+
+        // Jika kategori diubah dari Mentah ke Menu/Finish/Semi Finish, set harga_dasar = null
+        if (!$this->isCategoryMentah($category->name)) {
+            $data['harga_dasar'] = null;
+        }
+
         $oldName = $item->nama;
 
         $item->update($data);
