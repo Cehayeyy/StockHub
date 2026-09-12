@@ -1,0 +1,38 @@
+name: Deploy StockHub Application
+
+on:
+  push:
+    branches:
+      - master # Sudah disesuaikan dengan branch repositori kalian
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Executing Remote SSH Commands using Key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd ~/StockHub
+            
+            # Menghindari bentrok konfigurasi lokal di server AWS
+            git reset --hard HEAD
+            
+            # Tarik kode terbaru dari branch master ke server AWS
+            git pull origin master
+            
+            # Jalankan otomatisasi optimasi caching Laravel di dalam Docker
+            sudo docker-compose exec -T app php artisan config:cache
+            sudo docker-compose exec -T app php artisan route:cache
+            sudo docker-compose exec -T app php artisan view:cache
+            
+            # Restart Nginx luar agar gerbang proxy tetap segar
+            sudo systemctl restart nginx

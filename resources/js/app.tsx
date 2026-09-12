@@ -10,10 +10,10 @@ declare global {
     const route: typeof routeFn;
 }
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = 'StockHub';
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => title ? `${title} - StockHub` : 'StockHub',
     resolve: (name) =>
         resolvePageComponent(
             `./pages/${name}.tsx`,
