@@ -13,18 +13,21 @@ declare global {
 const appName = 'StockHub';
 
 createInertiaApp({
-    title: (title) => title ? `${title} - StockHub` : 'StockHub',
+    title: (title) => title ? `${title} - ${appName}` : appName,
+
     resolve: (name) =>
         resolvePageComponent(
             `./pages/${name}.tsx`,
-            import.meta.glob('./pages/**/*.tsx')
+            import.meta.glob('./pages/**/*.tsx'),
         ),
 
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);
     },
 
-    progress: { color: '#4B5563' },
+    progress: {
+        color: '#B89568',
+    },
 });
 
 initializeTheme();

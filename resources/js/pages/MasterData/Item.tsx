@@ -1,13 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
-<<<<<<< HEAD
-import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react"; // Ditambahkan Trash2 dan X
+import { Head, usePage, router, Link } from "@inertiajs/react";
+import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
-=======
-import { Head, usePage, router, Link } from "@inertiajs/react"; // Ditambahkan Link
-import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react"; 
->>>>>>> 6d0a03124b09267961b0d40b26e380cc82f86152
 
 type Division = "bar" | "dapur";
 
@@ -180,14 +175,11 @@ export default function ItemPage() {
   const handleEdit = (item: Item) => {
     setEditId(item.id);
     setDivision(item.division);
-<<<<<<< HEAD
 
     const itemCat = safeCategories.find(c => c.id === item.item_category_id) || item.item_category;
     const isMentah = isCategoryMentah(itemCat?.name ?? item.kategori_item);
 
     // Saat edit, paksa array hanya berisi 1 item
-=======
->>>>>>> 6d0a03124b09267961b0d40b26e380cc82f86152
     setFormItems([{
       uid: Date.now(),
       nama: item.nama,
@@ -259,14 +251,11 @@ export default function ItemPage() {
 
     try {
       if (editId) {
-<<<<<<< HEAD
         // MODE EDIT (Hanya 1 Baris)
         const selectedCat = safeCategories.find(c => String(c.id) === String(formItems[0].item_category_id));
         const isMentah = isCategoryMentah(selectedCat?.name);
         const cleanPrice = isMentah ? String(formItems[0].harga_dasar ?? "").replace(/[^0-9]/g, "") : null;
 
-=======
->>>>>>> 6d0a03124b09267961b0d40b26e380cc82f86152
         await new Promise<void>((resolve, reject) => {
           router.put(route("item.update", editId), {
             division,

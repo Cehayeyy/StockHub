@@ -38,22 +38,11 @@ class ItemController extends Controller
             $query->where('nama', 'like', '%' . $request->search . '%');
         }
 
-        // 🛠️ FIX PAGINATION MACET: Paksa query string mengikat parameter division yang sedang aktif
         $items = $query->orderBy('nama')
             ->paginate(10)
-            ->appends(['division' => $division]);
+            ->withQueryString();
 
-        if ($request->search) {
-            $items->appends(['search' => $request->search]);
-        }
-
-        // --- ADAPTASI DROPDOWN FORM TAMBAH ITEM: Jika dapur, cari data 'kitchen' di SQLite ---
-        $searchDivision = $division;
-        if (config('database.default') === 'sqlite' && $division === 'dapur') {
-            $searchDivision = 'kitchen';
-        }
-
-        $categories = ItemCategory::where('division', $searchDivision) // Gunakan $searchDivision agar tidak kosong
+        $categories = ItemCategory::where('division', $division)
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -73,26 +62,19 @@ class ItemController extends Controller
             $division = 'bar';
         }
 
-        // --- ADAPTASI PENCARIAN: Jika dapur, cari juga yang bernilai 'kitchen' di SQLite ---
-        $searchDivision = $division;
-        if (config('database.default') === 'sqlite' && $division === 'dapur') {
-            $searchDivision = 'kitchen';
-        }
-
-        $categories = ItemCategory::where('division', $searchDivision)
+        $categories = ItemCategory::where('division', $division)
             ->orderBy('name')
             ->get()
             ->map(function (ItemCategory $cat) use ($division) {
-                // 🛠️ FIX COUNTER: Pakai variabel $division ('dapur'/'bar') dari request, bukan $cat->division
                 $items = $cat->items()
-                    ->where('division', $division) 
+                    ->where('division', $division)
                     ->orderBy('nama')
                     ->get(['id', 'nama']);
 
                 return [
                     'id'          => $cat->id,
                     'name'        => $cat->name,
-                    'division'    => $division, 
+                    'division'    => $cat->division,
                     'total_items' => $items->count(),
                     'items'       => $items,
                 ];
@@ -111,13 +93,7 @@ class ItemController extends Controller
             'division' => 'required|in:bar,dapur',
         ]);
 
-        // --- SISTEM ADAPTASI SQLITE AWS EC2 (FIX CHECK CONSTRAINT) ---
-        $insertDivision = $data['division'];
-        if (config('database.default') === 'sqlite' && $insertDivision === 'dapur') {
-            $insertDivision = 'kitchen';
-        }
-
-        $exists = ItemCategory::where('division', $insertDivision)
+        $exists = ItemCategory::where('division', $data['division'])
             ->where('name', $data['name'])
             ->exists();
 
@@ -125,15 +101,12 @@ class ItemController extends Controller
             return back()->with('error', 'Kategori sudah ada untuk divisi ini.');
         }
 
-        $cat = ItemCategory::create([
-            'name'     => $data['name'],
-            'division' => $insertDivision,
-        ]);
+        $cat = ItemCategory::create($data);
 
         ActivityLog::create([
             'user_id'     => Auth::id(),
             'activity'    => 'Tambah Kategori',
-            'description' => "Menambahkan kategori baru: '{$cat->name}' ({$data['division']})."
+            'description' => "Menambahkan kategori baru: '{$cat->name}' ({$cat->division})."
         ]);
 
         return redirect()
@@ -166,7 +139,7 @@ class ItemController extends Controller
         ]);
 
         $category = ItemCategory::findOrFail($data['item_category_id']);
-        if ($category->division !== $data['division'] && !($category->division === 'kitchen' && $data['division'] === 'dapur')) {
+        if ($category->division !== $data['division']) {
             return back()->with('error', 'Kategori tidak sesuai dengan divisi.');
         }
 
@@ -213,7 +186,7 @@ class ItemController extends Controller
         ]);
 
         $category = ItemCategory::findOrFail($data['item_category_id']);
-        if ($category->division !== $data['division'] && !($category->division === 'kitchen' && $data['division'] === 'dapur')) {
+        if ($category->division !== $data['division']) {
             return back()->with('error', 'Kategori tidak sesuai dengan divisi.');
         }
 
@@ -243,6 +216,7 @@ class ItemController extends Controller
             ->with('success', 'Item berhasil diupdate!');
     }
 
+    // --- FUNGSI DESTROY YANG DIPERBAIKI ---
     public function destroy($id)
     {
         $item = Item::findOrFail($id);
@@ -250,19 +224,30 @@ class ItemController extends Controller
         $name = $item->nama;
 
         DB::transaction(function () use ($item, $name) {
+            // 1. Hapus Relasi Resep (Jika ada)
             $relatedRecipes = Recipe::where('name', $item->nama)
                                     ->orWhere('item_id', $item->id)
                                     ->get();
 
             foreach ($relatedRecipes as $recipe) {
+                // Hapus Stok Dapur Menu (Pakai recipe_id)
                 StokHarianDapurMenu::where('recipe_id', $recipe->id)->delete();
                 $recipe->delete();
             }
 
+            // 2. Hapus Stok Harian yang terhubung via ITEM_ID (Direct Link)
+            // Ini menangani Bar Menu & Bar Mentah & Dapur Mentah
+
+            // Bar Mentah
             StokHarianMentah::where('item_id', $item->id)->delete();
+
+            // Bar Menu (Tabel stok_harian_menu pakai item_id)
             StokHarianMenu::where('item_id', $item->id)->delete();
+
+            // 🔥 Dapur Mentah (INI YANG DITAMBAHKAN)
             StokHarianDapurMentah::where('item_id', $item->id)->delete();
 
+            // 3. Hapus Item Utama
             $item->delete();
 
             ActivityLog::create([
@@ -285,7 +270,7 @@ class ItemController extends Controller
         Item::where('item_category_id', $itemCategory->id)
             ->update([
                 'item_category_id' => null,
-                'kategori_item'    => null,
+                'kategori_item' => null,
             ]);
 
         $itemCategory->delete();
@@ -297,7 +282,7 @@ class ItemController extends Controller
         ]);
 
         return redirect()
-            ->route('kategori', ['division' => $division === 'kitchen' ? 'dapur' : $division])
+            ->route('kategori', ['division' => $division])
             ->with('success', 'Kategori berhasil dihapus!');
     }
 }

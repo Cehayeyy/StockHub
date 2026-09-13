@@ -601,7 +601,7 @@ export default function KategoriPage() {
 
             <p className="mb-4 text-center text-sm text-gray-700">
               Menghapus kategori dapat menghapus juga item yang memakai
-              kategori ini (sesuai logika di backend).
+              kategori ini
             </p>
             <p className="mb-8 text-center text-sm text-gray-700">
               Apakah Anda yakin ingin menghapus kategori{" "}

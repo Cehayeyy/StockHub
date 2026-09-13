@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'stockhub') }}</title>
+        <title inertia>{{ config('app.name', 'StockHub') }}</title>
 
         <link rel="icon" type="image/png" href="{{ asset('images/stockhub-logo.png') }}">
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,11 +19,4 @@
     <body class="font-sans antialiased">
         @inertia
     </body>
-        @csrf
-        @method('DELETE')
-        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menonaktifkan akun ini?')">
-
-        </button>
-    </form>
-
 </html>
