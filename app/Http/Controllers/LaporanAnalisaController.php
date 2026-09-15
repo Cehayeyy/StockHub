@@ -19,27 +19,29 @@ class LaporanAnalisaController extends Controller
         [$startDate, $endDate] = $this->resolvePeriod($tanggal, $periode);
 
         // Harga satuan/subtotal adalah snapshot saat staff menyimpan nota.
+        // Laporan mencakup transaksi Staff Bar dan Dapur.
         $salesItems = SalesReportItem::query()
             ->with(['item.itemCategory', 'salesReport.user'])
             ->whereHas('salesReport', function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('tanggal_transaksi', [$startDate, $endDate])
-                    ->whereHas('user', fn ($userQuery) => $userQuery->where('role', 'bar'));
+                    ->whereHas('user', fn ($userQuery) => $userQuery->whereIn('role', ['bar', 'dapur', 'kitchen', 'staff_kitchen']));
             })
             ->whereHas('item', function ($query) use ($search) {
-                $query->where('division', 'bar')
+                $query->whereIn('division', ['bar', 'dapur'])
                     ->when($search !== '', fn ($itemQuery) => $itemQuery->where('nama', 'like', "%{$search}%"));
             })
             ->get();
 
         // Data resep lama dapat belum memiliki item_id; gunakan nama sebagai fallback.
-        $recipes = Recipe::with('category')->where('division', 'bar')->get();
+        $recipes = Recipe::with('category')->whereIn('division', ['bar', 'dapur'])->get();
         $recipesByItemId = $recipes->filter(fn (Recipe $recipe) => $recipe->item_id !== null)->keyBy('item_id');
-        $recipesByName = $recipes->groupBy('name');
+        $recipesByDivisionAndName = $recipes->groupBy(fn (Recipe $recipe) => "{$recipe->division}|{$recipe->name}");
 
         $groupedItems = $salesItems->groupBy('item_id')
-            ->map(function ($lines, $itemId) use ($recipesByItemId, $recipesByName) {
+            ->map(function ($lines, $itemId) use ($recipesByItemId, $recipesByDivisionAndName) {
                 $item = $lines->first()->item;
-                $recipe = $recipesByItemId->get($itemId) ?? $recipesByName->get($item->nama)?->first();
+                $recipe = $recipesByItemId->get($itemId)
+                    ?? $recipesByDivisionAndName->get("{$item->division}|{$item->nama}")?->first();
                 $terjual = (float) $lines->sum('quantity');
                 // Diskon dan fee berlaku untuk satu nota, sehingga dibagi
                 // proporsional terhadap subtotal masing-masing menu.
