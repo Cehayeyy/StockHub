@@ -74,7 +74,7 @@ export default function SalesReport() {
   const discPercent = Number(diskonPersen) || 0;
   const diskonNominal = (subtotal * discPercent) / 100;
   const partnerFee = Number(feeMitra) || 0;
-  const totalBersih = Math.max(subtotal - diskonNominal, 0);
+  const totalBersih = Math.max(subtotal - diskonNominal - partnerFee, 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
