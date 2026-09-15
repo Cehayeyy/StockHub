@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import AppLayout from "@/layouts/app-layout";
-import { Head, usePage, router } from "@inertiajs/react";
+import { Head, usePage, router, useForm } from "@inertiajs/react";
 import { Search, ChevronDown, Trash2, Plus, AlertTriangle, Edit, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,6 +17,7 @@ interface ItemData {
   pemakaian: number;
   tersisa: number;
   is_submitted?: number;
+  connected_menus?: string[];
 }
 
 interface DropdownItem {
@@ -55,7 +56,7 @@ interface PageProps {
   search?: string;
 }
 
-// --- 🔥 KOMPONEN DROPDOWN PENCARIAN (BARU) 🔥 ---
+// --- KOMPONEN DROPDOWN PENCARIAN ---
 const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item..." }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -81,16 +82,16 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item.
     <div ref={dropdownRef} className="relative w-full">
       <div
         onClick={() => { setIsOpen(!isOpen); setSearchTerm(""); }}
-        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] text-gray-700 cursor-pointer flex justify-between items-center"
+        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#8B5E3C] text-gray-700 cursor-pointer flex justify-between items-center"
       >
-        <span className={selectedOption ? "text-gray-800" : "text-gray-400"}>
+        <span className={selectedOption ? "text-gray-800 font-bold" : "text-gray-400"}>
           {selectedOption ? selectedOption.nama : placeholder}
         </span>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && (
-        <div className="absolute z-[60] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 flex flex-col overflow-hidden">
+        <div className="absolute z-[60] w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-60 flex flex-col overflow-hidden">
           <div className="p-2 border-b border-gray-100 bg-gray-50">
             <div className="relative">
               <input
@@ -99,12 +100,12 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item.
                 placeholder="Cari nama item..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
               />
-              <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
+              <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
             </div>
           </div>
-          <div className="overflow-y-auto flex-1 p-1">
+          <div className="overflow-y-auto flex-1 p-1.5 space-y-1">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((opt: any) => (
                 <button
@@ -114,13 +115,13 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item.
                     onChange(opt.id);
                     setIsOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-[#FDF3E4] hover:text-[#8B5E3C] rounded-lg transition font-medium"
+                  className="w-full text-left px-3.5 py-2.5 text-sm text-gray-700 hover:bg-[#FDF3E4] hover:text-[#8B5E3C] rounded-xl transition font-medium"
                 >
                   {opt.nama}
                 </button>
               ))
             ) : (
-              <div className="px-3 py-4 text-sm text-gray-400 text-center">
+              <div className="px-3 py-4 text-sm text-gray-400 text-center italic">
                 Item tidak ditemukan
               </div>
             )}
@@ -130,7 +131,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item.
     </div>
   );
 };
-// --- 🔥 SELESAI KOMPONEN DROPDOWN 🔥 ---
 
 // --- MODAL INPUT (CREATE) ---
 interface FormItem {
@@ -176,21 +176,18 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     }
   }, [show, tanggal]);
 
-  // 🔥 UPDATE FUNGSI HANDLE CHANGE UNTUK DROPDOWN BARU 🔥
   const handleItemChange = (index: number, val: string | number) => {
     const id = val ? val.toString() : "";
     const newItems = [...items];
     newItems[index].target_id = id;
 
     if (id) {
-      // Perbaikan: Mencari di 'id' atau 'recipe_id' agar sinkron dengan Controller Dapur
       const selected = inputableMenus.find((m: any) =>
         Number(m.id) === Number(id) || Number(m.recipe_id) === Number(id)
       );
 
       if (selected) {
         newItems[index].selectedItemInfo = selected;
-        // Memastikan stok_awal terbaca sebagai string, jika tidak ada set ke "0"
         newItems[index].stok_awal = selected.stok_awal !== undefined ? selected.stok_awal.toString() : "0";
         newItems[index].satuan = selected.satuan || "porsi";
       }
@@ -239,11 +236,8 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
         }
       })
       .map(item => {
-        // 🔥 MAPPING AMAN KHUSUS DAPUR 🔥
         if (tab === "menu") {
           return {
-            // PENTING: Gunakan 'item_id' sebagai key pengiriman karena Controller storeMenu
-            // mencari $row['item_id'], meskipun di database disave sebagai recipe_id.
             item_id: item.target_id.toString(),
             pemakaian: item.pemakaian.toString(),
           };
@@ -251,7 +245,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           return {
             item_id: item.target_id.toString(),
             stok_awal: item.stok_awal.toString(),
-            // Pastikan stok_masuk bernilai string angka yang valid, default "0"
             stok_masuk: (item as any).stok_masuk ? (item as any).stok_masuk.toString() : "0",
           };
         }
@@ -263,7 +256,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     }
 
     setProcessing(true);
-    // PASTIKAN INI DAPUR
     const routeName = tab === "menu" ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
 
     router.post(route(routeName), {
@@ -297,43 +289,42 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-all">
       <motion.div
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
-        className="bg-white rounded-[30px] shadow-2xl w-full max-w-2xl p-8 max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto border border-gray-100"
       >
-        <h3 className="font-bold text-lg text-center mb-6">
+        <h3 className="font-extrabold text-xl text-center mb-6 text-gray-800">
           Input Data Dapur ({tab === "menu" ? "Menu" : "Bahan Mentah"})
         </h3>
 
-        <form onSubmit={submit} className="space-y-6">
+        <form onSubmit={submit} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Tanggal</label>
-            <div className="w-full bg-gray-100 rounded-xl px-4 py-3 text-sm font-medium border-none text-gray-600">
-              {new Date(tanggal).toLocaleDateString("id-ID")}
+            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Tanggal</label>
+            <div className="w-full bg-gray-50 rounded-2xl px-4 py-3 text-sm font-bold border border-gray-200 text-gray-700">
+              {new Date(tanggal).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
           </div>
 
           {items.map((item, index) => (
-            <div key={item.id} className="border-2 border-gray-200 rounded-2xl p-4 space-y-4 relative">
+            <div key={item.id} className="bg-white border border-gray-200/80 rounded-3xl p-5 space-y-4 relative shadow-xs">
               {items.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition"
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-sm"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
 
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-bold text-gray-700">Item #{index + 1}</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-extrabold text-[#8B5E3C] uppercase tracking-wider">Item #{index + 1}</span>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nama Item</label>
-                {/* 🔥 PENERAPAN SEARCHABLE SELECT 🔥 */}
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Nama Item</label>
                 <SearchableSelect
                   options={inputableMenus}
                   value={item.target_id}
@@ -343,54 +334,57 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Satuan</label>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Satuan</label>
                 <input
                   type="text"
                   value={item.selectedItemInfo?.satuan || "porsi"}
                   disabled
-                  className="w-full bg-gray-100 border-none rounded-xl px-4 py-3 text-sm text-gray-500"
+                  className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-500 font-medium cursor-not-allowed"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Stok Awal</label>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stok Awal</label>
                 {tab === "menu" ? (
                   <input
                     type="text"
                     value={item.selectedItemInfo?.stok_awal ?? "0"}
                     disabled
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700"
+                    className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-600 font-bold cursor-not-allowed"
                   />
                 ) : (
                   <input
                     type="number"
                     value={item.stok_awal}
                     onChange={(e) => handleFieldChange(index, 'stok_awal', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
+                    placeholder="0"
                   />
                 )}
               </div>
 
               {tab === "mentah" && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Stok Masuk</label>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stok Masuk</label>
                   <input
                     type="number"
                     value={item.stok_masuk}
                     onChange={(e) => handleFieldChange(index, 'stok_masuk', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
+                    placeholder="0"
                   />
                 </div>
               )}
 
               {tab === "menu" && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Pemakaian</label>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Pemakaian</label>
                   <input
                     type="number"
                     value={item.pemakaian}
                     onChange={(e) => handleFieldChange(index, 'pemakaian', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
+                    placeholder="0"
                   />
                 </div>
               )}
@@ -400,28 +394,28 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
           <button
             type="button"
             onClick={addNewItem}
-            className="w-full py-3 border-2 border-dashed border-[#D9A978] rounded-xl text-[#D9A978] font-bold text-sm hover:bg-[#D9A978]/5 transition flex items-center justify-center gap-2"
+            className="w-full py-3.5 border-2 border-dashed border-[#D9A978] rounded-2xl text-[#8B5E3C] font-bold text-sm hover:bg-[#D9A978]/10 transition flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            Tambah Item
+            Tambah Item Lainnya
           </button>
 
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-full font-bold text-sm text-gray-600 hover:bg-gray-50"
+              className="flex-1 px-6 py-3 bg-gray-100 rounded-2xl font-bold text-sm text-gray-700 hover:bg-gray-200 transition"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isButtonDisabled}
-              className={`px-6 py-2 rounded-full text-white font-bold text-sm ${
-                isButtonDisabled ? "bg-[#E0C09E] cursor-not-allowed" : "bg-[#D9A978] hover:bg-[#C19A6B]"
+              className={`flex-1 px-6 py-3 rounded-2xl text-white font-bold text-sm shadow-md transition ${
+                isButtonDisabled ? "bg-[#E0C09E] cursor-not-allowed" : "bg-[#8B5E3C] hover:bg-[#6F4E37]"
               }`}
             >
-              {processing ? "Menyimpan..." : "Simpan"}
+              {processing ? "Menyimpan..." : "Simpan Semua"}
             </button>
           </div>
         </form>
@@ -433,7 +427,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4"
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ scale: 0.95, y: 10, opacity: 0 }}
@@ -460,13 +454,13 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
                 </button>
               </div>
 
-              <p className="mt-4 text-sm text-gray-700 leading-relaxed">{warningMessage}</p>
+              <p className="mt-4 text-sm text-gray-700 leading-relaxed font-medium">{warningMessage}</p>
 
               <div className="mt-6 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setWarningMessage(null)}
-                  className="px-5 py-2 rounded-full bg-[#D9A978] text-white font-bold text-sm hover:bg-[#C99968] transition"
+                  className="px-6 py-2.5 rounded-2xl bg-[#8B5E3C] text-white font-bold text-sm hover:bg-[#6F4E37] transition shadow-md"
                 >
                   Mengerti
                 </button>
@@ -502,19 +496,11 @@ export default function Dapur() {
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
   const [formSatuan, setFormSatuan] = useState("porsi");
 
-  // 🔥 LOGIKA PENGUNCIAN BERTINGKAT 🔥
   const isAlreadySubmitted = items.data.some((item: ItemData) => item.is_submitted === 1);
   const isStaff = role !== 'owner' && role !== 'supervisor';
 
-  // 1. Kunci MENU: Terkunci jika (Staff DAN Dashboard Centang Hijau) ATAU (Staff DAN Jam > 21:00)
-  // bypass jika canInput = true (Izin Revisi disetujui).
   const isMenuLocked = isStaff && !canInput && (isAlreadySubmitted || isPastCutoff);
-
-  // 2. Kunci MENTAH: HANYA terkunci jika (Staff DAN Jam > 21:00)
-  // Mentah TETAP TERBUKA meskipun sudah centang hijau sampai jam 9 malam.
   const isMentahLocked = isStaff && !canInput && isPastCutoff;
-
-  // Variabel penentu akhir sesuai tab yang aktif di layar
   const isLocked = tab === "menu" ? isMenuLocked : isMentahLocked;
 
   useEffect(() => {
@@ -634,32 +620,25 @@ export default function Dapur() {
     });
   };
 
-  // --- 🔥 TAMBAHAN LOGIKA ENTER (HAPUS) & ESC (BATAL) 🔥 ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Jika Modal Hapus terbuka
       if (showDeleteModal) {
         if (e.key === "Enter") {
           e.preventDefault();
-          submitDelete(); // Eksekusi Hapus
+          submitDelete();
         } else if (e.key === "Escape") {
           e.preventDefault();
-          setShowDeleteModal(false); // Batal
+          setShowDeleteModal(false);
         }
-      }
-      // 2. Jika Modal Edit terbuka
-      else if (showEditModal && e.key === "Escape") {
+      } else if (showEditModal && e.key === "Escape") {
         e.preventDefault();
         setShowEditModal(false);
-      }
-      // 3. Jika Modal Input Data terbuka
-      else if (showInputModal && e.key === "Escape") {
+      } else if (showInputModal && e.key === "Escape") {
         e.preventDefault();
         setShowInputModal(false);
       }
     };
 
-    // Pasang pendengar hanya saat salah satu modal aktif
     if (showDeleteModal || showEditModal || showInputModal) {
       window.addEventListener("keydown", handleKeyDown);
     }
@@ -668,9 +647,9 @@ export default function Dapur() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [showDeleteModal, showEditModal, showInputModal, formRecordId]);
-  // --- 🔥 SELESAI TAMBAHAN 🔥 ---
 
-  const showInputButton = tab === "mentah" || (tab === "menu" && role !== "supervisor");
+  // 🔥 TOMBOL INPUT DATA HANYA MUNCUL DI TAB "MENTAH" SAJA
+  const showInputButton = tab === "mentah";
 
   return (
     <AppLayout header={`Stok Harian Dapur`}>
@@ -714,30 +693,30 @@ export default function Dapur() {
 
       <div className="py-6 space-y-6">
         {lowStockItems && lowStockItems.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-4 shadow-sm animate-in fade-in">
-            <div className="p-2 bg-red-100 rounded-full text-red-600">
-              <AlertTriangle className="w-6 h-6" />
+          <div className="bg-red-50 border border-red-200 rounded-3xl p-4 flex items-start gap-4 shadow-xs">
+            <div className="p-2.5 bg-red-100 rounded-2xl text-red-600 flex-shrink-0">
+              <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-red-800 font-bold">Peringatan: Stok Menipis!</h3>
-              <p className="text-red-600 text-sm mt-1">
+              <h3 className="text-red-800 font-bold text-sm">Peringatan: Stok Menipis!</h3>
+              <p className="text-red-600 text-xs mt-0.5">
                 Terdapat {lowStockItems.length} item dengan stok di bawah 7.
               </p>
             </div>
           </div>
         )}
 
-        <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[500px]">
+        <div className="bg-[#F2ECE4] p-4 md:p-8 rounded-3xl shadow-sm border border-amber-200/60 min-h-[500px] flex flex-col">
           {isLocked && (
-            <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-start gap-3">
-              <div className="p-2 bg-yellow-100 rounded-full text-yellow-600">
+            <div className="mb-6 bg-amber-50 border border-amber-200/80 rounded-3xl p-4 flex items-start gap-3 shadow-2xs">
+              <div className="p-2.5 bg-amber-100 rounded-2xl text-amber-700 flex-shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-yellow-800 font-bold text-sm">Aksi Terkunci</h3>
-                <p className="text-yellow-700 text-xs mt-1">
+                <h3 className="text-amber-900 font-bold text-sm">Aksi Terkunci</h3>
+                <p className="text-amber-700 text-xs mt-0.5 leading-relaxed">
                   {tab === "menu" && isAlreadySubmitted && !isPastCutoff
-                    ? "Tab Menu terkunci karena data sudah berhasil disimpan (Dashboard Centang Hijau). Anda masih bisa input di tab Mentah sampai jam 21:00."
+                    ? "Tab Menu terkunci karena data sudah berhasil disimpan. Anda masih bisa input di tab Mentah sampai jam 21:00."
                     : "Waktu input harian (Menu & Mentah) telah ditutup setelah jam 21:00. Silakan ajukan izin revisi untuk melakukan perubahan."
                   }
                 </p>
@@ -751,23 +730,24 @@ export default function Dapur() {
                 <button
                   onClick={() => setShowInputModal(true)}
                   disabled={isLocked}
-                  className={`flex-1 md:flex-none justify-center px-6 py-2 rounded-full text-sm font-bold flex gap-2 items-center transition ${
+                  className={`flex-1 md:flex-none justify-center px-6 py-2.5 rounded-full text-sm font-bold flex gap-2 items-center transition shadow-md ${
                     isLocked
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
-                      : 'bg-[#C19A6B] text-white hover:bg-[#a8855a]'
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50 shadow-none'
+                      : 'bg-[#D9A978] text-white hover:bg-[#c4925e]'
                   }`}
                 >
                   <Plus className="w-4 h-4" />
-                  {isAlreadySubmitted && isStaff && tab === "menu" && !canInput ? "Sudah Tersimpan" : "Input Data"}
+                  Input Data
                 </button>
               )}
             </div>
+
             <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
               <input
                 type="date"
                 value={date}
                 onChange={handleDateChange}
-                className="w-full md:w-auto bg-[#FDF3E4] border-none rounded-full px-4 py-2 text-sm text-[#8B5E3C] font-medium"
+                className="w-full md:w-auto bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm text-[#8B5E3C] font-bold shadow-2xs outline-none"
               />
               <div className="relative w-full md:w-auto">
                 <input
@@ -776,24 +756,25 @@ export default function Dapur() {
                   value={search}
                   onChange={handleSearch}
                   autoFocus
-                  className="w-full md:w-64 bg-[#FDF3E4] border-none rounded-full pl-4 pr-10 py-2 text-sm"
+                  className="w-full md:w-64 bg-gray-50 border border-gray-200 rounded-full pl-4 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
-                <Search className="w-4 h-4 absolute right-3 top-2.5 text-gray-400" />
+                <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
-            <div className="flex w-full md:w-auto bg-[#FDF3E4] rounded-full p-1">
+
+            <div className="flex w-full md:w-auto bg-gray-100 rounded-full p-1 border border-gray-200/60">
               <button
                 onClick={() => handleTabSwitch("menu")}
-                className={`flex-1 md:flex-none px-6 py-1 rounded-full text-sm font-medium transition ${
-                  tab === "menu" ? "bg-[#D9A978] text-white" : "text-gray-500"
+                className={`flex-1 md:flex-none px-6 py-1.5 rounded-full text-xs font-bold transition ${
+                  tab === "menu" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 Menu
               </button>
               <button
                 onClick={() => handleTabSwitch("mentah")}
-                className={`flex-1 md:flex-none px-6 py-1 rounded-full text-sm font-medium transition ${
-                  tab === "mentah" ? "bg-[#D9A978] text-white" : "text-gray-500"
+                className={`flex-1 md:flex-none px-6 py-1.5 rounded-full text-xs font-bold transition ${
+                  tab === "mentah" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 Mentah
@@ -801,80 +782,103 @@ export default function Dapur() {
             </div>
           </div>
 
-          <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-100">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-700 font-semibold border-b">
-                <tr>
-                  <th className="p-4 text-center">No</th>
-                  <th className="p-4">Nama</th>
-                  <th className="p-4 text-center">Satuan</th>
-                  <th className="p-4 text-center">Stok Awal</th>
-                  {tab === "mentah" && <th className="p-4 text-center">Stok Masuk</th>}
-                  <th className="p-4 text-center">Stok Total</th>
-                  <th className="p-4 text-center">Pemakaian</th>
-                  <th className="p-4 text-center">Tersisa</th>
-                  <th className="p-4 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {items.data.length > 0 ? (
-                  items.data.map((item: ItemData, i: number) => (
-                    <tr key={item.id} className="hover:bg-[#FFF9F0]">
-                      <td className="p-4 text-center text-gray-500">
-                        {(items.current_page ? (items.current_page - 1) * 10 : 0) + i + 1}
-                      </td>
-                      <td className="p-4 font-bold text-gray-800">{item.nama}</td>
-                      <td className="p-4 text-center text-gray-500">{item.satuan}</td>
-                      <td className="p-4 text-center">{item.stok_awal}</td>
-                      {tab === "mentah" && (
-                        <td className="p-4 text-center">{item.stok_masuk ?? 0}</td>
-                      )}
-                      <td className="p-4 text-center">{item.stok_total}</td>
-                      <td className="p-4 text-center">{item.pemakaian}</td>
-                      <td
-                        className={`p-4 text-center font-bold ${
-                          item.tersisa < 7 ? "text-red-600" : "text-gray-900"
-                        }`}
-                      >
-                        {item.tersisa}
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => handleEditClick(item)}
-                            disabled={isLocked}
-                            className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-                              isLocked
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : "bg-[#1D8CFF] text-white hover:bg-[#166ac4]"
-                            }`}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(item.id)}
-                            disabled={isLocked}
-                            className={`px-4 py-1 rounded-full text-xs font-semibold transition ${
-                              isLocked
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : "bg-[#FF4B4B] text-white hover:bg-[#e03535]"
-                            }`}
-                          >
-                            Hapus
-                          </button>
-                        </div>
+          <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-xs overflow-hidden flex-1 mb-6">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4 text-center w-16">No</th>
+                    <th className="px-6 py-4">Nama</th>
+                    <th className="px-6 py-4 text-center w-32">Satuan</th>
+                    <th className="px-6 py-4 text-center w-32">Stok Awal</th>
+                    {tab === "mentah" && <th className="px-6 py-4 text-center w-32">Stok Masuk</th>}
+                    <th className="px-6 py-4 text-center w-32">Stok Total</th>
+                    <th className="px-6 py-4 text-center w-32">Pemakaian</th>
+                    <th className="px-6 py-4 text-center w-32">Tersisa</th>
+                    <th className="px-6 py-4 text-center w-40">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {items.data.length > 0 ? (
+                    items.data.map((item: ItemData, i: number) => (
+                      <tr key={item.id} className="hover:bg-[#FDF3E4]/50 transition-colors duration-150">
+                        <td className="px-6 py-4 text-center text-gray-400 font-medium">
+                          {(items.current_page ? (items.current_page - 1) * items.per_page : 0) + i + 1}
+                        </td>
+                        <td className="px-6 py-4 text-gray-800">
+                          <div className="font-bold text-gray-800">{item.nama}</div>
+                          {tab === "mentah" && item.connected_menus && item.connected_menus.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mt-1.5 items-center">
+                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Digunakan di menu:</span>
+                              {item.connected_menus.map((menuName: string, idx: number) => (
+                                <span 
+                                  key={idx} 
+                                  className="bg-[#FDF3E4] text-[#8B5E3C] px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-amber-100 shadow-2xs"
+                                >
+                                  {menuName}
+                                </span>
+                              ))}
+                            </div>
+                          ) : tab === "mentah" ? (
+                            <div className="text-[10px] text-gray-400 italic mt-0.5">Belum terhubung ke resep menu</div>
+                          ) : null}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-500 font-medium">{item.satuan}</td>
+                        <td className="px-6 py-4 text-center font-bold text-gray-700">{item.stok_awal}</td>
+                        {tab === "mentah" && (
+                          <td className="px-6 py-4 text-center font-bold text-gray-700">{item.stok_masuk ?? 0}</td>
+                        )}
+                        <td className="px-6 py-4 text-center font-bold text-blue-600">{item.stok_total}</td>
+                        <td className="px-6 py-4 text-center font-bold text-gray-700">{item.pemakaian}</td>
+                        <td
+                          className={`px-6 py-4 text-center font-black ${
+                            item.tersisa < 7 ? "text-red-600 animate-pulse" : "text-gray-900"
+                          }`}
+                        >
+                          {item.tersisa}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {!(isStaff && tab === "menu") ? (
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={() => handleEditClick(item)}
+                                disabled={isLocked}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
+                                  isLocked
+                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                                    : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                }`}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteClick(item.id)}
+                                disabled={isLocked}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
+                                  isLocked
+                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                                    : "bg-red-50 text-red-600 hover:bg-red-100"
+                                }`}
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic font-medium">Read-only</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={10} className="px-6 py-12 text-center text-gray-400 italic">
+                        Belum ada data.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={10} className="p-8 text-center text-gray-400">
-                      Belum ada data.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:hidden">
@@ -882,70 +886,76 @@ export default function Dapur() {
               items.data.map((item: ItemData) => (
                 <div
                   key={item.id}
-                  className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm"
+                  className="bg-white border border-gray-100 rounded-2xl p-4 shadow-xs"
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-bold">{item.nama}</span>
+                    <span className="font-bold text-gray-800">{item.nama}</span>
                     <span
-                      className={`text-xs px-2 py-1 rounded ${
+                      className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                         item.tersisa < 7
                           ? "bg-red-100 text-red-600"
-                          : "bg-green-100 text-green-600"
+                          : "bg-emerald-100 text-emerald-700"
                       }`}
                     >
                       Sisa: {item.tersisa}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mt-2">
-                    <div className="bg-gray-50 p-2 rounded">
-                      <span className="text-gray-500">Awal:</span>
-                      <span className="font-semibold ml-1">{item.stok_awal}</span>
+                    <div className="bg-gray-50 p-2.5 rounded-xl font-medium">
+                      <span className="text-gray-400 font-bold uppercase text-[10px] block">Awal</span>
+                      <span className="font-bold text-gray-800">{item.stok_awal}</span>
                     </div>
-                    <div className="bg-gray-50 p-2 rounded">
-                      <span className="text-gray-500">Total:</span>
-                      <span className="font-semibold ml-1 text-blue-600">{item.stok_total}</span>
+                    <div className="bg-gray-50 p-2.5 rounded-xl font-medium">
+                      <span className="text-gray-400 font-bold uppercase text-[10px] block">Total</span>
+                      <span className="font-bold text-blue-600">{item.stok_total}</span>
                     </div>
                     {tab === "mentah" && (
-                      <div className="bg-gray-50 p-2 rounded">
-                        <span className="text-gray-500">Masuk:</span>
-                        <span className="font-semibold ml-1">{item.stok_masuk ?? 0}</span>
+                      <div className="bg-gray-50 p-2.5 rounded-xl font-medium">
+                        <span className="text-gray-400 font-bold uppercase text-[10px] block">Masuk</span>
+                        <span className="font-bold text-gray-800">{item.stok_masuk ?? 0}</span>
                       </div>
                     )}
-                    <div className="bg-gray-50 p-2 rounded">
-                      <span className="text-gray-500">Pakai:</span>
-                      <span className="font-semibold ml-1">{item.pemakaian}</span>
+                    <div className="bg-gray-50 p-2.5 rounded-xl font-medium">
+                      <span className="text-gray-400 font-bold uppercase text-[10px] block">Pakai</span>
+                      <span className="font-bold text-gray-800">{item.pemakaian}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-3 pt-3 border-t">
-                    <button
-                      onClick={() => handleEditClick(item)}
-                      disabled={isLocked}
-                      className={`flex-1 py-1 rounded text-xs ${
-                        isLocked ? "bg-gray-200 text-gray-400" : "bg-blue-500 text-white"
-                      }`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(item.id)}
-                      disabled={isLocked}
-                      className={`flex-1 py-1 rounded text-xs ${
-                        isLocked ? "bg-gray-200 text-gray-400" : "bg-red-500 text-white"
-                      }`}
-                    >
-                      Hapus
-                    </button>
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                  {!(isStaff && tab === "menu") ? (
+                    <>
+                      <button
+                        onClick={() => handleEditClick(item)}
+                        disabled={isLocked}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold shadow-xs ${
+                          isLocked ? "bg-gray-200 text-gray-400" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(item.id)}
+                        disabled={isLocked}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold shadow-xs ${
+                          isLocked ? "bg-gray-200 text-gray-400" : "bg-red-50 text-red-600 hover:bg-red-100"
+                        }`}
+                      >
+                        Hapus
+                      </button>
+                    </>
+                  ) : (
+                    <div className="w-full text-center text-xs text-gray-400 italic">Read-only</div>
+                  )}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-center text-gray-400 text-sm">Belum ada data.</p>
+              <p className="text-center text-gray-400 text-sm italic py-8">Belum ada data.</p>
             )}
           </div>
 
           {items.links && items.links.length > 3 && (
-            <div className="mt-6 flex justify-center pb-4">
-              <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
+            <div className="mt-auto flex justify-center pt-4 pb-2">
+              <div className="flex flex-wrap justify-center gap-1 bg-white p-1 rounded-full border border-gray-100 shadow-xs">
                 {items.links.map((link: any, i: number) => {
                   let label = link.label;
                   if (label.includes('&laquo;')) label = 'Prev';
@@ -959,10 +969,10 @@ export default function Dapur() {
                         link.url &&
                         router.get(link.url, {}, { preserveScroll: true })
                       }
-                      className={`px-3 sm:px-4 py-2 rounded-full text-xs font-medium transition-all ${
+                      className={`px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition-all ${
                         link.active
-                          ? "bg-[#D9A978] text-white shadow-md"
-                          : "text-gray-600 hover:bg-white hover:text-[#D9A978]"
+                          ? "bg-[#D9A978] text-white shadow-xs"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-[#8B5E3C]"
                       } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
                       dangerouslySetInnerHTML={{ __html: label }}
                     />
@@ -971,28 +981,28 @@ export default function Dapur() {
               </div>
             </div>
           )}
+
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="w-2 h-6 bg-red-500 rounded-full inline-block"></span>Grafik Stok Hampir
-            Habis ({"<"} 7)
+        <div className="bg-[#F2ECE4] p-6 md:p-8 rounded-3xl shadow-sm border border-amber-200/60">
+          <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2.5">
+            <span className="w-2.5 h-6 bg-red-500 rounded-full inline-block"></span> Grafik Stok Hampir Habis ({"<"} 7)
           </h3>
           {lowStockItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {lowStockItems.map((item: LowStockItem, idx: number) => (
                 <div
                   key={idx}
-                  className="flex flex-col gap-1 p-3 border border-gray-100 rounded-xl hover:shadow-sm"
+                  className="flex flex-col gap-2 p-4 bg-white border border-gray-100 rounded-2xl shadow-xs"
                 >
-                  <div className="flex justify-between text-xs font-semibold text-gray-600 mb-2">
+                  <div className="flex justify-between text-xs font-bold text-gray-700">
                     <span>
                       {item.nama}{" "}
                       <span className="text-gray-400 font-normal">({item.kategori})</span>
                     </span>
-                    <span className="text-red-500">{item.tersisa} Tersisa</span>
+                    <span className="text-red-500 font-extrabold">{item.tersisa} Tersisa</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-red-500 to-red-400 h-full rounded-full"
                       style={{
@@ -1004,7 +1014,7 @@ export default function Dapur() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-400 text-sm">
+            <div className="text-center py-8 text-gray-400 text-sm italic bg-white rounded-2xl border border-gray-100">
               Semua stok aman! Tidak ada item yang hampir habis.
             </div>
           )}
@@ -1012,9 +1022,9 @@ export default function Dapur() {
       </div>
 
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-6 md:p-8 shadow-2xl animate-in zoom-in-95 overflow-y-auto max-h-[90vh]">
-            <h2 className="text-lg font-bold text-center mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-all">
+          <div className="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-6 md:p-8 shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100">
+            <h2 className="text-xl font-extrabold text-center mb-6 text-gray-800">
               Edit Stok {tab === "menu" ? "Menu" : "Bahan"}
             </h2>
             <form
@@ -1025,73 +1035,71 @@ export default function Dapur() {
               className="space-y-4"
             >
               <div>
-                <label className="block text-sm font-medium mb-1">Nama Item</label>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Nama Item</label>
                 <input
                   type="text"
                   value={formItemName}
                   readOnly
-                  className="w-full bg-gray-100 border rounded-xl px-4 py-2.5 text-sm"
+                  className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-medium text-gray-500 cursor-not-allowed"
                 />
               </div>
-             <div>
-                <label className="block text-sm font-medium mb-1">Stok Awal</label>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stok Awal</label>
                 <input
                   type="number"
                   value={formStokAwal}
                   onChange={(e) => setFormStokAwal(Number(e.target.value))}
-                  disabled={tab === "menu"} // Kunci hanya jika di tab menu
-                  className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors ${
-                    tab === "menu" ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white focus:ring-2 focus:ring-[#D9A978]"
+                  disabled={tab === "menu"}
+                  className={`w-full border rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none transition-colors ${
+                    tab === "menu" ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200" : "bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#8B5E3C]"
                   }`}
                 />
               </div>
 
               {tab === "mentah" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Sisa Stok Saat Ini</label>
-                    <input
-                      type="text"
-                      value={formStokTersisa}
-                      disabled
-                      className="w-full bg-gray-200 border border-gray-300 text-gray-600 rounded-xl px-4 py-2.5 text-sm font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Stok Masuk</label>
-                    <input
-                      type="number"
-                      value={formStokMasuk}
-                      onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm"
-                    />
-                  </div>
-                </>
-              )}
-
-              {tab === "menu" && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">Pemakaian</label>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Sisa Stok Saat Ini</label>
                   <input
-                    type="number"
-                    value={formPemakaian}
-                    onChange={(e) => setFormPemakaian(Number(e.target.value))}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm"
+                    type="text"
+                    value={formStokTersisa}
+                    disabled
+                    className="w-full bg-gray-100 border border-gray-200 text-gray-600 rounded-2xl px-4 py-3 text-sm font-black cursor-not-allowed"
                   />
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 mt-4">
+              {tab === "mentah" ? (
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stok Masuk</label>
+                  <input
+                    type="number"
+                    value={formStokMasuk}
+                    onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#8B5E3C] outline-none"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Pemakaian</label>
+                  <input
+                    type="number"
+                    value={formPemakaian}
+                    onChange={(e) => setFormPemakaian(Number(e.target.value))}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#8B5E3C] outline-none"
+                  />
+                </div>
+              )}
+              <div className="flex justify-between gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-2xl font-bold text-sm text-gray-700 hover:bg-gray-50 transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition shadow-md"
                 >
                   Update
                 </button>
@@ -1102,20 +1110,20 @@ export default function Dapur() {
       )}
 
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white p-6 rounded-3xl shadow-2xl text-center max-w-sm w-full">
-            <h2 className="text-lg font-bold mb-2">Hapus Data?</h2>
-            <p className="text-gray-500 text-sm mb-4">Aksi ini tidak dapat dibatalkan.</p>
-            <div className="flex justify-center gap-3 mt-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-all">
+          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl text-center max-w-sm w-full border border-gray-100">
+            <h2 className="text-xl font-extrabold text-gray-900 mb-2">Hapus Data? ⚠️</h2>
+            <p className="text-gray-500 text-xs mb-6 leading-relaxed">Aksi ini tidak dapat dibatalkan.</p>
+            <div className="flex justify-between gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2.5 bg-gray-100 rounded-2xl text-gray-700 font-bold hover:bg-gray-200 transition text-sm"
               >
                 Batal
               </button>
               <button
                 onClick={submitDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-2xl font-bold shadow-md hover:bg-red-600 transition text-sm"
               >
                 Hapus
               </button>

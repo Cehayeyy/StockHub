@@ -15,6 +15,8 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+
         // 1. Ambil parameter filter
         $dateParam = $request->input('date');   // YYYY-MM-DD
         $search    = $request->input('search'); // Keyword pencarian
@@ -31,12 +33,17 @@ class ActivityLogController extends Controller
         }
 
         // 3. Query Dasar
-        $query = ActivityLog::with('user')
+        $query = ActivityLog::with('user:id,name,role,username')
             ->whereDate('created_at', $selectedDate)
             ->orderBy('created_at', 'desc');
 
+        // 🔥 JIKA AKUN STAFF, BATASI HANYA MENAMPILKAN AKTIVITAS MILIKNYA SENDIRI
+        if (!in_array($user->role, ['owner', 'supervisor'])) {
+            $query->where('user_id', $user->id);
+        }
+
         // Filter berdasarkan role: supervisor tidak boleh lihat aktivitas owner
-        if (auth()->user()->role === 'supervisor') {
+        if ($user->role === 'supervisor') {
             $query->whereHas('user', function ($q) {
                 $q->where('role', '!=', 'owner');
             });
@@ -71,7 +78,7 @@ class ActivityLogController extends Controller
         });
 
         // 7. Return ke Inertia View
-        return Inertia::render('LaporanAktivitas', [
+        return Inertia::render('Laporan/LaporanAktivitas', [
             'logs' => $logs,
             'filters' => [
                 'date'   => $selectedDate,
@@ -81,10 +88,12 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * Export laporan aktivitas ke file Excel (.xlsx) atau CSV.
+     * Export laporan aktivitas ke file Excel (.xls) atau CSV.
      */
     public function export(Request $request)
     {
+        $user = $request->user();
+
         // Ambil filter yang sama dengan index
         $dateParam = $request->input('date');
         $search    = $request->input('search');
@@ -101,11 +110,16 @@ class ActivityLogController extends Controller
         }
 
         // Query Data (Tanpa Pagination untuk Export)
-        $query = ActivityLog::with('user')
+        $query = ActivityLog::with('user:id,name,role,username')
             ->whereDate('created_at', $selectedDate);
 
+        // 🔥 JIKA AKUN STAFF, BATASI HANYA EXPORT AKTIVITAS MILIKNYA SENDIRI
+        if (!in_array($user->role, ['owner', 'supervisor'])) {
+            $query->where('user_id', $user->id);
+        }
+
         // Filter berdasarkan role: supervisor tidak boleh lihat aktivitas owner
-        if (auth()->user()->role === 'supervisor') {
+        if ($user->role === 'supervisor') {
             $query->whereHas('user', function ($q) {
                 $q->where('role', '!=', 'owner');
             });
@@ -162,40 +176,54 @@ class ActivityLogController extends Controller
         $html .= '</x:ExcelWorkbook>';
         $html .= '</xml>';
         $html .= '<style>';
-        $html .= 'table { border-collapse: collapse; width: 100%; }';
-        $html .= 'th { background-color: #8B5E3C; color: white; font-weight: bold; padding: 10px; text-align: center; border: 1px solid #000; }';
-        $html .= 'td { padding: 8px; border: 1px solid #ddd; }';
+        $html .= 'table { border-collapse: collapse; width: 100%; font-family: Calibri, sans-serif; }';
+        $html .= '.title { font-size: 16px; font-weight: bold; text-align: center; padding: 15px; background-color: #FDF3E4; color: #5D3A1A; border: 1px solid #000; }';
+        $html .= 'th { background-color: #8B5E3C; color: white; font-weight: bold; padding: 10px; text-align: center; border: 1px solid #000; vertical-align: middle; }';
+        $html .= 'td { padding: 8px; border: 1px solid #d3d3d3; vertical-align: middle; }';
         $html .= '.text-center { text-align: center; }';
+        $html .= '.text-left { text-align: left; }';
         $html .= '</style>';
         $html .= '</head>';
         $html .= '<body>';
         $html .= '<table>';
 
-        // Header
+        // Judul Laporan di Bagian Atas
+        $html .= '<tr>';
+        $html .= '<colspan="5" class="title">LAPORAN AKTIVITAS PENGGUNA - WARUNG CANGKRUK</td>';
+        $html .= '</tr>';
+        $html .= '<tr><td colspan="5" style="border: none;"></td></tr>'; // Baris kosong pemisah
+
+        // Header Tabel
         $html .= '<thead>';
         $html .= '<tr>';
-        $html .= '<th>No</th>';
-        $html .= '<th>Waktu</th>';
-        $html .= '<th>Pengguna</th>';
-        $html .= '<th>Aktivitas</th>';
-        $html .= '<th>Keterangan</th>';
+        $html .= '<th style="width: 50px;">No</th>';
+        $html .= '<th style="width: 150px;">Waktu</th>';
+        $html .= '<th style="width: 200px;">Pengguna</th>';
+        $html .= '<th style="width: 150px;">Aktivitas</th>';
+        $html .= '<th style="width: 300px;">Keterangan</th>';
         $html .= '</tr>';
         $html .= '</thead>';
 
-        // Body
+        // Body Tabel
         $html .= '<tbody>';
-        foreach ($logs as $index => $log) {
-            $pengguna = $log->user
-                ? htmlspecialchars($log->user->name . ' (@' . $log->user->username . ')')
-                : '-';
-
+        if ($logs->isEmpty()) {
             $html .= '<tr>';
-            $html .= '<td class="text-center">' . ($index + 1) . '</td>';
-            $html .= '<td>' . $log->created_at->format('d-m-Y H:i:s') . '</td>';
-            $html .= '<td>' . $pengguna . '</td>';
-            $html .= '<td>' . htmlspecialchars($log->activity) . '</td>';
-            $html .= '<td>' . htmlspecialchars($log->description) . '</td>';
+            $html .= '<td colspan="5" class="text-center" style="padding: 20px; font-style: italic;">Tidak ada data aktivitas untuk tanggal ini.</td>';
             $html .= '</tr>';
+        } else {
+            foreach ($logs as $index => $log) {
+                $pengguna = $log->user
+                    ? htmlspecialchars($log->user->name . ' (@' . $log->user->username . ')')
+                    : '-';
+
+                $html .= '<tr>';
+                $html .= '<td class="text-center">' . ($index + 1) . '</td>';
+                $html .= '<td class="text-center">' . $log->created_at->format('d-m-Y H:i:s') . '</td>';
+                $html .= '<td class="text-left">' . $pengguna . '</td>';
+                $html .= '<td class="text-center">' . htmlspecialchars($log->activity) . '</td>';
+                $html .= '<td class="text-left">' . htmlspecialchars($log->description) . '</td>';
+                $html .= '</tr>';
+            }
         }
         $html .= '</tbody>';
         $html .= '</table>';

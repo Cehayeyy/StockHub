@@ -45,7 +45,7 @@ class VerifikasiStokController extends Controller
                 ]);
         }
 
-        return Inertia::render('VerifikasiStok', [
+        return Inertia::render('Verifikasi/VerifikasiStok', [
             'items'          => $items,
             'tab'            => $tab,
             'tanggal_picker' => $rawDate,

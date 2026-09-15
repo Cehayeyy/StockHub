@@ -15,6 +15,9 @@ use App\Http\Controllers\StokHarianController;
 use App\Http\Controllers\StokHarianDapurController;
 use App\Http\Controllers\VerifikasiStokController;
 use App\Http\Controllers\AuditDataController;
+use App\Http\Controllers\LaporanKerugianController;
+use App\Http\Controllers\SalesReportController;
+use App\Http\Controllers\LaporanAnalisaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -123,6 +126,17 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/resep/{recipe}', [RecipeController::class, 'destroy'])
             ->name('resep.destroy');
 
+        // --- LAPORAN KERUGIAN (Aksi Tulis) ---
+        // Staf submit laporan
+        Route::post('/laporan-kerugian', [LaporanKerugianController::class, 'store'])
+            ->name('laporan-kerugian.store');
+
+        // Supervisor memverifikasi laporan
+        Route::middleware(['role:owner,supervisor'])->group(function () {
+            Route::put('/verifikasi-kerugian/{id}', [LaporanKerugianController::class, 'updateStatus'])
+                ->name('verifikasi-kerugian.update');
+        });
+
         // =========================================================
         // STOK HARIAN - BAR (Aksi Tulis)
         // =========================================================
@@ -185,9 +199,26 @@ Route::middleware(['auth'])->group(function () {
     // Rute Rahasia Developer (CCTV Data)
     Route::get('/audit-data', [AuditDataController::class, 'index'])->name('audit.index');
 
-    // User Management View (Supervisor)
-    Route::get('/users', [UserController::class, 'index'])
-        ->name('users.index');
+    // Pencatatan Kerugian View (Staff)
+    Route::get('/laporan-kerugian', [LaporanKerugianController::class, 'index'])
+        ->name('laporan-kerugian.index');
+
+    // Verifikasi Kerugian View (Supervisor)
+    Route::middleware(['role:owner,supervisor'])->group(function () {
+        Route::get('/verifikasi-kerugian', [LaporanKerugianController::class, 'verifikasiIndex'])
+            ->name('verifikasi-kerugian.index');
+
+        Route::get('/verifikasi-kerugian/export', [LaporanKerugianController::class, 'exportExcel'])
+            ->name('verifikasi-kerugian.export');
+
+        // ===========================
+        // LAPORAN ANALISA & PROFIT (Owner & Supervisor Only)
+        // ===========================
+        Route::get('/laporan/analisa-profit', [LaporanAnalisaController::class, 'index'])
+            ->name('laporan.analisa-profit');
+        Route::get('/laporan/analisa-profit/export', [LaporanAnalisaController::class, 'export'])
+            ->name('laporan.analisa-profit.export');
+    });
 
     // User Management View (Supervisor)
     Route::get('/users', [UserController::class, 'index'])
@@ -249,6 +280,19 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/laporan-aktivitas/export', [ActivityLogController::class, 'export'])
         ->name('laporan-aktivitas.export');
+
+    // ===========================
+    // SALES REPORT (BILL / NOTA)
+    // ===========================
+
+    Route::get('/sales-report/open', [SalesReportController::class, 'openFromDashboard'])
+        ->name('sales-report.open');
+        
+    Route::get('/sales-report', [App\Http\Controllers\SalesReportController::class, 'index'])
+        ->name('sales-report.index');
+
+    Route::post('/sales-report', [App\Http\Controllers\SalesReportController::class, 'store'])
+        ->name('sales-report.store');
 
 });
 

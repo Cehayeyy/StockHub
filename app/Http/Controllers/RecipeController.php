@@ -174,10 +174,10 @@ class RecipeController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name'              => 'required|string|max:255',
-            'division'          => 'required|in:bar,dapur',
-            'category_id'       => 'required|exists:item_categories,id',
-            'ingredients'       => 'required|array|min:1',
+            'name'                => 'required|string|max:255',
+            'division'            => 'required|in:bar,dapur',
+            'category_id'         => 'required|exists:item_categories,id',
+            'ingredients'         => 'required|array|min:1',
             'ingredients.*.item_id' => 'required|exists:items,id',
             'ingredients.*.amount'  => 'required|numeric|min:0.01',
             'ingredients.*.unit'    => 'required|string',
@@ -248,9 +248,8 @@ class RecipeController extends Controller
             ]);
         });
 
-        return redirect()->route('resep', [
-            'division' => $validated['division'],
-        ])->with('success', 'Resep diperbarui & Stok Harian disinkronkan.');
+        // 🔥 UBAH BAGIAN INI MENJADI back() AGAR TETAP DI HALAMAN YANG SAMA
+        return back()->with('success', 'Resep diperbarui & Stok Harian disinkronkan.');
     }
 
     public function destroy(Recipe $recipe)
@@ -311,34 +310,8 @@ class RecipeController extends Controller
             ]);
         });
 
-        return redirect()->route('resep', [
-            'division' => $division,
-        ])->with('success', 'Resep berhasil dihapus.');
-    }
-
-    private function syncToStokHarianBar($recipe, $tanggal)
-    {
-        $menuItem = Item::where('nama', $recipe->name)->first();
-
-        if ($menuItem) {
-            $stokMenu = StokHarianMenu::where('item_id', $menuItem->id)
-                                      ->whereDate('tanggal', $tanggal)
-                                      ->first();
-
-            $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'bar', $tanggal);
-
-            if (!$stokMenu) {
-                StokHarianMenu::create([
-                    'item_id'     => $menuItem->id,
-                    'tanggal'     => $tanggal,
-                    'stok_awal'   => $stokAwalBaru,
-                    'stok_masuk'  => 0,
-                    'stok_keluar' => 0,
-                    'stok_akhir'  => $stokAwalBaru,
-                    'unit'        => 'porsi'
-                ]);
-            }
-        }
+        // 🔥 Tetap di halaman saat ini setelah menghapus data
+        return back()->with('success', 'Resep berhasil dihapus.');
     }
 
     private function syncToStokHarianDapur($recipe, $tanggal)

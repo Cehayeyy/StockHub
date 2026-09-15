@@ -64,18 +64,35 @@ class StokHarianDapurController extends Controller
                 $query->whereHas('item', fn ($q) => $q->where('nama', 'like', "%{$search}%"));
             }
 
-            $items = $query->orderByDesc('id')->paginate(10)->through(fn ($s) => [
-                'id'           => $s->id,
-                'item_id'      => $s->item_id,
-                'nama'         => $s->item->nama,
-                'satuan'       => $s->unit ?? $s->item->satuan,
-                'stok_awal'    => $s->stok_awal,
-                'stok_masuk'   => $s->stok_masuk,
-                'stok_total'   => $s->stok_awal + $s->stok_masuk,
-                'pemakaian'    => $s->stok_keluar,
-                'tersisa'      => $s->stok_akhir,
-                'is_submitted' => 0,
-            ])->withQueryString();
+            $items = $query->orderByDesc('id')->paginate(10)->through(function ($s) {
+                // 🔥 Cari menu Dapur apa saja yang menggunakan item_id bahan mentah ini
+                $connectedMenus = Recipe::where('division', 'dapur')
+                    ->get()
+                    ->filter(function ($recipe) use ($s) {
+                        if (!is_array($recipe->ingredients)) return false;
+                        foreach ($recipe->ingredients as $ing) {
+                            if (isset($ing['item_id']) && $ing['item_id'] == $s->item_id) return true;
+                        }
+                        return false;
+                    })
+                    ->pluck('name')
+                    ->values()
+                    ->toArray();
+
+                return [
+                    'id'           => $s->id,
+                    'item_id'      => $s->item_id,
+                    'nama'         => $s->item->nama,
+                    'satuan'       => $s->unit ?? $s->item->satuan,
+                    'stok_awal'    => $s->stok_awal,
+                    'stok_masuk'   => $s->stok_masuk,
+                    'stok_total'   => $s->stok_awal + $s->stok_masuk,
+                    'pemakaian'    => $s->stok_keluar,
+                    'tersisa'      => $s->stok_akhir,
+                    'is_submitted' => 0,
+                    'connected_menus' => $connectedMenus, // 🔥 Kirim data menu terhubung ke frontend
+                ];
+            })->withQueryString();
         }
 
             $inputableMenus = [];
@@ -218,6 +235,13 @@ class StokHarianDapurController extends Controller
 
     public function storeMenu(Request $request)
     {
+
+        // 🔥 KUNCI: Staff tidak boleh lagi input pemakaian menu manual (dialihkan ke Sales Report)
+        $user = Auth::user();
+        if (!in_array($user->role, ['owner', 'supervisor'])) {
+            return back()->withErrors(['pemakaian' => 'Akses ditutup! Input penjualan menu kini dilakukan melalui Sales Report (Bill).']);
+        }
+
         // 1. Cek izin akses (Pintu Masuk)
         if (!$this->canUserInput($request->tanggal)) {
             return back()->withErrors(['pemakaian' => 'Akses ditutup! Harap ajukan revisi untuk input kembali.']);
@@ -354,6 +378,12 @@ class StokHarianDapurController extends Controller
 
     public function updateMenu(Request $request, $id)
     {
+
+        $user = Auth::user();
+    if (!in_array($user->role, ['owner', 'supervisor'])) {
+        return back()->withErrors(['pemakaian' => 'Akses ditutup! Perubahan data menu hanya dapat dilakukan oleh Supervisor atau Owner.']);
+    }
+    
         $menu = StokHarianDapurMenu::with('recipe')->findOrFail($id);
         $newKeluar = $request->input('stok_keluar') ?? $request->input('pemakaian') ?? $menu->stok_keluar;
 

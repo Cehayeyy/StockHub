@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Users,
@@ -18,9 +19,17 @@ import {
   Menu,
   X,
   AlertTriangle,
+  PackageOpen,
+  FileWarning,
+  Receipt,
+  TrendingUp,
+  Layers,
+  Calendar,
+  Clock,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
-// Tipe data props halaman
 interface PageProps {
   auth: {
     user: {
@@ -34,16 +43,14 @@ interface PageProps {
   flash?: {
     login_success?: string;
   };
-  [key: string]: any; // supaya kompatibel dengan Inertia PageProps
+  [key: string]: any;
 }
 
-// Tipe props layout
 interface LayoutProps {
   header?: React.ReactNode;
   children: React.ReactNode;
 }
 
-// Komponen sidebar link utama (menu besar)
 function SidebarLink({
   href,
   icon: Icon,
@@ -61,20 +68,19 @@ function SidebarLink({
   let url = '#';
 
   try {
-    // Cek apakah href adalah nama route yang valid
     if (href && route().has(href)) {
       isActive = route().current(href);
       url = route(href);
-    }
-    // Jika bukan route name, anggap URL biasa (fallback)
-    else if (href) {
+    } else if (href) {
         url = href;
     }
   } catch (e) {
     console.warn(`Route ${href} tidak ditemukan atau error.`);
   }
 
-  const activeClasses = isActive ? 'bg-black/20' : 'hover:bg-black/10';
+  const activeClasses = isActive 
+    ? 'bg-black/30 text-white font-bold shadow-sm' 
+    : 'text-white/90 hover:bg-black/15 hover:text-white font-semibold';
 
   return (
     <Link
@@ -84,15 +90,14 @@ function SidebarLink({
         onNavigate?.();
       }}
       preserveScroll
-      className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeClasses}`}
+      className={`flex items-center px-4 py-3 text-sm rounded-2xl transition-all duration-200 ${activeClasses}`}
     >
-      <Icon className="w-5 h-5 mr-3 text-white/90" />
-      {children}
+      <Icon className="w-5 h-5 mr-3 text-white/95 flex-shrink-0" />
+      <span className="whitespace-nowrap">{children}</span>
     </Link>
   );
 }
 
-// Link untuk submenu (Kategori, Item, Resep, Bar, Dapur)
 function SubMenuLink({
   href,
   icon: Icon,
@@ -117,18 +122,18 @@ function SubMenuLink({
   }
 
   const activeClasses = isActive
-    ? 'bg-black/20 text-white'
-    : 'text-white/90 hover:bg-black/10';
+    ? 'bg-black/30 text-white font-bold'
+    : 'text-white/80 hover:bg-black/15 hover:text-white font-medium';
 
   return (
     <Link
       href={url}
       onClick={onNavigate}
       preserveScroll
-      className={`flex items-center ml-8 px-4 py-2 text-sm rounded-lg transition-colors ${activeClasses}`}
+      className={`flex items-center px-3 py-2 text-xs rounded-xl transition-all duration-200 ${activeClasses}`}
     >
-      <Icon className="w-4 h-4 mr-3 text-white/90" />
-      <span>{children}</span>
+      <Icon className="w-4 h-4 mr-2.5 text-white/90 flex-shrink-0" />
+      <span className="whitespace-nowrap">{children}</span>
     </Link>
   );
 }
@@ -147,14 +152,13 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
   const isStaff = role !== 'owner' && role !== 'supervisor';
 
-  // AUTO LOGOUT IDLE 10 MENIT + LOGOUT SAAT BROWSER DITUTUP ATAU DEVICE MATI
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
         router.post(route("logout"));
-      }, 10 * 60 * 1000); // 10 menit
+      }, 10 * 60 * 1000);
     };
 
     window.addEventListener("mousemove", resetTimer);
@@ -175,18 +179,16 @@ export default function AppLayout({ header, children }: LayoutProps) {
     };
   }, []);
 
-
   const [showModal, setShowModal] = useState(false);
-
-  // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // buka/tutup submenu
   const [openMasterData, setOpenMasterData] = useState(false);
   const [openStokHarian, setOpenStokHarian] = useState(false);
   const [openAuditData, setOpenAuditData] = useState(false);
+  const [openVerifikasi, setOpenVerifikasi] = useState(false);
+  const [openLaporan, setOpenLaporan] = useState(false);
 
-  // Jam realtime
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -215,30 +217,40 @@ export default function AppLayout({ header, children }: LayoutProps) {
       })
       .replace(/\./g, ':') + ' WIB';
 
-  // Close mobile menu when navigating
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  // Sidebar Content Component (reusable untuk desktop dan mobile)
+  // 🌟 KARTU SIDEBAR MENGAPUNG BERWARNA COKLAT KHAS STOCKHUB
   const SidebarContent = () => (
-    <>
-      {/* Profil User + Nama Warung */}
-      <div className="flex items-center mb-8 flex-shrink-0">
-        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-          <span className="text-xl font-bold text-theme-sidebar">
-            {(auth?.user?.name || auth?.user?.username || 'U').charAt(0).toUpperCase()}
-          </span>
-        </div>
-        <div>
-          <div className="font-bold text-lg text-white">Warung Cangkruk</div>
-          <div className="text-xs text-white/70">
-            {auth.user.name || auth.user.username}
-            {auth.user.username ? ` (${auth.user.username})` : ''}
+    <div className="w-[280px] p-4 sm:p-5 flex flex-col h-[calc(100vh-2rem)] bg-[#6F4E37] text-white/90 rounded-3xl shadow-2xl border border-white/10 my-4 ml-4">
+      
+      {/* HEADER PROFIL DENGAN TOMBOL TUTUP DI DALAMNYA */}
+      <div className="flex items-center justify-between mb-6 flex-shrink-0 bg-black/20 p-3 rounded-2xl border border-white/10">
+        <div className="flex items-center overflow-hidden">
+          <div className="w-11 h-11 rounded-xl bg-white/10 text-white font-bold flex items-center justify-center mr-3 flex-shrink-0 shadow-inner">
+            <span>
+              {(auth?.user?.name || auth?.user?.username || 'U').charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="truncate">
+            <div className="font-extrabold text-sm text-white truncate">Warung Cangkruk</div>
+            <div className="text-xs text-white/70 truncate capitalize">
+              {auth.user.name || auth.user.username} ({auth.user.role})
+            </div>
           </div>
         </div>
+
+        {/* 🔥 TOMBOL TUTUP SIDEBAR DI DALAM CARD PROFIL */}
+        <button
+          onClick={() => setIsSidebarOpen(false)}
+          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 transition text-white flex items-center justify-center flex-shrink-0 ml-2"
+          title="Tutup Sidebar"
+        >
+          <PanelLeftClose size={16} />
+        </button>
       </div>
 
-      {/* MENU NAVIGASI */}
-      <nav className="flex-1 space-y-2">
+      {/* NAVIGASI MENU */}
+      <nav className="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden pr-1">
         <SidebarLink href="dashboard" icon={LayoutDashboard} onNavigate={closeMobileMenu}>
           Dasbor
         </SidebarLink>
@@ -249,176 +261,213 @@ export default function AppLayout({ header, children }: LayoutProps) {
           </SidebarLink>
         )}
 
-        {/* DATA INDUK + SUB: Kategori, Item, Resep */}
+        {/* Data Induk */}
         <div>
           <button
             type="button"
             onClick={() => setOpenMasterData(!openMasterData)}
-            className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+            className="flex items-center justify-between w-full px-4 py-3 text-sm font-bold text-white/90 rounded-2xl hover:bg-black/15 transition-colors"
           >
             <div className="flex items-center">
-              <Box className="w-5 h-5 mr-3 text-white/90" />
-              Data Induk
+              <Box className="w-5 h-5 mr-3 text-white/95 flex-shrink-0" />
+              <span className="whitespace-nowrap">Data Induk</span>
             </div>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform duration-200 ${
-                openMasterData ? 'rotate-180' : ''
-              }`}
-            />
+            <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMasterData ? 'rotate-180' : ''}`} />
           </button>
 
           {openMasterData && (
-            <div className="mt-1 space-y-1">
-              <SubMenuLink href="kategori" icon={Tag} onNavigate={closeMobileMenu}>
-                Kategori
-              </SubMenuLink>
-              <SubMenuLink href="item.index" icon={Package} onNavigate={closeMobileMenu}>
-                Item
-              </SubMenuLink>
-              <SubMenuLink href="resep" icon={BookOpen} onNavigate={closeMobileMenu}>
-                Resep
-              </SubMenuLink>
+            <div className="mt-1 space-y-1 pl-4">
+              <SubMenuLink href="kategori" icon={Tag} onNavigate={closeMobileMenu}>Kategori</SubMenuLink>
+              <SubMenuLink href="item.index" icon={Package} onNavigate={closeMobileMenu}>Item</SubMenuLink>
+              <SubMenuLink href="resep" icon={BookOpen} onNavigate={closeMobileMenu}>Resep</SubMenuLink>
             </div>
           )}
         </div>
 
-        {/* --- TAMBAHKAN KODE AUDIT DATA DI BAWAH SINI --- */}
-        {!isStaff && (
+        {/* Audit Data */}
+        {!isStaff ? (
           <div>
             <button
               type="button"
               onClick={() => setOpenAuditData(!openAuditData)}
-              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-bold text-white/90 rounded-2xl hover:bg-black/15 transition-colors"
             >
               <div className="flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-3 text-white/90 text-red-300" />
-                Audit Data
+                <AlertTriangle className="w-5 h-5 mr-3 text-red-300 flex-shrink-0" />
+                <span className="whitespace-nowrap">Audit Data</span>
               </div>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  openAuditData ? 'rotate-180' : ''
-                }`}
-              />
+              <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openAuditData ? 'rotate-180' : ''}`} />
             </button>
-
             {openAuditData && (
-              <div className="mt-1 space-y-1">
-                <SubMenuLink href="audit.index" icon={FileText} onNavigate={closeMobileMenu}>
-                  Laporan Audit
-                </SubMenuLink>
+              <div className="mt-1 space-y-1 pl-4">
+                <SubMenuLink href="audit.index" icon={FileText} onNavigate={closeMobileMenu}>Laporan Audit</SubMenuLink>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <button
+              type="button"
+              onClick={() => setOpenAuditData(!openAuditData)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-bold text-white/90 rounded-2xl hover:bg-black/15 transition-colors"
+            >
+              <div className="flex items-center">
+                <AlertTriangle className="w-5 h-5 mr-3 text-red-300 flex-shrink-0" />
+                <span className="whitespace-nowrap">Audit Data</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openAuditData ? 'rotate-180' : ''}`} />
+            </button>
+            {openAuditData && (
+              <div className="mt-1 space-y-1 pl-4">
+                <SubMenuLink href="laporan-kerugian.index" icon={FileWarning} onNavigate={closeMobileMenu}>Laporan Kerugian</SubMenuLink>
               </div>
             )}
           </div>
         )}
-        {/* --- BATAS KODE AUDIT DATA --- */}
 
-        {/* STOK HARIAN + SUB: Bar, Dapur */}
+        {/* Stok Harian */}
         <div>
           <button
             type="button"
             onClick={() => setOpenStokHarian(!openStokHarian)}
-            className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+            className="flex items-center justify-between w-full px-4 py-3 text-sm font-bold text-white/90 rounded-2xl hover:bg-black/15 transition-colors"
           >
             <div className="flex items-center">
-              <ClipboardList className="w-5 h-5 mr-3 text-white/90" />
-              Stok Harian
+              <ClipboardList className="w-5 h-5 mr-3 text-white/90 flex-shrink-0" />
+              <span className="whitespace-nowrap">Stok Harian</span>
             </div>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform duration-200 ${
-                openStokHarian ? 'rotate-180' : ''
-              }`}
-            />
+            <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openStokHarian ? 'rotate-180' : ''}`} />
           </button>
 
           {openStokHarian && (
-            <div className="mt-1 space-y-1">
-              {/* OWNER / SUPERVISOR */}
+            <div className="mt-1 space-y-1 pl-4">
               {!isStaff && (
                 <>
-                  <SubMenuLink href="stok-harian.bar" icon={CupSoda} onNavigate={closeMobileMenu}>
-                    Bar
-                  </SubMenuLink>
-                  <SubMenuLink href="stok-harian.dapur" icon={CookingPot} onNavigate={closeMobileMenu}>
-                    Dapur
-                  </SubMenuLink>
+                  <SubMenuLink href="stok-harian.bar" icon={CupSoda} onNavigate={closeMobileMenu}>Bar</SubMenuLink>
+                  <SubMenuLink href="stok-harian.dapur" icon={CookingPot} onNavigate={closeMobileMenu}>Dapur</SubMenuLink>
                 </>
               )}
-
-              {/* STAFF BAR */}
               {isStaff && division === "bar" && (
-                <SubMenuLink href="stok-harian.bar" icon={CupSoda} onNavigate={closeMobileMenu}>
-                  Bar
-                </SubMenuLink>
+                <SubMenuLink href="stok-harian.bar" icon={CupSoda} onNavigate={closeMobileMenu}>Bar</SubMenuLink>
               )}
-
-              {/* STAFF DAPUR */}
               {isStaff && division === "dapur" && (
-                <SubMenuLink href="stok-harian.dapur" icon={CookingPot} onNavigate={closeMobileMenu}>
-                  Dapur
-                </SubMenuLink>
+                <SubMenuLink href="stok-harian.dapur" icon={CookingPot} onNavigate={closeMobileMenu}>Dapur</SubMenuLink>
               )}
             </div>
           )}
         </div>
 
-        <SidebarLink href="verifikasi-stok.index" icon={ClipboardCheck} onNavigate={closeMobileMenu}>
-          Verifikasi Stok
-        </SidebarLink>
-
-        {/* Laporan Aktivitas */}
-        {!isStaff && (
-          <SidebarLink href="laporan-aktivitas" icon={FileText} onNavigate={closeMobileMenu}>
-            Laporan Aktifitas
+        {/* Sales Report */}
+        {isStaff && (
+          <SidebarLink href="sales-report.index" icon={Receipt} onNavigate={closeMobileMenu}>
+            Sales Report
           </SidebarLink>
         )}
+
+        {/* Verifikasi */}
+        {!isStaff && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setOpenVerifikasi(!openVerifikasi)}
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-bold text-white/90 rounded-2xl hover:bg-black/15 transition-colors"
+            >
+              <div className="flex items-center">
+                <ClipboardCheck className="w-5 h-5 mr-3 text-white/90 flex-shrink-0" />
+                <span className="whitespace-nowrap">Verifikasi</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openVerifikasi ? 'rotate-180' : ''}`} />
+            </button>
+
+            {openVerifikasi && (
+              <div className="mt-1 space-y-1 pl-4">
+                <SubMenuLink href="verifikasi-stok.index" icon={PackageOpen} onNavigate={closeMobileMenu}>Verifikasi Stok</SubMenuLink>
+                <SubMenuLink href="verifikasi-kerugian.index" icon={FileWarning} onNavigate={closeMobileMenu}>Verifikasi Kerugian</SubMenuLink>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Laporan */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setOpenLaporan(!openLaporan)}
+            className="flex items-center justify-between w-full px-4 py-3 text-sm font-bold text-white/90 rounded-2xl hover:bg-black/15 transition-colors"
+          >
+            <div className="flex items-center">
+              <FileText className="w-5 h-5 mr-3 text-white/90 flex-shrink-0" />
+              <span className="whitespace-nowrap">Laporan</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openLaporan ? 'rotate-180' : ''}`} />
+          </button>
+
+          {openLaporan && (
+            <div className="mt-1 space-y-1 pl-4">
+              <SubMenuLink href="laporan-aktivitas" icon={FileText} onNavigate={closeMobileMenu}>
+                Laporan Aktivitas
+              </SubMenuLink>
+
+              {!isStaff && (
+                <>
+                  <SubMenuLink href="laporan.analisa-profit" icon={TrendingUp} onNavigate={closeMobileMenu}>
+                    Laporan Analisa
+                  </SubMenuLink>
+
+                  <SubMenuLink href="laporan.keuangan" icon={Receipt} onNavigate={closeMobileMenu}>
+                    Laporan Keuangan
+                  </SubMenuLink>
+
+                  <SubMenuLink href="laporan.frekuensi" icon={Layers} onNavigate={closeMobileMenu}>
+                    Frekuensi Pembelian
+                  </SubMenuLink>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* TOMBOL KELUAR */}
-      <div className="mt-auto pt-4 flex-shrink-0">
+      <div className="mt-auto pt-4 border-t border-white/15 flex-shrink-0">
         <Link
           href={route('logout')}
           method="post"
           as="button"
           onClick={closeMobileMenu}
-          className="flex items-center px-4 py-3 w-full text-sm font-medium rounded-lg hover:bg-black/10 transition-colors"
+          className="flex items-center px-4 py-3 w-full text-sm font-bold rounded-2xl text-red-300 hover:bg-red-500/20 transition-colors"
         >
-          <LogOut className="w-5 h-5 mr-3 text-white/90" />
-          Keluar
+          <LogOut className="w-5 h-5 mr-3 text-red-400 flex-shrink-0" />
+          <span className="whitespace-nowrap">Keluar</span>
         </Link>
       </div>
-    </>
+    </div>
   );
 
   return (
-    // FIX SCROLL: overflow-hidden di root untuk mencegah scroll body ganda
-    <div className="flex h-screen w-full bg-theme-background overflow-hidden">
-
-      {/* Mobile Menu Overlay */}
+    <div className="flex h-screen w-full bg-[#FAF7F2] overflow-hidden relative">
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Mobile Sidebar Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-[#502A07] text-white/90 p-5 flex flex-col transform transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-[300px] bg-transparent flex flex-col transform transition-transform duration-300 ease-in-out lg:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Close Button */}
         <button
           onClick={() => setMobileMenuOpen(false)}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition"
+          className="absolute top-7 right-7 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition z-10 text-white"
         >
-          <X size={20} className="text-white" />
+          <X size={20} />
         </button>
 
         <SidebarContent />
       </aside>
 
-      {/* Modal Login Berhasil */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-w-sm w-full text-center">
@@ -435,25 +484,35 @@ export default function AppLayout({ header, children }: LayoutProps) {
         </div>
       )}
 
-      {/* Desktop Sidebar */}
-      {/* FIX SCROLL: flex-shrink-0 (agar lebar tetap), overflow-y-auto (agar menu bisa discroll sendiri) */}
-      {/* Changed md:flex to lg:flex so tablet (iPad) uses hamburger menu */}
-      <aside className="w-64 bg-[#502A07] text-white/90 p-5 flex-col flex-shrink-0 h-full overflow-y-auto hidden lg:flex">
+      <motion.aside
+        initial={false}
+        animate={{ 
+          width: isSidebarOpen ? "300px" : "0px", 
+          opacity: isSidebarOpen ? 1 : 0 
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className="bg-transparent flex-col flex-shrink-0 h-full hidden lg:flex relative z-20 overflow-hidden whitespace-nowrap"
+      >
         <SidebarContent />
-      </aside>
+      </motion.aside>
 
-      {/* AREA KANAN */}
-      {/* FIX SCROLL: min-w-0 agar konten tidak melebar paksa keluar layar */}
-      <div className="flex-1 flex flex-col h-screen min-w-0 bg-gray-50 relative">
-
-        {/* Header */}
-        <header className="bg-white shadow-sm p-3 sm:p-4 md:p-6 flex-shrink-0 z-10 w-full">
+      <div className="flex-1 flex flex-col h-screen min-w-0 bg-[#FAF7F2] relative">
+        <header className="bg-white/80 backdrop-blur-md shadow-2xs border-b border-amber-100/60 p-3 sm:p-4 md:p-6 flex-shrink-0 z-10 w-full">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Hamburger Menu Button (Mobile & Tablet) */}
+              {!isSidebarOpen && (
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="hidden lg:flex w-10 h-10 items-center justify-center rounded-xl bg-[#6F4E37] text-white hover:bg-[#402105] transition shadow-md group"
+                  title="Buka Sidebar"
+                >
+                  <PanelLeftOpen size={20} className="group-hover:scale-110 transition-transform" />
+                </button>
+              )}
+
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#502A07] text-white lg:hidden"
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#6F4E37] text-white lg:hidden"
               >
                 <Menu size={22} />
               </button>
@@ -471,25 +530,34 @@ export default function AppLayout({ header, children }: LayoutProps) {
             </div>
 
             <div className="flex items-center">
-              <div className="text-right">
-                <div className="font-semibold text-gray-800 text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">
-                  {auth.user.name || auth.user.username}
-                  <span className="hidden sm:inline">
-                    {auth.user.username ? ` (${auth.user.username})` : ''}
-                  </span>
+              <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-amber-100/80 shadow-2xs">
+                <div className="w-9 h-9 rounded-xl bg-[#8B5E3C]/10 text-[#8B5E3C] flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  {(auth?.user?.name || auth?.user?.username || 'U').charAt(0).toUpperCase()}
                 </div>
-                <div className="text-xs sm:text-sm text-gray-500 hidden sm:block">{formattedDate}</div>
-                <div className="text-xs sm:text-sm font-mono font-semibold text-[#5D4037]">
-                  {formattedTime}
+                <div className="text-right flex flex-col">
+                  <div className="font-bold text-gray-800 text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none">
+                    {auth.user.name || auth.user.username}
+                    <span className="text-gray-400 font-medium">
+                      {auth.user.username ? ` (@${auth.user.username})` : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">
+                    <span className="flex items-center gap-1">
+                      <Calendar size={10} className="text-[#8B5E3C]" />
+                      {formattedDate}
+                    </span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 font-mono font-bold text-[#8B5E3C]">
+                      <Clock size={10} className="text-[#8B5E3C]" />
+                      {formattedTime}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </header>
 
-        {/* KONTEN HALAMAN */}
-        {/* FIX SCROLL: overflow-y-auto di sini agar hanya area ini yang discroll */}
-        {/* overflow-y-visible diganti jadi overflow-y-auto + min-h-0 */}
         <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-y-auto w-full min-h-0">
             {children}
         </main>

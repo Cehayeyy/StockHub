@@ -162,9 +162,7 @@ class ItemController extends Controller
             'description' => "Menambahkan item master baru: '{$item->nama}' ({$item->division})."
         ]);
 
-        return redirect()
-            ->route('item.index', ['division' => $data['division']])
-            ->with('success', 'Item berhasil ditambahkan!');
+        return back()->with('success', 'Item berhasil diupdate!');
     }
 
     public function update(Request $request, Item $item)
@@ -211,9 +209,7 @@ class ItemController extends Controller
             'description' => "Mengupdate data item dari '{$oldName}' menjadi '{$item->nama}'."
         ]);
 
-        return redirect()
-            ->route('item.index', ['division' => $data['division']])
-            ->with('success', 'Item berhasil diupdate!');
+        return back()->with('success', 'Item berhasil ditambahkan!');
     }
 
     // --- FUNGSI DESTROY YANG DIPERBAIKI ---
@@ -257,9 +253,7 @@ class ItemController extends Controller
             ]);
         });
 
-        return redirect()
-            ->route('item.index', ['division' => $division])
-            ->with('success', 'Item berhasil dihapus!');
+        return back()->with('success', 'Item berhasil dihapus!');
     }
 
     public function destroyCategory(ItemCategory $itemCategory)

@@ -744,7 +744,27 @@ class DashboardController extends Controller
 
         // Jika Staff (Bar / Dapur)
         if (in_array($user->role, ['bar', 'dapur', 'kitchen', 'staff_kitchen'])) {
+            
+            // 🔥 Cek apakah staff sudah selesai/pernah melakukan input sales report hari ini
+            $sudahInputHariIni = ActivityLog::where('user_id', $user->id)
+                ->where('activity', 'Input Sales Report')
+                ->whereDate('created_at', Carbon::today())
+                ->exists();
+
+            // 🔥 Tentukan status kunci Sales Report berdasarkan jam 21:00, status sudah input, dan Izin Revisi aktif
+            $now = Carbon::now();
+            $isAfterNinePM = $now->format('H:i') >= '21:00';
+            $activeIzin = IzinRevisi::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->where('end_time', '>', $now)
+                ->exists();
+
+            // Jika sudah input hari ini (dan tidak sedang ada izin revisi aktif), maka kunci aksesnya
+            $salesReportLocked = ($sudahInputHariIni || $isAfterNinePM) && !$activeIzin;
+
             return Inertia::render('DashboardStaff', array_merge($data, [
+                'alreadyInputToday' => $salesReportLocked, // 👈 Mengunci akses jika sudah input atau lewat jam 21:00
+                'sudahInputHariIni' => $sudahInputHariIni, // 👈 Status mentah untuk tombol abu-abu di dashboard
                 'alreadyRequestedRevision' => $izinPending,
                 'izinApproved' => $izinApproved ? [
                     'start_time' => $izinApproved->start_time->toIso8601String(),

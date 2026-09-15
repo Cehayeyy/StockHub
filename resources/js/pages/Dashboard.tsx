@@ -20,7 +20,7 @@ import CountUp from "react-countup";
 
 const COLORS = ["#DC2626", "#F59E0B", "#22C55E"];
 
-// Card sederhana dan formal - RESPONSIVE
+// Card statistik atas yang lebih hidup dan elegan
 const InfoCard = ({
   title,
   value,
@@ -34,18 +34,18 @@ const InfoCard = ({
 }) => (
   <motion.div
     onClick={onClick}
-    whileHover={{ scale: 1.02 }}
+    whileHover={{ scale: 1.02, y: -2 }}
     whileTap={{ scale: 0.98 }}
-    className={`bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 ${
-      onClick ? "cursor-pointer hover:bg-[#F0EBE5] transition active:scale-95" : ""
+    className={`bg-white p-5 sm:p-6 rounded-3xl shadow-xs border border-gray-100/80 flex items-center gap-4 transition-all duration-300 group ${
+      onClick ? "cursor-pointer hover:shadow-md hover:border-[#8B5E3C]/30" : ""
     }`}
   >
-    <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-[#8B5E3C] rounded-lg sm:rounded-xl flex items-center justify-center text-white shadow-sm flex-shrink-0">
-      <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#8B5E3C] to-[#6F4E37] rounded-2xl flex items-center justify-center text-white shadow-md shadow-[#8B5E3C]/20 flex-shrink-0 group-hover:scale-105 transition-transform">
+      <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
     </div>
     <div className="min-w-0">
-      <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">{title}</p>
-      <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-800">
+      <p className="text-xs sm:text-sm text-gray-400 font-bold uppercase tracking-wider">{title}</p>
+      <p className="text-2xl sm:text-3xl font-black text-gray-800 mt-0.5">
         <CountUp end={value} duration={1.2} />
       </p>
     </div>
@@ -166,13 +166,15 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
           />
         </div>
 
-        {/* Status Stok dengan 3 kategori - RESPONSIVE */}
+        {/* Status Stok Harian dengan 3 kategori - RESPONSIVE */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          whileHover={{ scale: 1.01, y: -2 }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ duration: 0.3 }}
           onClick={handlePieClick}
-          className="bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm cursor-pointer hover:bg-[#F0EBE5] transition-all duration-300 border border-gray-100 active:scale-[0.99]"
+          className="bg-[#F2ECE4] p-5 sm:p-6 md:p-7 rounded-3xl shadow-xs cursor-pointer hover:shadow-md hover:border-[#8B5E3C]/40 transition-all duration-300 border border-amber-200/60"
         >
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
@@ -264,25 +266,28 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100"
+          whileHover={{ scale: 1.01, y: -2 }}
+          transition={{ duration: 0.3 }}
+          className="bg-[#F2ECE4] p-5 sm:p-6 md:p-7 rounded-3xl shadow-xs border border-amber-200/60 hover:shadow-md hover:border-[#8B5E3C]/40 transition-all duration-300"
         >
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B5E3C]" />
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#8B5E3C]/10 flex items-center justify-center text-[#8B5E3C]">
+                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
               <span className="hidden sm:inline">Permintaan Izin Revisi</span>
               <span className="sm:hidden">Izin Revisi</span>
             </h3>
             {izinRevisiPending.length > 0 && (
-              <span className="px-2 sm:px-3 py-1 bg-amber-100 text-amber-700 text-xs sm:text-sm font-semibold rounded-full">
-                {izinRevisiPending.length} Menunggu
+              <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full shadow-xs animate-pulse">
+                {izinRevisiPending.length} Menunggu Persetujuan
               </span>
             )}
           </div>
 
           <AnimatePresence mode="wait">
             {izinRevisiPending.length > 0 ? (
-              <motion.div className="space-y-2 sm:space-y-3">
+              <motion.div className="space-y-3">
                 {izinRevisiPending.map((izin: any, index: number) => (
                   <motion.div
                     key={izin.id}
@@ -290,34 +295,33 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white border border-gray-200 gap-3 sm:gap-4"
+                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-2xl bg-white border border-gray-100 shadow-xs hover:border-[#8B5E3C]/30 transition-all gap-4"
                   >
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-9 h-9 sm:w-11 sm:h-11 bg-[#8B5E3C] rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-lg flex-shrink-0">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 bg-gradient-to-br from-[#8B5E3C] to-[#6F4E37] rounded-2xl flex items-center justify-center text-white font-bold text-base shadow-sm flex-shrink-0">
                         {izin.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-800 text-sm sm:text-base">{izin.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5 sm:mt-1 flex-wrap">
-                          <span className="px-2 py-0.5 bg-[#8B5E3C]/10 text-[#8B5E3C] text-xs font-medium rounded-full">
+                        <p className="font-bold text-gray-800 text-sm sm:text-base">{izin.name}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="px-2.5 py-0.5 bg-[#8B5E3C]/10 text-[#8B5E3C] text-[11px] font-bold rounded-full uppercase tracking-wider">
                             {izin.role}
                           </span>
-                          <span className="flex items-center gap-1 text-xs text-gray-500">
-                            <Clock size={10} className="sm:w-3 sm:h-3" />
-                            <span className="hidden sm:inline">Menunggu persetujuan</span>
-                            <span className="sm:hidden">Pending</span>
+                          <span className="flex items-center gap-1 text-xs text-gray-400 font-medium">
+                            <Clock size={12} />
+                            <span>Menunggu persetujuan hari ini</span>
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="flex gap-2.5 w-full sm:w-auto">
                       <button
                         onClick={() => {
                           setSelectedIzin(izin);
                           setShowFormRevisi(true);
                         }}
-                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-green-600 text-white text-xs sm:text-sm font-semibold rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-1 sm:gap-2 active:scale-95"
+                        className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Setujui</span>
@@ -325,7 +329,7 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
 
                       <button
                         onClick={() => submitIzinRevisi(izin.id, 'reject')}
-                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-600 text-white text-xs sm:text-sm font-semibold rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-1 sm:gap-2 active:scale-95"
+                        className="flex-1 sm:flex-none px-4 py-2.5 bg-rose-50 text-rose-600 text-xs sm:text-sm font-bold rounded-xl hover:bg-rose-100 transition flex items-center justify-center gap-1.5 active:scale-95"
                       >
                         <X className="w-4 h-4" />
                         <span>Tolak</span>
@@ -338,13 +342,13 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-6 sm:py-8 text-center"
+                className="flex flex-col items-center justify-center py-8 text-center bg-white/60 rounded-2xl border border-dashed border-gray-200"
               >
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                  <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />
+                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-2.5 shadow-inner">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                 </div>
-                <p className="text-gray-600 font-medium text-sm sm:text-base">Tidak ada permintaan izin revisi</p>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1">Semua permintaan telah diproses</p>
+                <p className="text-gray-700 font-bold text-sm">Tidak ada permintaan izin revisi</p>
+                <p className="text-xs text-gray-400 mt-0.5">Semua permintaan staf telah diproses dengan bersih</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -354,96 +358,99 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-[#F9F6F3] p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100"
+          whileHover={{ scale: 1.01, y: -2 }}
+          transition={{ duration: 0.3 }}
+          className="bg-[#F2ECE4] p-5 sm:p-6 md:p-7 rounded-3xl shadow-xs border border-amber-200/60 hover:shadow-md hover:border-[#8B5E3C]/40 transition-all duration-300"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-                <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#8B5E3C]" />
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#8B5E3C]/10 flex items-center justify-center text-[#8B5E3C]">
+                  <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
                 <span className="hidden sm:inline">Status Input Harian Staff</span>
                 <span className="sm:hidden">Status Input Staff</span>
               </h3>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">Monitoring input stok harian hari ini</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">Monitoring kehadiran & input stok harian staff</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 sm:px-3 py-1 bg-green-100 text-green-700 text-xs sm:text-sm font-semibold rounded-full">
-                {staffSudahInput?.length || 0} / {totalStaff || 0} Sudah Input
+              <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-bold rounded-xl border border-emerald-100 shadow-2xs">
+                ✨ {staffSudahInput?.length || 0} / {totalStaff || 0} Sudah Input
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Staff Sudah Input */}
-            <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-3 sm:px-4 py-2 sm:py-3 bg-green-50 border-b border-green-100 flex items-center gap-2">
-                <UserCheck className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-green-600" />
-                <span className="font-semibold text-green-700 text-sm sm:text-base">Sudah Input</span>
-                <span className="ml-auto px-2 py-0.5 bg-green-600 text-white text-xs font-bold rounded-full">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
+              <div className="px-4 py-3 bg-emerald-50/70 border-b border-emerald-100 flex items-center gap-2.5">
+                <UserCheck className="w-4 h-4 text-emerald-600" />
+                <span className="font-bold text-emerald-800 text-sm">Sudah Input</span>
+                <span className="ml-auto px-2.5 py-0.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-2xs">
                   {staffSudahInput?.length || 0}
                 </span>
               </div>
-              <div className="max-h-[200px] sm:max-h-[280px] overflow-y-auto">
+              <div className="max-h-[260px] overflow-y-auto p-2">
                 {staffSudahInput && staffSudahInput.length > 0 ? (
-                  <div className="divide-y divide-gray-100">
+                  <div className="space-y-1.5">
                     {staffSudahInput.map((staff: any) => (
-                      <div key={staff.id} className="px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 hover:bg-gray-50 transition">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
+                      <div key={staff.id} className="px-3 py-2.5 rounded-xl flex items-center gap-3 bg-gray-50/50 hover:bg-emerald-50/30 transition-all">
+                        <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs flex-shrink-0">
                           {staff.name?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-800 truncate text-sm sm:text-base">{staff.name}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-1.5 sm:px-2 py-0.5 text-xs font-medium rounded-full ${
+                          <p className="font-bold text-gray-800 text-sm truncate">{staff.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wide ${
                               staff.role === 'bar'
                                 ? 'bg-purple-100 text-purple-700'
                                 : 'bg-orange-100 text-orange-700'
                             }`}>
-                            {staff.role === 'bar' ? 'Bar' : 'Dapur'}
+                              {staff.role === 'bar' ? 'Bar' : 'Dapur'}
                             </span>
                             {staff.input_time && (
-                              <span className="text-xs text-gray-400 flex items-center gap-1">
+                              <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
                                 <Clock size={10} />
                                 {new Date(staff.input_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             )}
                           </div>
                         </div>
-                        <CheckCircle2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-green-500 flex-shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="py-6 sm:py-8 text-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                  <div className="py-10 text-center">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2 text-gray-400">
+                      <UserCheck className="w-5 h-5" />
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-500">Belum ada staff yang input</p>
+                    <p className="text-xs text-gray-400 italic">Belum ada staff yang melakukan input</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Staff Belum Input */}
-            <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-3 sm:px-4 py-2 sm:py-3 bg-red-50 border-b border-red-100 flex items-center gap-2">
-                <UserX className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-red-600" />
-                <span className="font-semibold text-red-700 text-sm sm:text-base">Belum Input</span>
-                <span className="ml-auto px-2 py-0.5 bg-red-600 text-white text-xs font-bold rounded-full">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
+              <div className="px-4 py-3 bg-rose-50/70 border-b border-rose-100 flex items-center gap-2.5">
+                <UserX className="w-4 h-4 text-rose-600" />
+                <span className="font-bold text-rose-800 text-sm">Belum Input</span>
+                <span className="ml-auto px-2.5 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-full shadow-2xs">
                   {staffBelumInput?.length || 0}
                 </span>
               </div>
-              <div className="max-h-[200px] sm:max-h-[280px] overflow-y-auto">
+              <div className="max-h-[260px] overflow-y-auto p-2">
                 {staffBelumInput && staffBelumInput.length > 0 ? (
-                  <div className="divide-y divide-gray-100">
+                  <div className="space-y-1.5">
                     {staffBelumInput.map((staff: any) => (
-                      <div key={staff.id} className="px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 hover:bg-gray-50 transition">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
+                      <div key={staff.id} className="px-3 py-2.5 rounded-xl flex items-center gap-3 bg-gray-50/50 hover:bg-rose-50/30 transition-all">
+                        <div className="w-9 h-9 bg-rose-500 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs flex-shrink-0">
                           {staff.name?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-800 truncate text-sm sm:text-base">{staff.name}</p>
-                          <span className={`px-1.5 sm:px-2 py-0.5 text-xs font-medium rounded-full ${
+                          <p className="font-bold text-gray-800 text-sm truncate">{staff.name}</p>
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
                             staff.role === 'bar'
                               ? 'bg-purple-100 text-purple-700'
                               : 'bg-orange-100 text-orange-700'
@@ -451,17 +458,16 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                             {staff.role === 'bar' ? 'Bar' : 'Dapur'}
                           </span>
                         </div>
-                        <XCircle className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-red-500 flex-shrink-0" />
+                        <XCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="py-6 sm:py-8 text-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
+                  <div className="py-10 text-center">
+                    <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-500">Semua staff sudah input!</p>
-                    <p className="text-xs text-gray-400">Kerja bagus! 🎉</p>
+                    <p className="text-xs font-bold text-emerald-700">Luar biasa! Semua staff sudah input.</p>
                   </div>
                 )}
               </div>
