@@ -49,8 +49,8 @@ class SalesReportController extends Controller
         $today = Carbon::today()->toDateString();
         $tanggal = $request->get('tanggal', $today);
 
-        // Tentukan divisi berdasarkan role user (bar atau dapur)
-        $division = $user->role === 'bar' ? 'bar' : 'dapur';
+        // Bar boleh menjual menu Bar dan Dapur; Dapur hanya menu Dapur.
+        $allowedDivisions = $user->role === 'bar' ? ['bar', 'dapur'] : ['dapur'];
 
         $now = Carbon::now();
         $isAfterNinePM = $now->format('H:i') >= '21:00'; // Cek apakah sudah lewat jam 21:00
@@ -68,10 +68,10 @@ class SalesReportController extends Controller
         // 🔥 KUNCI AKTIF JIKA: Belum klik dari dashboard (tanpa izin revisi) ATAU sudah lewat jam 21:00 (tanpa izin revisi)
         $alreadyInputToday = ((! $unlockedFromDashboard && ! $izinApproved) || ($isAfterNinePM && ! $izinApproved));
 
-        // Ambil daftar resep/menu aktif sesuai divisi untuk pilihan di form bill
-        $recipes = Recipe::where('division', $division)->get()->map(function ($recipe) use ($tanggal, $division) {
+        // Ambil daftar resep/menu yang boleh dijual oleh divisi pengguna.
+        $recipes = Recipe::whereIn('division', $allowedDivisions)->get()->map(function ($recipe) use ($tanggal) {
             $stokAkhir = 0;
-            if ($division === 'bar') {
+            if ($recipe->division === 'bar') {
                 $menuItem = \App\Models\Item::where('nama', $recipe->name)->where('division', 'bar')->first();
                 if ($menuItem) {
                     $stokHarian = StokHarianMenu::where('item_id', $menuItem->id)->whereDate('tanggal', $tanggal)->first();
@@ -128,7 +128,7 @@ class SalesReportController extends Controller
             'items.*.recipe_id' => 'required|exists:recipes,id',
             'items.*.quantity' => 'required|numeric|min:1',
             'diskon_persen' => 'nullable|numeric|min:0|max:100',
-            'fee_mitra' => 'nullable|numeric|min:0',
+            'fee_mitra_persen' => 'nullable|numeric|min:0|max:100',
         ], [
             'nomor_nota.unique' => 'Nomor nota sudah digunakan untuk tanggal, Staff, dan sumber nota yang sama.',
         ]);
@@ -137,7 +137,7 @@ class SalesReportController extends Controller
         $userId = Auth::id();
 
         try {
-            DB::transaction(function () use ($request, $tanggal, $userId, $partnerNota) {
+            DB::transaction(function () use ($request, $tanggal, $userId, $partnerNota, $currentUser) {
 
                 $subtotalMenu = 0;
                 $processedItems = [];
@@ -150,6 +150,11 @@ class SalesReportController extends Controller
                     $recipe = Recipe::find($recipeId);
                     if (! $recipe) {
                         throw new \RuntimeException('Resep menu tidak ditemukan.');
+                    }
+
+                    $allowedDivisions = $currentUser->role === 'bar' ? ['bar', 'dapur'] : ['dapur'];
+                    if (! in_array($recipe->division, $allowedDivisions, true)) {
+                        throw new \RuntimeException('Menu tersebut tidak dapat dijual oleh divisi Anda.');
                     }
 
                     $hargaSatuan = (float) ($recipe->harga_jual_real ?? 0);
@@ -223,8 +228,9 @@ class SalesReportController extends Controller
 
                 // 3. Hitung Diskon & Total Bersih Nota
                 $diskonPersen = (float) ($request->diskon_persen ?? 0);
-                $feeMitra = (float) ($request->fee_mitra ?? 0);
+                $feeMitraPersen = (float) ($request->fee_mitra_persen ?? 0);
                 $nominalDiskon = ($subtotalMenu * $diskonPersen) / 100;
+                $feeMitra = ($subtotalMenu * $feeMitraPersen) / 100;
                 $totalBersih = ($subtotalMenu - $nominalDiskon) - $feeMitra;
 
                 // 4. Simpan ke Tabel Sales Reports (Utama)
@@ -233,6 +239,7 @@ class SalesReportController extends Controller
                     'tanggal_transaksi' => $tanggal,
                     'partner_nota' => $partnerNota,
                     'diskon_persen' => $diskonPersen,
+                    'fee_mitra_persen' => $feeMitraPersen,
                     'fee_mitra' => $feeMitra,
                     'subtotal' => $subtotalMenu,
                     'total_bersih' => max(0, $totalBersih),

@@ -15,6 +15,7 @@ class SalesReport extends Model
         'tanggal_transaksi',
         'partner_nota',
         'diskon_persen',
+        'fee_mitra_persen',
         'fee_mitra',
         'subtotal',
         'total_bersih',
