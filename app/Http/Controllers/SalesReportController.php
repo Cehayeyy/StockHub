@@ -137,11 +137,7 @@ class SalesReportController extends Controller
         $userId = Auth::id();
 
         try {
-<<<<<<< HEAD
-            DB::transaction(function () use ($request, $tanggal, $userId) {
-=======
             DB::transaction(function () use ($request, $tanggal, $userId, $partnerNota, $currentUser) {
->>>>>>> e01270427c134a6911d0460009c7ee1c9f6a772f
 
                 $subtotalMenu = 0;
                 $processedItems = [];
@@ -298,7 +294,3 @@ SalesReport::create([
 ]);
     }
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> e01270427c134a6911d0460009c7ee1c9f6a772f
