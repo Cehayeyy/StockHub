@@ -4,6 +4,7 @@ import { Head, usePage } from "@inertiajs/react";
 import { router } from "@inertiajs/react";
 import { Plus, Trash2, Receipt, AlertTriangle, CheckCircle, Calculator } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import CustomSelect from "@/components/CustomSelect";
 
 interface RecipeOption {
   id: number;
@@ -35,7 +36,7 @@ export default function SalesReport() {
   const [selectedDate, setSelectedDate] = useState(tanggal);
   const [partnerMitra, setPartnerMitra] = useState("Internal / Umum");
   const [diskonPersen, setDiskonPersen] = useState("");
-  const [feeMitra, setFeeMitra] = useState("");
+  const [feeMitraPersen, setFeeMitraPersen] = useState("");
   
   const [items, setItems] = useState<BillItem[]>([
     { recipe_id: "", quantity: "1" }
@@ -73,8 +74,9 @@ export default function SalesReport() {
   const subtotal = calculateSubtotal();
   const discPercent = Number(diskonPersen) || 0;
   const diskonNominal = (subtotal * discPercent) / 100;
-  const partnerFee = Number(feeMitra) || 0;
-  const totalBersih = Math.max(subtotal - diskonNominal, 0);
+  const partnerFeePercent = Number(feeMitraPersen) || 0;
+  const partnerFee = (subtotal * partnerFeePercent) / 100;
+  const totalBersih = Math.max(subtotal - diskonNominal - partnerFee, 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,14 +101,14 @@ export default function SalesReport() {
       partner_mitra: partnerMitra, // 🔥 Diselaraskan dengan controller agar tercatat sumber notanya
       items: validItems as any,
       diskon_persen: diskonPersen || 0,
-      fee_mitra: feeMitra || 0,
+      fee_mitra_persen: feeMitraPersen || 0,
     }, {
       preserveScroll: true,
       onSuccess: () => {
         setProcessing(false);
         setNomorNota("");
         setDiskonPersen("");
-        setFeeMitra("");
+        setFeeMitraPersen("");
         setPartnerMitra("Internal / Umum");
         setItems([{ recipe_id: "", quantity: "1" }]);
       },
@@ -122,6 +124,18 @@ export default function SalesReport() {
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(number);
   };
+
+  const partnerOptions = [
+    { value: "Internal / Umum", label: "Internal / Umum (Kasir)" },
+    { value: "GoFood", label: "GoFood" },
+    { value: "GrabFood", label: "GrabFood" },
+    { value: "ShopeeFood", label: "ShopeeFood" },
+  ];
+
+  const menuOptions = recipes.map((recipe) => ({
+    value: recipe.id,
+    label: `${recipe.name} — ${formatRupiah(recipe.harga_jual)} (Stok ${recipe.division}: ${recipe.stok_tersedia})`,
+  }));
 
   return (
     <AppLayout header={<h2 className="text-2xl font-bold text-gray-800">Sales Report (Bill / Nota)</h2>}>
@@ -187,16 +201,12 @@ export default function SalesReport() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Partner / Sumber Nota</label>
-                <select
+                <CustomSelect
                   value={partnerMitra}
-                  onChange={(e) => setPartnerMitra(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-xl px-3 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none text-gray-700"
-                >
-                  <option value="Internal / Umum">Internal / Umum (Kasir)</option>
-                  <option value="GoFood">GoFood</option>
-                  <option value="GrabFood">GrabFood</option>
-                  <option value="ShopeeFood">ShopeeFood</option>
-                </select>
+                  onChange={(value) => setPartnerMitra(String(value))}
+                  options={partnerOptions}
+                  placeholder="Pilih sumber nota"
+                />
               </div>
             </div>
 
@@ -221,18 +231,15 @@ export default function SalesReport() {
                   <div key={index} className="flex flex-col sm:flex-row gap-3 items-center bg-gray-50 p-4 rounded-2xl border border-gray-200/60">
                     <div className="flex-1 w-full">
                       <label className="block text-[10px] font-bold text-gray-500 mb-1">Pilih Menu</label>
-                      <select
+                      <CustomSelect
                         value={item.recipe_id}
-                        onChange={(e) => handleItemChange(index, 'recipe_id', e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none text-gray-700"
-                      >
-                        <option value="">-- Pilih Menu Divisi Anda --</option>
-                        {recipes.map((rec) => (
-                          <option key={rec.id} value={rec.id}>
-                            {rec.name} — {formatRupiah(rec.harga_jual)} (Stok: {rec.stok_tersedia})
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => handleItemChange(index, 'recipe_id', String(value))}
+                        options={menuOptions}
+                        placeholder="Cari atau pilih menu"
+                        searchable
+                        searchPlaceholder="Ketik nama menu..."
+                        buttonClassName="py-2.5"
+                      />
                     </div>
 
                     <div className="w-full sm:w-32">
@@ -281,13 +288,15 @@ export default function SalesReport() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Fee Mitra / Ojol (Rp) - Opsional[cite: 1, 3]</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Fee Mitra / Ojol (%) - Opsional</label>
                   <input
                     type="number"
                     min="0"
+                    max="100"
+                    step="0.01"
                     placeholder="0"
-                    value={feeMitra}
-                    onChange={(e) => setFeeMitra(e.target.value)}
+                    value={feeMitraPersen}
+                    onChange={(e) => setFeeMitraPersen(e.target.value)}
                     className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none"
                   />
                 </div>
@@ -308,7 +317,7 @@ export default function SalesReport() {
                   <span className="font-semibold text-red-600">- {formatRupiah(diskonNominal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Fee Mitra ({partnerMitra}):</span>
+                  <span>Fee Mitra ({partnerFeePercent}%):</span>
                   <span className="font-semibold text-amber-700">- {formatRupiah(partnerFee)}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-amber-200 text-sm font-extrabold text-gray-900">

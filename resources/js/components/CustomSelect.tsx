@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Search } from "lucide-react";
 
 export interface CustomSelectOption {
   value: string | number;
@@ -16,6 +16,8 @@ interface CustomSelectProps {
   buttonClassName?: string;
   disabled?: boolean;
   error?: boolean | string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 export default function CustomSelect({
@@ -27,8 +29,11 @@ export default function CustomSelect({
   buttonClassName = "",
   disabled = false,
   error = false,
+  searchable = false,
+  searchPlaceholder = "Cari...",
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find(
@@ -68,7 +73,12 @@ export default function CustomSelect({
     if (option.disabled || disabled) return;
     onChange(option.value);
     setIsOpen(false);
+    setSearch("");
   };
+
+  const filteredOptions = searchable
+    ? options.filter((option) => option.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()))
+    : options;
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
@@ -100,13 +110,26 @@ export default function CustomSelect({
 
       {isOpen && (
         <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white rounded-2xl shadow-xl border border-[#F6E1C6] p-1.5 max-h-60 overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-150">
-          {options.length === 0 ? (
+          {searchable && (
+            <div className="relative mb-1.5">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#C19A6B]" />
+              <input
+                autoFocus
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full rounded-xl border border-amber-100 bg-[#FFFCF8] py-2.5 pl-9 pr-3 text-sm text-gray-700 outline-none focus:border-[#D9A978] focus:ring-2 focus:ring-[#D9A978]/30"
+              />
+            </div>
+          )}
+          {filteredOptions.length === 0 ? (
             <div className="px-4 py-3 text-xs text-gray-400 text-center">
-              Tidak ada pilihan
+              {searchable && search ? "Menu tidak ditemukan" : "Tidak ada pilihan"}
             </div>
           ) : (
             <div className="space-y-0.5">
-              {options.map((opt) => {
+              {filteredOptions.map((opt) => {
                 const isSelected = String(opt.value) === String(value);
 
                 return (
