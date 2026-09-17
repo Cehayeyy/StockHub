@@ -124,7 +124,7 @@ class SalesReportController extends Controller
 
         try {
             DB::transaction(function () use ($request, $tanggal, $userId) {
-                
+
                 $subtotalMenu = 0;
                 $processedItems = [];
 
@@ -254,5 +254,25 @@ class SalesReportController extends Controller
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal menyimpan nota: ' . $e->getMessage()]);
         }
+        // Contoh potongan logic di SalesReportController.php store()
+$subtotal = 0;
+foreach ($request->items as $item) {
+    $recipe = Recipe::find($item['recipe_id']);
+    $subtotal += ($recipe->harga_jual * $item['quantity']);
+}
+
+$diskonNominal = ($subtotal * ($request->diskon_persen ?? 0)) / 100;
+
+SalesReport::create([
+    'nomor_nota'      => $request->nomor_nota,
+    'tanggal'         => $request->tanggal,
+    'partner_mitra'   => $request->partner_mitra,
+    'subtotal'        => $subtotal,
+    'diskon_nominal'  => $diskonNominal,
+    'fee_mitra'       => $request->fee_mitra ?? 0,
+    'total_bayar'     => max($subtotal - $diskonNominal, 0),
+    'user_id'         => auth()->id(),
+]);
     }
 }
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Users,
@@ -72,20 +72,20 @@ function SidebarLink({
       isActive = route().current(href);
       url = route(href);
     } else if (href) {
-        url = href;
+      url = href;
     }
   } catch (e) {
-    console.warn(`Route ${href} tidak ditemukan atau error.`);
+    if (href) url = href;
   }
 
-  const activeClasses = isActive 
-    ? 'bg-black/30 text-white font-bold shadow-sm' 
+  const activeClasses = isActive
+    ? 'bg-black/30 text-white font-bold shadow-sm'
     : 'text-white/90 hover:bg-black/15 hover:text-white font-semibold';
 
   return (
     <Link
       href={url}
-      onClick={(e) => {
+      onClick={() => {
         onClick?.();
         onNavigate?.();
       }}
@@ -98,6 +98,7 @@ function SidebarLink({
   );
 }
 
+// 💡 SUBMENULINK PERBAIKAN: DUKUNG ROUTE NAME KORRECT & DIRECT PATH URL
 function SubMenuLink({
   href,
   icon: Icon,
@@ -110,15 +111,19 @@ function SubMenuLink({
   onNavigate?: () => void;
 }) {
   let isActive = false;
-  let url = '#';
+  let url = href;
 
   try {
     if (route().has(href)) {
       isActive = route().current(href);
       url = route(href);
+    } else {
+      // Jika href adalah URL string biasa (misal: /laporan/keuangan)
+      const currentPath = window.location.pathname;
+      isActive = currentPath === href || currentPath.startsWith(href);
     }
   } catch (e) {
-    console.warn(`Route submenu ${href} tidak ditemukan.`);
+    url = href;
   }
 
   const activeClasses = isActive
@@ -141,15 +146,12 @@ function SubMenuLink({
 export default function AppLayout({ header, children }: LayoutProps) {
   const { auth, flash } = usePage<PageProps>().props;
 
-  const rawRole = auth?.user?.role;
   const role = auth?.user?.role?.toLowerCase();
   const divisionRaw =
     auth?.user?.division?.toLowerCase() ??
     auth?.user?.role?.toLowerCase();
 
-  const division =
-    divisionRaw === 'kitchen' ? 'dapur' : divisionRaw;
-
+  const division = divisionRaw === 'kitchen' ? 'dapur' : divisionRaw;
   const isStaff = role !== 'owner' && role !== 'supervisor';
 
   useEffect(() => {
@@ -219,11 +221,10 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  // 🌟 KARTU SIDEBAR MENGAPUNG BERWARNA COKLAT KHAS STOCKHUB
   const SidebarContent = () => (
     <div className="w-[280px] p-4 sm:p-5 flex flex-col h-[calc(100vh-2rem)] bg-[#6F4E37] text-white/90 rounded-3xl shadow-2xl border border-white/10 my-4 ml-4">
-      
-      {/* HEADER PROFIL DENGAN TOMBOL TUTUP DI DALAMNYA */}
+
+      {/* HEADER PROFIL */}
       <div className="flex items-center justify-between mb-6 flex-shrink-0 bg-black/20 p-3 rounded-2xl border border-white/10">
         <div className="flex items-center overflow-hidden">
           <div className="w-11 h-11 rounded-xl bg-white/10 text-white font-bold flex items-center justify-center mr-3 flex-shrink-0 shadow-inner">
@@ -239,7 +240,6 @@ export default function AppLayout({ header, children }: LayoutProps) {
           </div>
         </div>
 
-        {/* 🔥 TOMBOL TUTUP SIDEBAR DI DALAM CARD PROFIL */}
         <button
           onClick={() => setIsSidebarOpen(false)}
           className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 transition text-white flex items-center justify-center flex-shrink-0 ml-2"
@@ -414,13 +414,14 @@ export default function AppLayout({ header, children }: LayoutProps) {
                     Laporan Analisa
                   </SubMenuLink>
 
+                  {/* 💡 DI SINI MENGGUNAKAN ROUTE NAME KONSISTEN */}
                   <SubMenuLink href="laporan.keuangan" icon={Receipt} onNavigate={closeMobileMenu}>
                     Laporan Keuangan
                   </SubMenuLink>
 
-                  <SubMenuLink href="laporan.frekuensi" icon={Layers} onNavigate={closeMobileMenu}>
+                  <SubMenuLink href="laporan.frekuensi-pembelian" icon={Layers} onNavigate={closeMobileMenu}>
                     Frekuensi Pembelian
-                  </SubMenuLink>
+                    </SubMenuLink>
                 </>
               )}
             </div>
@@ -445,7 +446,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
   );
 
   return (
-    <div className="flex h-screen w-full bg-[#FAF7F2] overflow-hidden relative">
+    <div className="flex min-h-screen w-full bg-[#FAF7F2] overflow-visible relative lg:h-screen lg:overflow-hidden">
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
@@ -486,9 +487,9 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
       <motion.aside
         initial={false}
-        animate={{ 
-          width: isSidebarOpen ? "300px" : "0px", 
-          opacity: isSidebarOpen ? 1 : 0 
+        animate={{
+          width: isSidebarOpen ? "300px" : "0px",
+          opacity: isSidebarOpen ? 1 : 0
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="bg-transparent flex-col flex-shrink-0 h-full hidden lg:flex relative z-20 overflow-hidden whitespace-nowrap"
@@ -496,7 +497,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
         <SidebarContent />
       </motion.aside>
 
-      <div className="flex-1 flex flex-col h-screen min-w-0 bg-[#FAF7F2] relative">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 bg-[#FAF7F2] relative lg:h-screen">
         <header className="bg-white/80 backdrop-blur-md shadow-2xs border-b border-amber-100/60 p-3 sm:p-4 md:p-6 flex-shrink-0 z-10 w-full">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -558,8 +559,8 @@ export default function AppLayout({ header, children }: LayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-y-auto w-full min-h-0">
-            {children}
+        <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-y-visible lg:overflow-y-auto w-full min-h-0">
+          {children}
         </main>
       </div>
     </div>

@@ -6,6 +6,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarGroup,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
@@ -45,13 +48,6 @@ export function AppSidebar() {
   const isActive = (url: string) => currentUrl === url;
   const isStartsWith = (url: string) => currentUrl.startsWith(url);
 
-  const subLinkClass = (active: boolean) =>
-    `block w-full rounded-lg px-4 py-2 text-sm font-medium text-left ${
-      active
-        ? 'bg-[#c58a5a] text-white'
-        : 'bg-[#5b3623] text-white/90 hover:bg-[#70402a]'
-    }`;
-
   return (
     <Sidebar collapsible="icon" variant="inset">
       {/* HEADER LOGO */}
@@ -59,7 +55,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard" prefetch>
+              <Link href="/dashboard" preserveScroll prefetch>
                 <AppLogo />
               </Link>
             </SidebarMenuButton>
@@ -68,7 +64,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* MENU UTAMA */}
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto">
         <SidebarGroup className="px-2 py-0">
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
 
@@ -79,7 +75,7 @@ export function AppSidebar() {
                 asChild
                 isActive={isActive('/dashboard')}
               >
-                <Link href="/dashboard" prefetch>
+                <Link href="/dashboard" preserveScroll prefetch>
                   <LayoutGrid />
                   <span>Dasbor</span>
                 </Link>
@@ -92,7 +88,7 @@ export function AppSidebar() {
                 asChild
                 isActive={isStartsWith('/manajemen-akun')}
               >
-                <Link href="/manajemen-akun" prefetch>
+                <Link href="/manajemen-akun" preserveScroll prefetch>
                   <Users />
                   <span>Manajemen Akun</span>
                 </Link>
@@ -103,44 +99,49 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={isStartsWith('/masterdata')}
+                isActive={isStartsWith('/masterdata') || isStartsWith('/kategori') || isStartsWith('/item') || isStartsWith('/resep')}
               >
-                <Link href="/masterdata" prefetch>
+                <Link href="/masterdata" preserveScroll prefetch>
                   <Box />
                   <span>Data Induk</span>
                 </Link>
               </SidebarMenuButton>
 
-              {/* SUB-MENU DATA INDUK */}
-              <div className="mt-2 ml-6 space-y-2">
-                <Link
-                  href="/masterdata/kategori"
-                  prefetch
-                  className={subLinkClass(
-                    isStartsWith('/masterdata/kategori'),
-                  )}
-                >
-                  Kategori
-                </Link>
-                <Link
-                  href="/masterdata/item"
-                  prefetch
-                  className={subLinkClass(
-                    isStartsWith('/masterdata/item'),
-                  )}
-                >
-                  Item
-                </Link>
-                <Link
-                  href="/masterdata/resep"
-                  prefetch
-                  className={subLinkClass(
-                    isStartsWith('/masterdata/resep'),
-                  )}
-                >
-                  Resep
-                </Link>
-              </div>
+              {/* SUB-MENU DATA INDUK MENGGUNAKAN SHADCN SUB-COMPONENTS */}
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isStartsWith('/kategori') || isStartsWith('/masterdata/kategori')}
+                  >
+                    <Link href="/kategori" preserveScroll prefetch>
+                      Kategori
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isStartsWith('/item') || isStartsWith('/masterdata/item')}
+                  >
+                    <Link href="/item" preserveScroll prefetch>
+                      Item
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isStartsWith('/resep') || isStartsWith('/masterdata/resep')}
+                  >
+                    <Link href="/resep" preserveScroll prefetch>
+                      Resep
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
             </SidebarMenuItem>
 
             {/* STOK HARIAN + SUB: Bar, Dapur */}
@@ -149,36 +150,40 @@ export function AppSidebar() {
                 asChild
                 isActive={
                   isStartsWith('/stok-harian/bar') ||
-                  isStartsWith('/stok-harian/dapur')
+                  isStartsWith('/stok-harian/dapur') ||
+                  isStartsWith('/stok-harian-dapur')
                 }
               >
-                <Link href="/stok-harian/bar" prefetch>
+                <Link href="/stok-harian/bar" preserveScroll prefetch>
                   <ClipboardList />
                   <span>Stok Harian</span>
                 </Link>
               </SidebarMenuButton>
 
               {/* SUB-MENU STOK HARIAN */}
-              <div className="mt-2 ml-6 space-y-2">
-                <Link
-                  href="/stok-harian/bar"
-                  prefetch
-                  className={subLinkClass(
-                    isStartsWith('/stok-harian/bar'),
-                  )}
-                >
-                  Bar
-                </Link>
-                <Link
-                  href="/stok-harian/dapur"
-                  prefetch
-                  className={subLinkClass(
-                    isStartsWith('/stok-harian/dapur'),
-                  )}
-                >
-                  Dapur
-                </Link>
-              </div>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isStartsWith('/stok-harian/bar')}
+                  >
+                    <Link href="/stok-harian/bar" preserveScroll prefetch>
+                      Bar
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isStartsWith('/stok-harian-dapur') || isStartsWith('/stok-harian/dapur')}
+                  >
+                    <Link href="/stok-harian-dapur" preserveScroll prefetch>
+                      Dapur
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
             </SidebarMenuItem>
 
             {/* Verifikasi Stok */}
@@ -187,7 +192,7 @@ export function AppSidebar() {
                 asChild
                 isActive={isStartsWith('/verifikasi-stok')}
               >
-                <Link href="/verifikasi-stok" prefetch>
+                <Link href="/verifikasi-stok" preserveScroll prefetch>
                   <CheckSquare />
                   <span>Verifikasi Stok</span>
                 </Link>
@@ -200,7 +205,7 @@ export function AppSidebar() {
                 asChild
                 isActive={isStartsWith('/laporan-aktivitas')}
               >
-                <Link href="/laporan-aktivitas" prefetch>
+                <Link href="/laporan-aktivitas" preserveScroll prefetch>
                   <FileText />
                   <span>Laporan Aktivitas</span>
                 </Link>

@@ -13,7 +13,13 @@ class CheckRole
             abort(403);
         }
 
-        if (! in_array(auth()->user()->role, $roles)) {
+        $userRole = strtolower(trim((string) auth()->user()->role));
+        $allowedRoles = array_map(
+            fn (string $role) => strtolower(trim($role)),
+            $roles
+        );
+
+        if (! in_array($userRole, $allowedRoles, true)) {
             abort(403, 'Anda tidak punya akses');
         }
 

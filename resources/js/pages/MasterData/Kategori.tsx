@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, X, Plus, Box, Layers } from "lucide-react";
+import { Search, ChevronDown, X, Plus, Layers } from "lucide-react";
 
 type Division = "bar" | "dapur";
 
@@ -16,7 +16,7 @@ interface Category {
   division: Division;
   total_items: number;
   items: CategoryItem[];
-  no?: number; // Tambahkan properti opsional 'no'
+  no?: number;
 }
 
 type PageProps = {
@@ -24,7 +24,6 @@ type PageProps = {
   categories?: Category[];
 };
 
-// Terjemahan label kategori untuk tampilan
 const translateCategoryName = (name: string) => {
   const lower = name.toLowerCase();
   if (lower === "finish") return "Menu";
@@ -32,7 +31,6 @@ const translateCategoryName = (name: string) => {
   return name;
 };
 
-// Susun kategori: Menu(Finish), Mentah(Raw), baru lainnya
 const sortCategories = (categories: Category[]) => {
   const BASE_ORDER = ["finish", "raw"];
   const baseSlots: (Category | undefined)[] = [];
@@ -83,9 +81,7 @@ export default function KategoriPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
-  );
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editCategoryName, setEditCategoryName] = useState("");
@@ -118,9 +114,7 @@ export default function KategoriPage() {
     );
   };
 
-  // =========================
-  // TAMBAH KATEGORI (panggil backend)
-  // =========================
+  // ===== TAMBAH KATEGORI =====
   const openAddModal = () => {
     setNewCategoryName("");
     setAddModalOpen(true);
@@ -142,9 +136,7 @@ export default function KategoriPage() {
     );
   };
 
-  // =========================
-  // EDIT (panggil backend)
-  // =========================
+  // ===== EDIT KATEGORI =====
   const openEditModal = (cat: Category) => {
     setSelectedCategory(cat);
     setEditCategoryName(cat.name);
@@ -161,22 +153,21 @@ export default function KategoriPage() {
       route("kategori.update", selectedCategory.id),
       { name },
       {
-        onSuccess: () => setEditModalOpen(false),
+        onSuccess: () => {
+          setEditModalOpen(false);
+          setSelectedCategory(null);
+        },
       }
     );
   };
 
-  // =========================
-  // VIEW DETAIL – tampilkan list item
-  // =========================
+  // ===== VIEW DETAIL =====
   const openViewModal = (cat: Category) => {
     setSelectedCategory(cat);
     setViewModalOpen(true);
   };
 
-  // =========================
-  // HAPUS (kategori + item di kategori itu – backend)
-  // =========================
+  // ===== HAPUS KATEGORI =====
   const openDeleteModal = (cat: Category) => {
     setSelectedCategory(cat);
     setDeleteModalOpen(true);
@@ -186,41 +177,27 @@ export default function KategoriPage() {
     if (!selectedCategory) return;
 
     router.delete(route("kategori.destroy", selectedCategory.id), {
-      onSuccess: () => setDeleteModalOpen(false),
+      onSuccess: () => {
+        setDeleteModalOpen(false);
+        setSelectedCategory(null);
+      },
     });
   };
 
-  // --- 🔥 TAMBAHAN LOGIKA ENTER (HAPUS) & ESC (BATAL) 🔥 ---
+  // ===== PENANGANAN TOMBOL KEYBOARD (ESC & ENTER HANYA DI DELETE) =====
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Jika Modal Hapus terbuka
-      if (deleteModalOpen) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleDeleteCategory(); // Eksekusi Hapus
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          setDeleteModalOpen(false); // Batal
-        }
-      }
-      // 2. Jika Modal Tambah terbuka
-      else if (addModalOpen && e.key === "Escape") {
-        e.preventDefault();
+      if (e.key === "Escape") {
         setAddModalOpen(false);
-      }
-      // 3. Jika Modal Edit terbuka
-      else if (editModalOpen && e.key === "Escape") {
-        e.preventDefault();
         setEditModalOpen(false);
-      }
-      // 4. Jika Modal View terbuka
-      else if (viewModalOpen && e.key === "Escape") {
-        e.preventDefault();
         setViewModalOpen(false);
+        setDeleteModalOpen(false);
+      } else if (deleteModalOpen && e.key === "Enter") {
+        e.preventDefault();
+        handleDeleteCategory();
       }
     };
 
-    // Pasang pendengar hanya saat salah satu modal aktif
     if (deleteModalOpen || addModalOpen || editModalOpen || viewModalOpen) {
       window.addEventListener("keydown", handleKeyDown);
     }
@@ -229,7 +206,6 @@ export default function KategoriPage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [deleteModalOpen, addModalOpen, editModalOpen, viewModalOpen, selectedCategory]);
-  // --- 🔥 SELESAI TAMBAHAN 🔥 ---
 
   const titleDivisionLabel = staffDivision === "bar" ? "Bar" : "Dapur";
 
@@ -247,14 +223,11 @@ export default function KategoriPage() {
                   {`Kategori ${titleDivisionLabel}`}
                 </h2>
 
-                {/* Dropdown Divisi */}
                 {!isStaff && (
                   <div className="relative inline-block w-full md:w-40">
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowDivisionDropdown((prev) => !prev)
-                      }
+                      onClick={() => setShowDivisionDropdown((prev) => !prev)}
                       className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-amber-100 shadow-2xs"
                     >
                       <span className="capitalize">{titleDivisionLabel}</span>
@@ -295,7 +268,6 @@ export default function KategoriPage() {
                 )}
               </div>
 
-              {/* Right controls: Tambah + Search */}
               <div className="flex flex-col gap-3 md:flex-row md:items-center w-full md:w-auto">
                 {!isStaff && (
                   <button
@@ -322,60 +294,58 @@ export default function KategoriPage() {
               </div>
             </div>
 
-            {/* --- MOBILE VIEW (CARDS) --- */}
-            {/* Tampil di layar kecil (< md) */}
+            {/* MOBILE VIEW */}
             <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
-                {filteredCategories.length === 0 ? (
-                     <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
-                        Belum ada kategori untuk divisi ini.
-                    </div>
-                ) : (
-                    filteredCategories.map((cat) => (
-                        <div key={cat.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-                           <div className="flex justify-between items-start mb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-orange-50 p-2 rounded-lg text-[#DABA93]">
-                                        <Layers className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-gray-800">{translateCategoryName(cat.name)}</div>
-                                        <div className="text-xs text-gray-500">Total Item: {cat.total_items}</div>
-                                    </div>
-                                </div>
-                           </div>
-
-                           <div className="flex gap-2 border-t pt-3 mt-2">
-                                <button
-                                     onClick={() => openViewModal(cat)}
-                                     className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
-                                >
-                                     View
-                                </button>
-
-                                {!isStaff && (
-                                     <>
-                                         <button
-                                             onClick={() => openEditModal(cat)}
-                                             className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
-                                         >
-                                             Edit
-                                         </button>
-                                         <button
-                                             onClick={() => openDeleteModal(cat)}
-                                             className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition"
-                                         >
-                                             Hapus
-                                         </button>
-                                     </>
-                                )}
-                           </div>
+              {filteredCategories.length === 0 ? (
+                <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                  Belum ada kategori untuk divisi ini.
+                </div>
+              ) : (
+                filteredCategories.map((cat) => (
+                  <div key={cat.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-orange-50 p-2 rounded-lg text-[#DABA93]">
+                          <Layers className="w-5 h-5" />
                         </div>
-                    ))
-                )}
+                        <div>
+                          <div className="font-bold text-gray-800">{translateCategoryName(cat.name)}</div>
+                          <div className="text-xs text-gray-500">Total Item: {cat.total_items}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 border-t pt-3 mt-2">
+                      <button
+                        onClick={() => openViewModal(cat)}
+                        className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
+                      >
+                        View
+                      </button>
+
+                      {!isStaff && (
+                        <>
+                          <button
+                            onClick={() => openEditModal(cat)}
+                            className="flex-1 flex items-center justify-center gap-1 bg-amber-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(cat)}
+                            className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition"
+                          >
+                            Hapus
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* --- DESKTOP VIEW (TABLE) --- */}
-            {/* Tampil di layar sedang ke atas (md:block) */}
+            {/* DESKTOP VIEW */}
             <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden flex-1 mb-6">
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-left text-sm whitespace-nowrap">
@@ -412,7 +382,6 @@ export default function KategoriPage() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              {/* VIEW – BOLEH UNTUK SEMUA */}
                               <button
                                 type="button"
                                 onClick={() => openViewModal(cat)}
@@ -421,7 +390,6 @@ export default function KategoriPage() {
                                 View
                               </button>
 
-                              {/* EDIT & HAPUS – KHUSUS NON STAFF */}
                               {!isStaff && (
                                 <>
                                   <button
@@ -470,6 +438,7 @@ export default function KategoriPage() {
               </label>
               <input
                 type="text"
+                autoFocus
                 placeholder="Contoh: Menu/Mentah"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
@@ -513,6 +482,7 @@ export default function KategoriPage() {
               </label>
               <input
                 type="text"
+                autoFocus
                 value={editCategoryName}
                 onChange={(e) => setEditCategoryName(e.target.value)}
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
@@ -634,7 +604,6 @@ export default function KategoriPage() {
   );
 }
 
-/** Komponen overlay modal sederhana */
 function Modal({
   children,
   onClose,

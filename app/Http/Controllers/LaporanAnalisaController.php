@@ -8,61 +8,78 @@ use App\Models\Item;
 use App\Models\Recipe;
 use App\Models\SalesReportItem;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class LaporanAnalisaController extends Controller
 {
     public function index(Request $request)
     {
+        Carbon::setLocale('id');
+
         $search = $request->input('search');
         $periode = $request->input('periode', 'Harian');
-        
         $tanggalInput = $request->input('tanggal', now()->toDateString());
+
         try {
             if (str_contains($tanggalInput, '/')) {
-                $tanggal = Carbon::createFromFormat('m/d/Y', $tanggalInput)->toDateString();
+                $dateObj = Carbon::createFromFormat('m/d/Y', $tanggalInput);
             } else {
-                $tanggal = Carbon::parse($tanggalInput)->toDateString();
+                $dateObj = Carbon::parse($tanggalInput);
             }
         } catch (\Exception $e) {
-            $tanggal = now()->toDateString();
+            $dateObj = Carbon::now();
         }
 
-        // 1. Ambil data master item menu yang memiliki resep
-        $items = Item::has('resep')
-            ->with('itemCategory')
-            ->when($search, function ($q, $search) {
-                $q->where('nama', 'like', "%{$search}%");
-            })
-            ->get();
+        $tanggal = $dateObj->toDateString();
 
-        if ($items->isEmpty()) {
-            $items = Item::has('resep')->with('itemCategory')->get();
-        }
+        // 1. Ambil data master resep/item tanpa membatasi has('resep') secara kaku
+        $recipes = Recipe::when($search, function ($q, $search) {
+                $q->where('name', 'like', "%{$search}%");
+            })->get();
 
-        // 2. Petakan data performa penjualan langsung dari SalesReportItem
-        $groupedItems = $items->map(function ($item) use ($tanggal) {
-            
-            // Ambil total quantity terjual dari tabel sales_report_items yang berelasi dengan sales_reports pada tanggal tersebut
-            $totalTerjual = SalesReportItem::where('item_id', $item->id)
-                ->whereHas('salesReport', function ($query) use ($tanggal) {
-                    $query->whereDate('tanggal_transaksi', $tanggal);
-                })
-                ->sum('quantity');
-            
-            // Perhitungan Finansial HPP & Profit
-            $hppSatuan = $item->harga_dasar ?? 0;
+        // 2. Deteksi nama kolom tanggal pada sales_reports
+        $salesCols = Schema::hasTable('sales_reports') ? Schema::getColumnListing('sales_reports') : [];
+        $dateCol = in_array('tanggal_transaksi', $salesCols) ? 'tanggal_transaksi' :
+                  (in_array('tanggal', $salesCols) ? 'tanggal' : 'created_at');
+
+        // 3. Petakan data performa penjualan per menu secara presisi
+        $groupedItems = $recipes->map(function ($recipe) use ($tanggal, $dateObj, $periode, $dateCol) {
+
+            // Cari item yang berelasi berdasarkan nama resep
+            $item = Item::where('nama', $recipe->name)->first();
+            $itemId = $item ? $item->id : null;
+
+            // Hitung total quantity terjual dari SalesReportItem
+            $salesQuery = SalesReportItem::where(function ($q) use ($recipe, $itemId) {
+                if ($itemId) {
+                    $q->where('item_id', $itemId);
+                } else {
+                    $q->where('recipe_id', $recipe->id);
+                }
+            })->whereHas('salesReport', function ($query) use ($tanggal, $dateObj, $periode, $dateCol) {
+                if ($periode === 'Harian') {
+                    $query->whereDate($dateCol, $tanggal);
+                } elseif ($periode === 'Mingguan') {
+                    $query->whereBetween($dateCol, [$dateObj->copy()->startOfWeek(), $dateObj->copy()->endOfWeek()]);
+                } else {
+                    $query->whereYear($dateCol, $dateObj->year)->whereMonth($dateCol, $dateObj->month);
+                }
+            });
+
+            $totalTerjual = (float) $salesQuery->sum('quantity');
+
+            // Finansial HPP & Harga Jual Riil
+            $hppSatuan = (float) ($item->harga_beli ?? $item->harga_dasar ?? $recipe->harga_hpp ?? 0);
+            $hargaJualRiil = (float) ($recipe->harga_jual_real ?? $item->harga_jual ?? 0);
+
             $totalHpp = $totalTerjual * $hppSatuan;
-
-            // Harga Jual Riil (HJR)
-            $hargaJualRiil = $item->harga_jual ?? ($hppSatuan * 1.5); 
-            
             $profitRiilSatuan = max(0, $hargaJualRiil - $hppSatuan);
             $totalProfitReal = $totalTerjual * $profitRiilSatuan;
 
             return [
-                'id' => $item->id,
-                'nama' => $item->nama,
-                'kategori' => $item->itemCategory->name ?? $item->kategori_item ?? 'Menu',
+                'id' => $recipe->id,
+                'nama' => $recipe->name,
+                'kategori' => ucfirst($recipe->division ?? 'Menu'),
                 'terjual' => $totalTerjual,
                 'total_hpp' => $totalHpp,
                 'harga_jual_riil' => $hargaJualRiil,
@@ -71,11 +88,11 @@ class LaporanAnalisaController extends Controller
             ];
         })->values();
 
-        // 3. Hitung Ringkasan Total Omset Real & Total Profit Real
+        // 4. Hitung Ringkasan Total Omset Real & Total Profit Real
         $totalOmsetReal = $groupedItems->sum(function ($item) {
             return $item['terjual'] * $item['harga_jual_riil'];
         });
-        
+
         $totalProfitRealSum = $groupedItems->sum('total_profit_real');
 
         $ringkasan = [

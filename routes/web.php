@@ -18,6 +18,8 @@ use App\Http\Controllers\AuditDataController;
 use App\Http\Controllers\LaporanKerugianController;
 use App\Http\Controllers\SalesReportController;
 use App\Http\Controllers\LaporanAnalisaController;
+use App\Http\Controllers\LaporanKeuanganController;
+use App\Http\Controllers\LaporanFrekuensiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -102,6 +104,9 @@ Route::middleware(['auth'])->group(function () {
         // --- KATEGORI ---
         Route::post('/kategori', [ItemController::class, 'kategoriStore'])
             ->name('kategori.store');
+
+        Route::put('/kategori/{itemCategory}', [ItemController::class, 'kategoriUpdate'])
+            ->name('kategori.update');
 
         Route::delete('/kategori/{itemCategory}', [ItemController::class, 'destroyCategory'])
             ->name('kategori.destroy');
@@ -189,10 +194,10 @@ Route::middleware(['auth'])->group(function () {
                 ->name('stok-harian-dapur-mentah.destroy');
         });
 
-    }); // 🛡️ End Wrapper Time Lock
+    }); //  End Wrapper Time Lock
 
     // ==============================================================================
-    // 📖 ROUTE VIEW (READ ONLY) - Bebas Akses Kapan Saja
+    //  ROUTE VIEW (READ ONLY) - Bebas Akses Kapan Saja
     // Route ini TIDAK dikunci oleh time.restricted agar staff bisa melihat data di malam hari.
     // ==============================================================================
 
@@ -218,6 +223,21 @@ Route::middleware(['auth'])->group(function () {
             ->name('laporan.analisa-profit');
         Route::get('/laporan/analisa-profit/export', [LaporanAnalisaController::class, 'export'])
             ->name('laporan.analisa-profit.export');
+
+        // ===========================
+        // LAPORAN KEUANGAN BULANAN (Owner & Supervisor Only)
+        // ===========================
+        Route::get('/laporan/keuangan', [LaporanKeuanganController::class, 'keuangan'])
+            ->name('laporan.keuangan');
+
+        Route::post('/laporan/keuangan/opex', [LaporanKeuanganController::class, 'storeOpex'])
+            ->name('laporan.keuangan.opex');
+
+        // ===========================
+        //  2. LAPORAN FREKUENSI PEMBELIAN MENU (Owner & Supervisor Only)
+        // ===========================
+        Route::get('/laporan/frekuensi-pembelian', [LaporanFrekuensiController::class, 'index'])
+            ->name('laporan.frekuensi-pembelian');
     });
 
     // User Management View (Supervisor)
@@ -261,7 +281,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('stok-harian.bar');
 
     // Stok Harian View - DAPUR
-    Route::get('/stok-harian/dapur', [StokHarianDapurController::class, 'dapur'])
+    Route::get('/stok-harian-dapur', [StokHarianDapurController::class, 'dapur'])
         ->name('stok-harian.dapur');
 
     // Verifikasi Stok
@@ -287,7 +307,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/sales-report/open', [SalesReportController::class, 'openFromDashboard'])
         ->name('sales-report.open');
-        
+
     Route::get('/sales-report', [App\Http\Controllers\SalesReportController::class, 'index'])
         ->name('sales-report.index');
 

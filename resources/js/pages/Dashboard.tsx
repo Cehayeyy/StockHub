@@ -191,7 +191,7 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
           </div>
 
           <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6 md:gap-8">
-            <div className="relative w-full md:w-1/2 h-[180px] sm:h-[200px] md:h-[220px]">
+            <div className="relative min-w-0 min-h-[180px] w-full md:w-1/2 h-[180px] sm:h-[200px] md:h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -740,7 +740,7 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                     <span className="sm:hidden">Detail</span>
                   </button>
                 </div>
-                <div className="h-[160px] sm:h-[180px] md:h-[200px]">
+                <div className="min-w-0 min-h-[160px] h-[160px] sm:h-[180px] md:h-[200px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={ownerData.activityPerDay}

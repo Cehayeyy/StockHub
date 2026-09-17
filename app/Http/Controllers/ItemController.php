@@ -114,6 +114,41 @@ class ItemController extends Controller
             ->with('success', 'Kategori berhasil ditambahkan!');
     }
 
+    public function kategoriUpdate(Request $request, ItemCategory $itemCategory)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:100',
+        ]);
+
+        $exists = ItemCategory::where('division', $itemCategory->division)
+            ->where('name', $data['name'])
+            ->whereKeyNot($itemCategory->id)
+            ->exists();
+
+        if ($exists) {
+            return back()->with('error', 'Kategori sudah ada untuk divisi ini.');
+        }
+
+        $oldName = $itemCategory->name;
+
+        DB::transaction(function () use ($itemCategory, $data, $oldName) {
+            $itemCategory->update(['name' => $data['name']]);
+
+            Item::where('item_category_id', $itemCategory->id)
+                ->update(['kategori_item' => $data['name']]);
+
+            ActivityLog::create([
+                'user_id'     => Auth::id(),
+                'activity'    => 'Update Kategori',
+                'description' => "Mengupdate kategori dari '{$oldName}' menjadi '{$data['name']}'.",
+            ]);
+        });
+
+        return redirect()
+            ->route('kategori', ['division' => $itemCategory->division])
+            ->with('success', 'Kategori berhasil diupdate!');
+    }
+
     private function isCategoryMentah(string $categoryName): bool
     {
         $lower = strtolower(trim($categoryName));
