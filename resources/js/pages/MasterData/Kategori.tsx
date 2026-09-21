@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, ChevronDown, X, Plus, Layers } from "lucide-react";
+import { Search, ChevronDown, X, Plus, Layers, Edit, Trash2, Eye } from "lucide-react";
 
 type Division = "bar" | "dapur";
 
@@ -318,24 +318,23 @@ export default function KategoriPage() {
                     <div className="flex gap-2 border-t pt-3 mt-2">
                       <button
                         onClick={() => openViewModal(cat)}
-                        className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
+                        className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition"
                       >
-                        View
+                        <Eye className="w-3.5 h-3.5" /> View
                       </button>
-
                       {!isStaff && (
                         <>
                           <button
                             onClick={() => openEditModal(cat)}
-                            className="flex-1 flex items-center justify-center gap-1 bg-amber-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-amber-600 transition"
+                            className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition"
                           >
-                            Edit
+                            <Edit className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => openDeleteModal(cat)}
-                            className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition"
+                            className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition"
                           >
-                            Hapus
+                            <Trash2 className="w-3.5 h-3.5" /> Hapus
                           </button>
                         </>
                       )}
@@ -354,7 +353,7 @@ export default function KategoriPage() {
                       <th className="px-6 py-4 w-16 text-center">No</th>
                       <th className="px-6 py-4">Nama Kategori</th>
                       <th className="px-6 py-4">Jumlah Item</th>
-                      <th className="px-6 py-4 text-center w-48">Aksi</th>
+                      <th className="px-6 py-4 text-center w-56">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -387,7 +386,7 @@ export default function KategoriPage() {
                                 onClick={() => openViewModal(cat)}
                                 className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
                               >
-                                View
+                                <Eye className="w-3.5 h-3.5" /> View
                               </button>
 
                               {!isStaff && (
@@ -395,16 +394,16 @@ export default function KategoriPage() {
                                   <button
                                     type="button"
                                     onClick={() => openEditModal(cat)}
-                                    className="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold text-xs hover:bg-amber-100 transition shadow-xs flex items-center gap-1"
+                                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
                                   >
-                                    Edit
+                                    <Edit className="w-3.5 h-3.5" /> Edit
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => openDeleteModal(cat)}
                                     className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs flex items-center gap-1"
                                   >
-                                    Hapus
+                                    <Trash2 className="w-3.5 h-3.5" /> Hapus
                                   </button>
                                 </>
                               )}

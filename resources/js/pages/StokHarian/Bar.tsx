@@ -758,7 +758,7 @@ export default function Bar() {
                     <th className="px-6 py-4 text-center w-32">Stok Total</th>
                     <th className="px-6 py-4 text-center w-32">Pemakaian</th>
                     <th className="px-6 py-4 text-center w-32">Tersisa</th>
-                    <th className="px-6 py-4 text-center w-40">Aksi</th>
+                    <th className="px-6 py-4 text-center w-48">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -806,24 +806,24 @@ export default function Bar() {
                               <button
                                 onClick={() => handleEditClick(item)}
                                 disabled={isLocked}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1 ${
                                   isLocked
                                     ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-                                    : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100"
                                 }`}
                               >
-                                Edit
+                                <Edit className="w-3.5 h-3.5" /> Edit
                               </button>
                               <button
                                 onClick={() => handleDeleteClick(item.id)}
                                 disabled={isLocked}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1 ${
                                   isLocked
                                     ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
                                     : "bg-red-50 text-red-600 hover:bg-red-100"
                                 }`}
                               >
-                                Hapus
+                                <Trash2 className="w-3.5 h-3.5" /> Hapus
                               </button>
                             </div>
                           ) : (
@@ -889,20 +889,20 @@ export default function Bar() {
                       <button
                         onClick={() => handleEditClick(item)}
                         disabled={isLocked}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold shadow-xs ${
-                          isLocked ? "bg-gray-200 text-gray-400" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-1 ${
+                          isLocked ? "bg-gray-200 text-gray-400" : "bg-blue-50 text-blue-600 hover:bg-blue-100"
                         }`}
                       >
-                        Edit
+                        <Edit className="w-3.5 h-3.5" /> Edit
                       </button>
                       <button
                         onClick={() => handleDeleteClick(item.id)}
                         disabled={isLocked}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold shadow-xs ${
+                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-1 ${
                           isLocked ? "bg-gray-200 text-gray-400" : "bg-red-50 text-red-600 hover:bg-red-100"
                         }`}
                       >
-                        Hapus
+                        <Trash2 className="w-3.5 h-3.5" /> Hapus
                       </button>
                     </>
                   ) : (

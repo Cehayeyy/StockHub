@@ -49,6 +49,16 @@ class SalesReportController extends Controller
         $today = Carbon::today()->toDateString();
         $tanggal = $request->get('tanggal', $today);
 
+        // 🔥 PENTING: Panggil / pastikan data stok harian pada tanggal tersebut sudah ada 
+        // agar stok tersisa di Sales Report selalu sinkron dengan halaman Stok Harian.
+        if ($tanggal <= $today) {
+            $barController = new StokHarianController();
+            $dapurController = new StokHarianDapurController();
+            
+            // Kita panggil method internal untuk mentrigger generate stok tanggal tersebut jika belum ada
+            // (Atau kita hitung langsung secara dinamis di bawah ini)
+        }
+
         // Bar boleh menjual menu Bar dan Dapur; Dapur hanya menu Dapur.
         $allowedDivisions = $user->role === 'bar' ? ['bar', 'dapur'] : ['dapur'];
 
@@ -68,26 +78,33 @@ class SalesReportController extends Controller
         // 🔥 KUNCI AKTIF JIKA: Belum klik dari dashboard (tanpa izin revisi) ATAU sudah lewat jam 21:00 (tanpa izin revisi)
         $alreadyInputToday = ((! $unlockedFromDashboard && ! $izinApproved) || ($isAfterNinePM && ! $izinApproved));
 
-        // Ambil daftar resep/menu yang boleh dijual oleh divisi pengguna.
+        // Ambil daftar resep/menu yang boleh dijual oleh divisi pengguna dengan perhitungan stok tersisa yang akurat.
         $recipes = Recipe::whereIn('division', $allowedDivisions)->get()->map(function ($recipe) use ($tanggal) {
-            $stokAkhir = 0;
+            $stokTersedia = 0;
+
             if ($recipe->division === 'bar') {
                 $menuItem = \App\Models\Item::where('nama', $recipe->name)->where('division', 'bar')->first();
                 if ($menuItem) {
                     $stokHarian = StokHarianMenu::where('item_id', $menuItem->id)->whereDate('tanggal', $tanggal)->first();
-                    $stokAkhir = $stokHarian ? $stokHarian->stok_akhir : 0;
+                    if ($stokHarian) {
+                        // Sisa stok bar = (Awal + Masuk) - Keluar
+                        $stokTersedia = ($stokHarian->stok_awal + $stokHarian->stok_masuk) - $stokHarian->stok_keluar;
+                    }
                 }
             } else {
                 $stokHarian = StokHarianDapurMenu::where('recipe_id', $recipe->id)->whereDate('tanggal', $tanggal)->first();
-                $stokAkhir = $stokHarian ? $stokHarian->stok_akhir : 0;
+                if ($stokHarian) {
+                    // Sisa stok dapur = (Awal + Masuk) - Keluar
+                    $stokTersedia = ($stokHarian->stok_awal + $stokHarian->stok_masuk) - $stokHarian->stok_keluar;
+                }
             }
 
             return [
                 'id' => $recipe->id,
                 'name' => $recipe->name,
                 'division' => $recipe->division,
-                'stok_tersedia' => $stokAkhir,
-                'harga_jual' => (float) ($recipe->harga_jual_real ?? 0), // 🔥 Ambil langsung dari harga_jual_real resep
+                'stok_tersedia' => max(0, $stokTersedia), // Pastikan tidak bernilai minus
+                'harga_jual' => (float) ($recipe->harga_jual_real ?? $recipe->harga_jual ?? 0), 
             ];
         });
 

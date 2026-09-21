@@ -39,6 +39,7 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
     const [search, setSearch] = useState(filters?.search || '');
     const [periode, setPeriode] = useState(filters?.periode || 'Harian');
     const [tanggal, setTanggal] = useState(filters?.tanggal || new Date().toISOString().split('T')[0]);
+    const [showCalendar, setShowCalendar] = useState(false);
 
     // Debounced Filter Handler
     useEffect(() => {
@@ -71,6 +72,14 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
+
+    const displayFilterDate = tanggal
+        ? new Date(tanggal).toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })
+        : 'Pilih tanggal';
 
     // Hitung total keseluruhan untuk footer tabel
     const totalTerjualCount = itemsAnalisa.data.reduce((acc, curr) => acc + curr.terjual, 0);
@@ -109,24 +118,42 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                             ))}
                         </div>
 
-                        {/* Tanggal Picker */}
-                        <div className="flex items-center gap-2 bg-[#FAF7F2] px-3 py-1.5 rounded-2xl border border-gray-200 text-xs font-bold text-gray-700">
-                            <Calendar size={14} className="text-[#8B5E3C]" />
-                            <input
-                                type="date"
-                                value={tanggal}
-                                onChange={(e) => setTanggal(e.target.value)}
-                                className="bg-transparent border-none outline-none text-xs font-bold text-gray-700 cursor-pointer"
-                            />
+                        {/* Date Picker (Diselaraskan dengan Laporan Aktivitas) */}
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setShowCalendar((v) => !v)}
+                                className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-200 px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-all"
+                            >
+                                <Calendar className="h-4 w-4 text-[#8B5E3C]" />
+                                <span>{displayFilterDate}</span>
+                            </button>
+
+                            {showCalendar && (
+                                <div className="absolute right-0 mt-2 rounded-3xl bg-white p-4 shadow-2xl z-20 w-64 border border-gray-100 animate-in fade-in zoom-in-95">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Filter Tanggal</span>
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={tanggal}
+                                        onChange={(e) => {
+                                            setTanggal(e.target.value);
+                                            setShowCalendar(false);
+                                        }}
+                                        className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none cursor-pointer"
+                                    />
+                                </div>
+                            )}
                         </div>
 
-                        {/* Tombol Export Excel / PDF */}
+                        {/* Tombol Export Excel / PDF (Diselaraskan) */}
                         <button
                             type="button"
                             onClick={handleDownloadExcel}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-[#8B5E3C] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#6F4E37] transition-all"
+                            className="inline-flex items-center gap-2 rounded-full bg-[#D9A978] px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-[#c4925e] transition-all"
                         >
-                            <Download size={14} />
+                            <Download className="h-4 w-4" />
                             <span>Export Excel / PDF</span>
                         </button>
                     </div>

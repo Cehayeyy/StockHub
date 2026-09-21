@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router, Link } from "@inertiajs/react";
-import { Search, ChevronDown, Plus, Package, Trash2, X } from "lucide-react";
+import { Search, ChevronDown, Plus, Package, Trash2, X, Edit } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 
 type Division = "bar" | "dapur";
@@ -431,7 +431,7 @@ export default function ItemPage() {
           {/* --- MOBILE VIEW (CARDS) --- */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
               {filteredItems.length > 0 ? (
-                  filteredItems.map((item, index) => {
+                  filteredItems.map((item) => {
                       const isMentah = isCategoryMentah(
                         item.item_category?.name ?? item.kategori_item
                       );
@@ -466,15 +466,15 @@ export default function ItemPage() {
                               <div className="flex gap-2 border-t border-gray-100 pt-3 mt-3">
                                   <button
                                       onClick={() => handleEdit(item)}
-                                      className="flex-1 bg-amber-50 text-amber-700 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-100 transition text-center shadow-2xs"
+                                      className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-xs"
                                   >
-                                      Edit
+                                      <Edit className="w-3.5 h-3.5" /> Edit
                                   </button>
                                   <button
                                       onClick={() => openDeleteConfirm(item.id)}
-                                      className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition text-center shadow-2xs"
+                                      className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-600 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition shadow-xs"
                                   >
-                                      Hapus
+                                      <Trash2 className="w-3.5 h-3.5" /> Hapus
                                   </button>
                               </div>
                           )}
@@ -499,7 +499,7 @@ export default function ItemPage() {
                     <th className="px-6 py-4 w-40">Kategori</th>
                     <th className="px-6 py-4 w-32">Satuan</th>
                     <th className="px-6 py-4 w-40 text-right">Harga Dasar</th>
-                    <th className="px-6 py-4 text-center w-40">Aksi</th>
+                    <th className="px-6 py-4 text-center w-48">Aksi</th>
                   </tr>
                 </thead>
 
@@ -532,16 +532,18 @@ export default function ItemPage() {
                             {!isStaff ? (
                               <>
                                 <button
+                                  type="button"
                                   onClick={() => handleEdit(item)}
-                                  className="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold text-xs hover:bg-amber-100 transition shadow-xs flex items-center gap-1"
+                                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
                                 >
-                                  Edit
+                                  <Edit className="w-3.5 h-3.5" /> Edit
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => openDeleteConfirm(item.id)}
                                   className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs flex items-center gap-1"
                                 >
-                                  Hapus
+                                  <Trash2 className="w-3.5 h-3.5" /> Hapus
                                 </button>
                               </>
                             ) : (

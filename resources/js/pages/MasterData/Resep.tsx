@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, Trash, ChevronDown, Plus, BookOpen, Calculator, TrendingUp, DollarSign, ReceiptText, Percent, X } from "lucide-react";
+import { Search, Trash, ChevronDown, Plus, BookOpen, Calculator, TrendingUp, DollarSign, ReceiptText, Percent, X, Edit, Trash2, Eye } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 
 // --- INTERFACES ---
@@ -543,23 +543,23 @@ const Resep: React.FC = () => {
                   <div className="flex gap-2 border-t border-gray-100 pt-3">
                     <button
                       onClick={() => openViewRecipe(r)}
-                      className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-2xs text-center"
+                      className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-2xs text-center flex items-center justify-center gap-1"
                     >
-                      View
+                      <Eye className="w-3.5 h-3.5" /> View
                     </button>
                     {!isStaff && (
                       <>
                         <button
                           onClick={() => openEdit(r)}
-                          className="flex-1 bg-amber-50 text-amber-700 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-100 transition shadow-2xs text-center"
+                          className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-2xs text-center flex items-center justify-center gap-1"
                         >
-                          Edit
+                          <Edit className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => openDeleteConfirm(r.id)}
-                          className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition shadow-2xs text-center"
+                          className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition shadow-2xs text-center flex items-center justify-center gap-1"
                         >
-                          Hapus
+                          <Trash2 className="w-3.5 h-3.5" /> Hapus
                         </button>
                       </>
                     )}
@@ -580,7 +580,7 @@ const Resep: React.FC = () => {
                     <th className="px-6 py-4 w-40">Kategori</th>
                     <th className="px-6 py-4 w-32 text-center">Total Bahan</th>
                     <th className="px-6 py-4 w-36">Dibuat</th>
-                    <th className="px-6 py-4 text-center w-48">Aksi</th>
+                    <th className="px-6 py-4 text-center w-56">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -606,12 +606,27 @@ const Resep: React.FC = () => {
                         <td className="px-6 py-4 text-gray-500 font-medium">{r.created_at || "-"}</td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex justify-center gap-2">
+                            <button
+                              onClick={() => openViewRecipe(r)}
+                              className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
+                            >
+                              <Eye className="w-3.5 h-3.5" /> View
+                            </button>
                             {!isStaff && (
-                              <button onClick={() => openEdit(r)} className="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold text-xs hover:bg-amber-100 transition shadow-xs">Edit</button>
-                            )}
-                            <button onClick={() => openViewRecipe(r)} className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs">View</button>
-                            {!isStaff && (
-                              <button onClick={() => openDeleteConfirm(r.id)} className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs">Hapus</button>
+                              <>
+                                <button
+                                  onClick={() => openEdit(r)}
+                                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
+                                >
+                                  <Edit className="w-3.5 h-3.5" /> Edit
+                                </button>
+                                <button
+                                  onClick={() => openDeleteConfirm(r.id)}
+                                  className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Hapus
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -916,4 +931,4 @@ const Resep: React.FC = () => {
   );
 };
 
-export default Resep;
+export default Resep; 
