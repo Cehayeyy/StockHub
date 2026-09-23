@@ -34,12 +34,17 @@ type PaginatedItems = {
   }[];
   current_page: number;
   per_page: number;
+  total?: number;
+  from?: number | null;
+  to?: number | null;
 };
 
 type PageProps = {
   items?: PaginatedItems;
   division: Division;
+  category?: "semua" | "menu" | "mentah";
   categories?: ItemCategory[];
+  search?: string;
   auth: {
     user: {
       role: string;
@@ -108,7 +113,7 @@ const sortCategories = (categories: ItemCategory[]) => {
 };
 
 export default function ItemPage() {
-  const { items, division: initialDivision, categories, auth } =
+  const { items, division: initialDivision, category: initialCategory = "semua", categories, search: initialSearch = "", auth } =
     usePage<PageProps>().props;
 
   const role = auth?.user?.role;
@@ -120,6 +125,9 @@ export default function ItemPage() {
     links: items?.links ?? [],
     current_page: items?.current_page ?? 1,
     per_page: items?.per_page ?? 10,
+    total: items?.total ?? (items?.data?.length ?? 0),
+    from: items?.from ?? (items?.data?.length ? (items?.current_page ? (items.current_page - 1) * 10 + 1 : 1) : 0),
+    to: items?.to ?? (items?.data?.length ?? 0),
   };
 
   const safeCategories = categories ?? [];
@@ -127,9 +135,10 @@ export default function ItemPage() {
   const [division, setDivision] = useState<Division>(
     isStaff && userDivision ? userDivision : initialDivision ?? "bar"
   );
+  const [currentCategory, setCurrentCategory] = useState<"semua" | "menu" | "mentah">(initialCategory || "semua");
   const [showDivisionDropdown, setShowDivisionDropdown] = useState(false);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch || "");
 
   const [openModal, setOpenModal] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -142,17 +151,17 @@ export default function ItemPage() {
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (initialCategory) setCurrentCategory(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialDivision) setDivision(initialDivision);
+  }, [initialDivision]);
+
   const sortedCategories = useMemo(
     () => sortCategories(safeCategories),
     [safeCategories]
-  );
-
-  const filteredItems = useMemo(
-    () =>
-      safeItems.data.filter((item) =>
-        (item.nama ?? "").toLowerCase().includes(search.toLowerCase())
-      ),
-    [safeItems.data, search]
   );
 
   const changeDivision = (value: Division) => {
@@ -161,14 +170,40 @@ export default function ItemPage() {
 
     router.get(
       route("item.index"),
-      { division: value },
+      { division: value, category: currentCategory, search: search || undefined },
+      { preserveScroll: true, preserveState: true, replace: true }
+    );
+  };
+
+  const changeCategory = (cat: "semua" | "menu" | "mentah") => {
+    setCurrentCategory(cat);
+    router.get(
+      route("item.index"),
+      { division, category: cat, search: search || undefined },
+      { preserveScroll: true, preserveState: true, replace: true }
+    );
+  };
+
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    router.get(
+      route("item.index"),
+      { division, category: currentCategory, search: val || undefined },
       { preserveScroll: true, preserveState: true, replace: true }
     );
   };
 
   const openModalAdd = () => {
     setEditId(null);
-    setFormItems([{ uid: Date.now(), nama: "", item_category_id: "", harga_dasar: "" }]);
+    let defaultCatId: string | number = "";
+    if (currentCategory === "mentah") {
+      const mentahCat = safeCategories.find(c => isCategoryMentah(c.name));
+      if (mentahCat) defaultCatId = mentahCat.id;
+    } else if (currentCategory === "menu") {
+      const menuCat = safeCategories.find(c => !isCategoryMentah(c.name));
+      if (menuCat) defaultCatId = menuCat.id;
+    }
+    setFormItems([{ uid: Date.now(), nama: "", item_category_id: defaultCatId, harga_dasar: "" }]);
     setOpenModal(true);
   };
 
@@ -346,218 +381,250 @@ export default function ItemPage() {
       <Head title="Item" />
 
       <div className="py-6">
-        <div className="bg-[#F2ECE4] p-4 md:p-8 rounded-3xl shadow-sm border border-amber-200/60 min-h-[600px] flex flex-col">
+        <div className="bg-white p-5 md:p-8 rounded-3xl shadow-xs border border-gray-100 min-h-[600px] flex flex-col">
 
-          {/* --- FILTER & HEADER --- */}
-          <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* --- TOP TOOLBAR --- */}
+          <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
-            {/* Division Dropdown */}
-            {!isStaff ? (
-              <div className="relative inline-block w-full md:w-40">
-                <button
-                  type="button"
-                  onClick={() => setShowDivisionDropdown((prev) => !prev)}
-                  className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-amber-100 shadow-2xs"
-                >
-                  <span className="capitalize">
-                    {division === "bar" ? "Bar" : "Dapur"}
-                  </span>
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
-                      showDivisionDropdown ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                {showDivisionDropdown && (
-                  <div className="absolute left-0 mt-1 w-full rounded-2xl bg-white py-1.5 text-sm z-20 shadow-xl border border-gray-100">
-                    <button
-                      onClick={() => changeDivision("bar")}
-                      className={`block w-full px-4 py-2 text-left font-semibold transition ${
-                        division === "bar" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
+            {/* Left: Division Dropdown & Category Tabs (Semua, Menu, Mentah) */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Division Dropdown */}
+              {!isStaff ? (
+                <div className="relative inline-block w-36">
+                  <button
+                    type="button"
+                    onClick={() => setShowDivisionDropdown((prev) => !prev)}
+                    className="flex w-full items-center justify-between rounded-xl bg-[#F6EFEB] hover:bg-[#EFE6DF] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-[#EADBCE] shadow-2xs transition"
+                  >
+                    <span className="capitalize">
+                      {division === "bar" ? "Bar" : "Dapur"}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        showDivisionDropdown ? "rotate-180" : ""
                       }`}
-                    >
-                      Bar
-                    </button>
-                    <button
-                      onClick={() => changeDivision("dapur")}
-                      className={`block w-full px-4 py-2 text-left font-semibold transition ${
-                        division === "dapur" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      Dapur
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-                <div className="px-4 py-2.5 rounded-xl bg-[#FDF3E4] text-sm font-bold text-[#8B5E3C] border border-amber-100 capitalize w-fit shadow-2xs">
+                    />
+                  </button>
+
+                  {showDivisionDropdown && (
+                    <div className="absolute left-0 mt-1 w-full rounded-2xl bg-white py-1.5 text-sm z-30 shadow-xl border border-gray-100">
+                      <button
+                        onClick={() => changeDivision("bar")}
+                        className={`block w-full px-4 py-2 text-left font-semibold transition ${
+                          division === "bar" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        Bar
+                      </button>
+                      <button
+                        onClick={() => changeDivision("dapur")}
+                        className={`block w-full px-4 py-2 text-left font-semibold transition ${
+                          division === "dapur" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        Dapur
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="px-4 py-2.5 rounded-xl bg-[#F6EFEB] text-sm font-bold text-[#8B5E3C] border border-[#EADBCE] capitalize w-fit shadow-2xs">
                   {division}
                 </div>
-            )}
-
-            {/* Add & Search */}
-            <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
-              {!isStaff && (
-                  <button
-                    onClick={openModalAdd}
-                    className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] px-5 py-2 text-sm font-bold text-white shadow-md hover:bg-[#c4925e] transition w-full md:w-auto"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Item
-                  </button>
               )}
 
-              <div className="relative w-full md:w-auto">
+              {/* Category Filter Tabs: Semua, Menu, Mentah */}
+              <div className="flex items-center gap-1.5 bg-[#F6EFEB] p-1 rounded-2xl border border-[#EADBCE]">
+                {(["semua", "menu", "mentah"] as const).map((tab) => {
+                  const isActive = currentCategory === tab;
+                  const labels: Record<string, string> = {
+                    semua: "Semua",
+                    menu: "Menu",
+                    mentah: "Mentah",
+                  };
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => changeCategory(tab)}
+                      className={`px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                        isActive
+                          ? "bg-[#8B5E3C] text-white shadow-xs"
+                          : "text-gray-600 hover:text-[#8B5E3C] hover:bg-white/60"
+                      }`}
+                    >
+                      {labels[tab]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right: Tambah Item Button & Search */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+              {!isStaff && (
+                <button
+                  onClick={openModalAdd}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#8B5E3C] hover:bg-[#6F4E37] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95 w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Item
+                </button>
+              )}
+
+              <div className="relative w-full sm:w-64">
                 <input
                   type="text"
-                  placeholder="Search...."
+                  placeholder="Search..."
                   value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    router.get(
-                      route("item.index"),
-                      { division, search: e.target.value },
-                      { preserveScroll: true, preserveState: true }
-                    );
-                  }}
-                  className="w-full md:w-64 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 pr-10 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition"
                 />
-                <Search className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search className="h-4 w-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
           </div>
 
           {/* --- MOBILE VIEW (CARDS) --- */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
-              {filteredItems.length > 0 ? (
-                  filteredItems.map((item) => {
-                      const isMentah = isCategoryMentah(
-                        item.item_category?.name ?? item.kategori_item
-                      );
+            {safeItems.data.length > 0 ? (
+              safeItems.data.map((item) => {
+                const isMentah = isCategoryMentah(
+                  item.item_category?.name ?? item.kategori_item
+                );
 
-                      return (
-                      <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-xs">
-                          <div className="flex justify-between items-start mb-2">
-                              <div className="flex items-center gap-3">
-                                  <div className="bg-[#D9A978]/15 text-[#8B5E3C] p-2.5 rounded-xl shadow-inner">
-                                      <Package className="w-5 h-5" />
-                                  </div>
-                                  <div>
-                                      <h4 className="font-bold text-gray-800 text-sm">{item.nama}</h4>
-                                      <div className="flex items-center gap-2 mt-0.5">
-                                          <span className="text-xs text-gray-500 font-medium">
-                                              {item.item_category ? translateCategoryName(item.item_category.name) : "-"}
-                                          </span>
-                                          {isMentah && (
-                                              <span className="text-xs font-bold text-[#8B5E3C] bg-[#FDF3E4] px-2 py-0.5 rounded-full border border-amber-100">
-                                                  {formatRupiah(item.harga_dasar)}
-                                              </span>
-                                          )}
-                                      </div>
-                                  </div>
-                              </div>
-                              <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-xl">
-                                  {item.satuan ?? "porsi"}
+                return (
+                  <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-xs">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#D9A978]/15 text-[#8B5E3C] p-2.5 rounded-xl shadow-inner">
+                          <Package className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-800 text-sm">{item.nama}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                              isMentah
+                                ? "bg-[#F7EFE6] text-[#8B5E3C]"
+                                : "bg-blue-50 text-blue-600"
+                            }`}>
+                              {item.item_category ? translateCategoryName(item.item_category.name) : (item.kategori_item || "-")}
+                            </span>
+                            {isMentah && (
+                              <span className="text-xs font-bold text-gray-700">
+                                {formatRupiah(item.harga_dasar)}
                               </span>
+                            )}
                           </div>
-
-                          {!isStaff && (
-                              <div className="flex gap-2 border-t border-gray-100 pt-3 mt-3">
-                                  <button
-                                      onClick={() => handleEdit(item)}
-                                      className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-xs"
-                                  >
-                                      <Edit className="w-3.5 h-3.5" /> Edit
-                                  </button>
-                                  <button
-                                      onClick={() => openDeleteConfirm(item.id)}
-                                      className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-600 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition shadow-xs"
-                                  >
-                                      <Trash2 className="w-3.5 h-3.5" /> Hapus
-                                  </button>
-                              </div>
-                          )}
+                        </div>
                       </div>
-                      );
-                  })
-              ) : (
-                  <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200">
-                      <p className="text-gray-400 text-sm italic">Tidak ada item ditemukan</p>
+                      <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-xl capitalize">
+                        {item.satuan ?? "porsi"}
+                      </span>
+                    </div>
+
+                    {!isStaff && (
+                      <div className="flex gap-2 border-t border-gray-100 pt-3 mt-3">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="flex-1 flex items-center justify-center gap-1 bg-[#2563EB] hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs"
+                        >
+                          <Edit className="w-3.5 h-3.5" /> Edit
+                        </button>
+                        <button
+                          onClick={() => openDeleteConfirm(item.id)}
+                          className="flex-1 flex items-center justify-center gap-1 bg-[#E11D48] hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Hapus
+                        </button>
+                      </div>
+                    )}
                   </div>
-              )}
+                );
+              })
+            ) : (
+              <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200">
+                <p className="text-gray-400 text-sm italic">Tidak ada item ditemukan</p>
+              </div>
+            )}
           </div>
 
           {/* --- DESKTOP VIEW (TABLE) --- */}
-          <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-xs overflow-hidden flex-1 mb-6">
+          <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-2xs overflow-hidden mb-6 flex-1">
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                <thead className="bg-[#FAF7F2]/60 text-gray-700 font-bold text-xs uppercase tracking-wider border-b border-gray-100">
                   <tr>
                     <th className="px-6 py-4 w-16 text-center">No</th>
                     <th className="px-6 py-4">Nama Item</th>
                     <th className="px-6 py-4 w-40">Kategori</th>
                     <th className="px-6 py-4 w-32">Satuan</th>
-                    <th className="px-6 py-4 w-40 text-right">Harga Dasar</th>
+                    <th className="px-6 py-4 w-44">Harga Dasar</th>
                     <th className="px-6 py-4 text-center w-48">Aksi</th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-50">
-                  {filteredItems.length > 0 ? (
-                    filteredItems.map((item, index) => {
+                <tbody className="divide-y divide-gray-100">
+                  {safeItems.data.length > 0 ? (
+                    safeItems.data.map((item, index) => {
                       const isMentah = isCategoryMentah(
                         item.item_category?.name ?? item.kategori_item
                       );
 
                       return (
-                      <tr key={item.id} className="hover:bg-[#FDF3E4]/50 transition-colors duration-150">
-                        <td className="px-6 py-4 text-center text-gray-400 font-medium">
+                        <tr key={item.id} className="hover:bg-[#FAF7F2]/40 transition-colors">
+                          <td className="px-6 py-4 text-center text-gray-400 font-medium">
                             {(safeItems.current_page - 1) * safeItems.per_page + index + 1}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-gray-800">{item.nama}</td>
-                        <td className="px-6 py-4 text-gray-600 font-medium">
-                          {item.item_category
-                            ? translateCategoryName(item.item_category.name)
-                            : "-"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-500 font-medium">
-                          {item.satuan ?? "porsi"}
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-gray-700">
-                          {isMentah ? formatRupiah(item.harga_dasar) : "-"}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex justify-center gap-2">
-                            {!isStaff ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleEdit(item)}
-                                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
-                                >
-                                  <Edit className="w-3.5 h-3.5" /> Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openDeleteConfirm(item.id)}
-                                  className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs flex items-center gap-1"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" /> Hapus
-                                </button>
-                              </>
-                            ) : (
-                              <span className="text-gray-400 text-xs italic">-</span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="px-6 py-4 font-bold text-gray-800">{item.nama}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold ${
+                              isMentah
+                                ? "bg-[#F7EFE6] text-[#8B5E3C]"
+                                : "bg-blue-50 text-blue-600"
+                            }`}>
+                              {item.item_category
+                                ? translateCategoryName(item.item_category.name)
+                                : (item.kategori_item || "-")}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 font-medium capitalize">
+                            {item.satuan ?? "porsi"}
+                          </td>
+                          <td className="px-6 py-4 font-bold text-gray-800">
+                            {isMentah ? formatRupiah(item.harga_dasar) : "-"}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex justify-center items-center gap-2">
+                              {!isStaff ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEdit(item)}
+                                    className="px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition shadow-2xs active:scale-95"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openDeleteConfirm(item.id)}
+                                    className="px-3.5 py-1.5 rounded-lg bg-[#E11D48] hover:bg-rose-700 text-white font-bold text-xs transition shadow-2xs active:scale-95"
+                                  >
+                                    Hapus
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-gray-400 text-xs italic">-</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
                       );
                     })
                   ) : (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">
-                        Tidak ada data ditemukan.
+                        Tidak ada data item ditemukan.
                       </td>
                     </tr>
                   )}
@@ -566,32 +633,89 @@ export default function ItemPage() {
             </div>
           </div>
 
-          {/* --- PAGINATION (RESPONSIVE) --- */}
-          {safeItems.links.length > 3 && (
-              <div className="mt-auto flex justify-center pb-4 pt-2">
-                <div className="flex flex-wrap justify-center gap-1 bg-white p-1 rounded-full border border-gray-100 shadow-xs">
-                  {safeItems.links.map((link, i) => {
-                    let label = link.label;
-                    if (label.includes('&laquo;')) label = 'Prev';
-                    if (label.includes('&raquo;')) label = 'Next';
+          {/* --- FOOTER: TOTAL INFO & PAGINATION --- */}
+          <div className="mt-auto pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-gray-100 text-xs sm:text-sm text-gray-500">
+            <div>
+              {safeItems.total && safeItems.total > 0 ? (
+                <span>
+                  Menampilkan {safeItems.from ?? 1}–{safeItems.to ?? safeItems.data.length} dari {safeItems.total}{" "}
+                  {currentCategory === "mentah"
+                    ? "item mentah"
+                    : currentCategory === "menu"
+                    ? "item menu"
+                    : "item"}
+                </span>
+              ) : (
+                <span>Tidak ada item</span>
+              )}
+            </div>
 
+            {/* Pagination Links */}
+            {safeItems.links && safeItems.links.length > 3 && (
+              <div className="flex items-center gap-1.5 self-center sm:self-auto">
+                {safeItems.links.map((link, i) => {
+                  const isPrev = link.label.includes("&laquo;") || link.label.toLowerCase().includes("previous") || link.label.toLowerCase().includes("prev");
+                  const isNext = link.label.includes("&raquo;") || link.label.toLowerCase().includes("next");
+
+                  if (isPrev) {
                     return (
                       <Link
                         key={i}
-                        href={link.url || '#'}
+                        href={link.url || "#"}
                         preserveScroll
-                        className={`px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                          link.active
-                            ? "bg-[#D9A978] text-white shadow-xs"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-[#8B5E3C]"
-                        } ${!link.url ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
-                        dangerouslySetInnerHTML={{ __html: label }}
-                      />
+                        className={`px-2 py-1 text-xs font-semibold transition ${
+                          !link.url
+                            ? "text-gray-300 pointer-events-none"
+                            : "text-gray-600 hover:text-[#8B5E3C]"
+                        }`}
+                      >
+                        Prev
+                      </Link>
                     );
-                  })}
-                </div>
+                  }
+
+                  if (isNext) {
+                    return (
+                      <Link
+                        key={i}
+                        href={link.url || "#"}
+                        preserveScroll
+                        className={`px-2 py-1 text-xs font-semibold transition ${
+                          !link.url
+                            ? "text-gray-300 pointer-events-none"
+                            : "text-gray-600 hover:text-[#8B5E3C]"
+                        }`}
+                      >
+                        Next
+                      </Link>
+                    );
+                  }
+
+                  if (link.active) {
+                    return (
+                      <span
+                        key={i}
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#8B5E3C] text-white flex items-center justify-center font-bold text-xs shadow-xs"
+                      >
+                        {link.label}
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={i}
+                      href={link.url || "#"}
+                      preserveScroll
+                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-gray-600 hover:text-[#8B5E3C] font-semibold text-xs transition"
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
               </div>
-          )}
+            )}
+          </div>
 
         </div>
       </div>

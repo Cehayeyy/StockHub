@@ -314,6 +314,32 @@ class RecipeController extends Controller
         return back()->with('success', 'Resep berhasil dihapus.');
     }
 
+    private function syncToStokHarianBar($recipe, $tanggal)
+    {
+        $menuItem = Item::where('nama', $recipe->name)->first();
+
+        if ($menuItem) {
+            $stokMenu = StokHarianMenu::where('item_id', $menuItem->id)
+                                      ->whereDate('tanggal', $tanggal)
+                                      ->first();
+
+            $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'bar', $tanggal);
+
+            if (!$stokMenu) {
+                StokHarianMenu::create([
+                    'item_id'     => $menuItem->id,
+                    'user_id'     => Auth::id(),
+                    'tanggal'     => $tanggal,
+                    'stok_awal'   => $stokAwalBaru,
+                    'stok_masuk'  => 0,
+                    'stok_keluar' => 0,
+                    'stok_akhir'  => $stokAwalBaru,
+                    'unit'        => 'porsi'
+                ]);
+            }
+        }
+    }
+
     private function syncToStokHarianDapur($recipe, $tanggal)
     {
         $stokMenu = StokHarianDapurMenu::where('recipe_id', $recipe->id)

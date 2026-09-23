@@ -31,14 +31,43 @@ class ItemController extends Controller
             }
         }
 
-        $query = Item::with('itemCategory')
-            ->where('division', $division);
-
-        if ($request->search) {
-            $query->where('nama', 'like', '%' . $request->search . '%');
+        $category = strtolower($request->query('category', 'semua'));
+        if (!in_array($category, ['semua', 'menu', 'mentah'])) {
+            $category = 'semua';
         }
 
-        $items = $query->orderBy('nama')
+        $query = Item::with('itemCategory')
+            ->where('items.division', $division);
+
+        if ($request->search) {
+            $query->where('items.nama', 'like', '%' . $request->search . '%');
+        }
+
+        if ($category === 'mentah') {
+            $query->where(function ($q) {
+                $q->whereHas('itemCategory', function ($cq) {
+                    $cq->whereIn(DB::raw('LOWER(name)'), ['mentah', 'raw']);
+                })->orWhereIn(DB::raw('LOWER(items.kategori_item)'), ['mentah', 'raw']);
+            });
+        } elseif ($category === 'menu') {
+            $query->where(function ($q) {
+                $q->whereHas('itemCategory', function ($cq) {
+                    $cq->whereIn(DB::raw('LOWER(name)'), ['menu', 'finish']);
+                })->orWhereIn(DB::raw('LOWER(items.kategori_item)'), ['menu', 'finish']);
+            });
+        }
+
+        // Susun rapi dari Mentah lalu ke Menu, kemudian nama ASC
+        $items = $query->leftJoin('item_categories', 'items.item_category_id', '=', 'item_categories.id')
+            ->select('items.*')
+            ->orderByRaw("
+                CASE 
+                    WHEN LOWER(COALESCE(item_categories.name, items.kategori_item, '')) IN ('mentah', 'raw') THEN 1 
+                    WHEN LOWER(COALESCE(item_categories.name, items.kategori_item, '')) IN ('menu', 'finish') THEN 2 
+                    ELSE 3 
+                END ASC
+            ")
+            ->orderBy('items.nama', 'asc')
             ->paginate(10)
             ->withQueryString();
 
@@ -48,6 +77,7 @@ class ItemController extends Controller
 
         return Inertia::render('MasterData/Item', [
             'division'   => $division,
+            'category'   => $category,
             'items'      => $items,
             'categories' => $categories,
             'search'     => $request->search,
