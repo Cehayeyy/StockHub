@@ -33,6 +33,8 @@ class LaporanKeuanganController extends Controller
         $penjualanKotor   = 0;
         $diskonVoucher    = 0;
         $potonganMerchant = 0;
+        $jumlahTransaksi  = 0;
+        $transaksiTerakhir = null;
 
         if (Schema::hasTable('sales_reports')) {
             $cols = Schema::getColumnListing('sales_reports');
@@ -66,7 +68,9 @@ class LaporanKeuanganController extends Controller
                 ->selectRaw("
                     COALESCE(SUM({$kotorCol}), 0) as kotor,
                     {$diskonExpression} as diskon,
-                    {$feeExpression} as fee
+                    {$feeExpression} as fee,
+                    COUNT(*) as jumlah_transaksi,
+                    MAX({$dateCol}) as transaksi_terakhir
                 ")
                 ->first();
 
@@ -74,6 +78,8 @@ class LaporanKeuanganController extends Controller
                 $penjualanKotor   = (float) $salesReportData->kotor;
                 $diskonVoucher    = (float) $salesReportData->diskon;
                 $potonganMerchant = (float) $salesReportData->fee;
+                $jumlahTransaksi  = (int) $salesReportData->jumlah_transaksi;
+                $transaksiTerakhir = $salesReportData->transaksi_terakhir;
             }
         }
 
@@ -89,17 +95,34 @@ class LaporanKeuanganController extends Controller
             $salesDateCol = in_array('tanggal_transaksi', $salesCols) ? 'sales_reports.tanggal_transaksi' :
                            (in_array('tanggal', $salesCols) ? 'sales_reports.tanggal' : 'sales_reports.created_at');
 
-            // Opsi 1: Coba hitung HPP dari recipe_id
+            // Opsi 1: Hitung dari HPP resep yang tersimpan. Pada struktur saat ini
+            // item nota menunjuk ke item menu, sehingga relasinya adalah recipes.item_id.
             if (in_array('recipe_id', $itemDetailCols) && Schema::hasTable('recipes')) {
                 $recipeCols = Schema::getColumnListing('recipes');
-                $hppCol = in_array('harga_hpp', $recipeCols) ? 'harga_hpp' :
+                $hppCol = in_array('total_hpp', $recipeCols) ? 'total_hpp' :
+                         (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' :
                          (in_array('hpp', $recipeCols) ? 'hpp' :
-                         (in_array('total_cost', $recipeCols) ? 'total_cost' : null));
+                         (in_array('total_cost', $recipeCols) ? 'total_cost' : null)));
 
                 if ($hppCol) {
                     $hppMenuTerjual = (float) DB::table('sales_report_items')
                         ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
                         ->join('recipes', 'sales_report_items.recipe_id', '=', 'recipes.id')
+                        ->whereYear($salesDateCol, $year)
+                        ->whereMonth($salesDateCol, $month)
+                        ->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
+                }
+            }
+
+            if ($hppMenuTerjual == 0 && Schema::hasTable('recipes') && in_array('item_id', $itemDetailCols)) {
+                $recipeCols = Schema::getColumnListing('recipes');
+                $hppCol = in_array('total_hpp', $recipeCols) ? 'total_hpp' :
+                    (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' : null);
+
+                if ($hppCol) {
+                    $hppMenuTerjual = (float) DB::table('sales_report_items')
+                        ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
+                        ->join('recipes', 'sales_report_items.item_id', '=', 'recipes.item_id')
                         ->whereYear($salesDateCol, $year)
                         ->whereMonth($salesDateCol, $month)
                         ->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
@@ -123,33 +146,33 @@ class LaporanKeuanganController extends Controller
                 }
             }
 
-            // Fallback: hitung estimasi 40% dari harga_satuan nota
-            if ($hppMenuTerjual == 0 && in_array('harga_satuan', $itemDetailCols)) {
-                $hppMenuTerjual = (float) DB::table('sales_report_items')
-                    ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
-                    ->whereYear($salesDateCol, $year)
-                    ->whereMonth($salesDateCol, $month)
-                    ->sum(DB::raw("sales_report_items.quantity * (sales_report_items.harga_satuan * 0.4)"));
-            }
+            // Tidak menggunakan estimasi persentase harga jual. Jika HPP belum
+            // diisi pada resep/item, nilainya tetap nol agar tidak menjadi data dummy.
         }
 
         // =========================================================================
         // 3. AMBIL TOTAL KERUGIAN BAHAN BAKU (WASTE) YANG DIVERIFIKASI
         // =========================================================================
         $bebanKerugianBahan = 0;
-        if (Schema::hasTable('laporan_kerugians')) {
+        if (Schema::hasTable('laporan_kerugians') && Schema::hasTable('items')) {
             $lossCols = Schema::getColumnListing('laporan_kerugians');
-            $lossCol = in_array('total_loss_amount', $lossCols) ? 'total_loss_amount' :
-                      (in_array('total_loss', $lossCols) ? 'total_loss' : 'nominal');
-
             $lossDateCol = in_array('tanggal', $lossCols) ? 'tanggal' : 'created_at';
+            $lossCol = in_array('total_loss_amount', $lossCols) ? 'total_loss_amount' :
+                (in_array('total_loss', $lossCols) ? 'total_loss' : null);
 
-            if (in_array($lossCol, $lossCols)) {
+            if ($lossCol) {
                 $bebanKerugianBahan = (float) DB::table('laporan_kerugians')
                     ->where('status', 'verified')
                     ->whereYear($lossDateCol, $year)
                     ->whereMonth($lossDateCol, $month)
                     ->sum($lossCol);
+            } elseif (in_array('kuantitas', $lossCols) && Schema::hasColumn('items', 'harga_dasar')) {
+                $bebanKerugianBahan = (float) DB::table('laporan_kerugians')
+                    ->join('items', 'laporan_kerugians.item_id', '=', 'items.id')
+                    ->where('laporan_kerugians.status', 'Disetujui')
+                    ->whereYear("laporan_kerugians.{$lossDateCol}", $year)
+                    ->whereMonth("laporan_kerugians.{$lossDateCol}", $month)
+                    ->sum(DB::raw('laporan_kerugians.kuantitas * COALESCE(items.harga_dasar, 0)'));
             }
         }
 
@@ -159,6 +182,7 @@ class LaporanKeuanganController extends Controller
         $biayaGaji         = 0;
         $biayaPerlengkapan = 0;
         $biayaUtilitas     = 0;
+        $opexUpdatedAt     = null;
 
         if (Schema::hasTable('operational_expenses')) {
             $opex = DB::table('operational_expenses')
@@ -168,13 +192,12 @@ class LaporanKeuanganController extends Controller
             $biayaGaji         = (float) ($opex->biaya_gaji ?? 0);
             $biayaPerlengkapan = (float) ($opex->biaya_perlengkapan ?? 0);
             $biayaUtilitas     = (float) ($opex->biaya_utilitas ?? 0);
+            $opexUpdatedAt     = $opex->updated_at ?? null;
         }
 
         // =========================================================================
         // 5. STRUKTURKAN PAYLOAD DATA UNTUK INERTIA REACT
         // =========================================================================
-        $currentUser = auth()->user();
-
         $dataKeuangan = [
             'periode'            => $periodeFormatted,
             'penjualanKotor'     => $penjualanKotor,
@@ -185,8 +208,13 @@ class LaporanKeuanganController extends Controller
             'biayaGaji'          => $biayaGaji,
             'biayaPerlengkapan'  => $biayaPerlengkapan,
             'biayaUtilitas'      => $biayaUtilitas,
-            'otorisasiBy'        => $currentUser->name ?? 'Supervisor Operasional',
-            'otorisasiCode'      => 'SPV-' . strtoupper($currentUser->username ?? 'USER') . '-' . $date->format('Ym'),
+            'jumlahTransaksi'    => $jumlahTransaksi,
+            'transaksiTerakhir'  => $transaksiTerakhir
+                ? Carbon::parse($transaksiTerakhir)->translatedFormat('d F Y')
+                : null,
+            'opexUpdatedAt'      => $opexUpdatedAt
+                ? Carbon::parse($opexUpdatedAt)->translatedFormat('d F Y, H:i')
+                : null,
         ];
 
         return Inertia::render('Laporan/LaporanKeuangan', [
@@ -201,7 +229,7 @@ class LaporanKeuanganController extends Controller
     public function storeOpex(Request $request)
     {
         $request->validate([
-            'periode'            => 'required|string',
+            'periode'            => 'required|date_format:Y-m',
             'biaya_gaji'         => 'required|numeric|min:0',
             'biaya_perlengkapan' => 'required|numeric|min:0',
             'biaya_utilitas'     => 'required|numeric|min:0',
