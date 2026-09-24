@@ -152,7 +152,7 @@ class StokHarianDapurController extends Controller
         ]);
     }
 
-    private function ensureStokExists($tanggal)
+    public function ensureStokExists($tanggal) // <-- Ubah dari private ke public
     {
         $userId = Auth::id();
 

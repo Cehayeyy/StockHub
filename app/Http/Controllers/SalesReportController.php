@@ -49,14 +49,16 @@ class SalesReportController extends Controller
         $today = Carbon::today()->toDateString();
         $tanggal = $request->get('tanggal', $today);
 
-        // 🔥 PENTING: Panggil / pastikan data stok harian pada tanggal tersebut sudah ada 
-        // agar stok tersisa di Sales Report selalu sinkron dengan halaman Stok Harian.
+        // 🔥 PENTING: Panggil otomatis fungsi generate stok harian Bar & Dapur 
+        // agar data stok pada tanggal tersebut selalu siap dan akurat saat staff membuka Sales Report.
         if ($tanggal <= $today) {
-            $barController = new StokHarianController();
-            $dapurController = new StokHarianDapurController();
-            
-            // Kita panggil method internal untuk mentrigger generate stok tanggal tersebut jika belum ada
-            // (Atau kita hitung langsung secara dinamis di bawah ini)
+            try {
+                (new StokHarianController())->ensureStokExists($tanggal);
+            } catch (\Throwable $e) {}
+
+            try {
+                (new StokHarianDapurController())->ensureStokExists($tanggal);
+            } catch (\Throwable $e) {}
         }
 
         // Bar boleh menjual menu Bar dan Dapur; Dapur hanya menu Dapur.
