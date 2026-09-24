@@ -12,7 +12,8 @@ import {
   FileText,
   X,
   Save,
-  Calculator
+  Calculator,
+  Calendar
 } from "lucide-react";
 
 interface Props {
@@ -38,6 +39,7 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
     initialMonth || new Date().toISOString().slice(0, 7),
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // Helper Format Ribuan dengan Titik (Misal: 4000000 -> "4.000.000")
   const formatNumberWithDots = (val: string | number) => {
@@ -113,6 +115,7 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
       { bulan: val },
       { preserveState: true, preserveScroll: true }
     );
+    setShowCalendar(false);
   };
 
   // Handler Perubahan Input Ber-titik
@@ -218,7 +221,7 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
         </div>
 
         {/* HEADER & FILTER HALAMAN WEB */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between no-print">
+        <div className="flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-xs md:flex-row md:items-center md:justify-between no-print">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
               Laporan Keuangan Bulanan (Laba Rugi)
@@ -228,13 +231,31 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={handleMonthChange}
-              className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 focus:outline-none focus:ring-2 focus:ring-[#6F4E37]/30"
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowCalendar((value) => !value)}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs transition-all hover:bg-gray-50"
+              >
+                <Calendar className="h-4 w-4 text-[#6F4E37]" />
+                <span>{data.periode}</span>
+              </button>
+
+              {showCalendar && (
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-gray-100 bg-white p-4 shadow-2xl animate-in fade-in zoom-in-95">
+                  <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                    Pilih periode
+                  </label>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    className="w-full cursor-pointer rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#6F4E37]"
+                  />
+                </div>
+              )}
+            </div>
 
             <button
               type="button"

@@ -47,20 +47,46 @@ class LaporanFrekuensiController extends Controller
                 $query->leftJoin('recipes', 'sales_report_items.recipe_id', '=', 'recipes.id');
             }
 
+            $hasItemCategory = $hasItemId
+                && Schema::hasColumn('items', 'item_category_id')
+                && Schema::hasTable('item_categories');
+
             if ($hasItemId) {
                 $query->leftJoin('items', 'sales_report_items.item_id', '=', 'items.id');
+
+                // Samakan cakupan dengan Laporan Analisa: hanya menu yang
+                // dijual oleh bagian Bar/Dapur, bukan bahan baku.
+                $itemColumns = Schema::getColumnListing('items');
+                if (in_array('division', $itemColumns)) {
+                    $query->whereIn('items.division', ['bar', 'dapur', 'kitchen']);
+                }
+
+                if ($hasItemCategory) {
+                    $query->leftJoin('item_categories', 'items.item_category_id', '=', 'item_categories.id');
+                }
+            }
+
+            // Laporan analisa menggunakan nota yang dicatat oleh petugas Bar
+            // dan Dapur. Terapkan sumber transaksi yang sama di sini.
+            if (in_array('user_id', $salesCols) && Schema::hasTable('users')) {
+                $query->join('users', 'sales_reports.user_id', '=', 'users.id')
+                    ->whereIn('users.role', ['bar', 'dapur', 'kitchen', 'staff_kitchen']);
             }
 
             // Ekspresi Seleksi Nama & Kategori
             if ($hasRecipeId && $hasItemId) {
                 $selectNama = "COALESCE(recipes.name, items.nama, 'Menu Unnamed')";
-                $selectKategori = "COALESCE(recipes.division, items.kategori_item, 'Menu')";
+                $selectKategori = $hasItemCategory
+                    ? "COALESCE(item_categories.name, recipes.division, items.kategori_item, 'Menu')"
+                    : "COALESCE(recipes.division, items.kategori_item, 'Menu')";
             } elseif ($hasRecipeId) {
                 $selectNama = "COALESCE(recipes.name, 'Menu Unnamed')";
                 $selectKategori = "COALESCE(recipes.division, 'Menu')";
             } elseif ($hasItemId) {
                 $selectNama = "COALESCE(items.nama, 'Menu Unnamed')";
-                $selectKategori = "COALESCE(items.kategori_item, 'Menu')";
+                $selectKategori = $hasItemCategory
+                    ? "COALESCE(item_categories.name, items.kategori_item, 'Menu')"
+                    : "COALESCE(items.kategori_item, 'Menu')";
             } else {
                 $selectNama = "'Menu Unnamed'";
                 $selectKategori = "'Menu'";

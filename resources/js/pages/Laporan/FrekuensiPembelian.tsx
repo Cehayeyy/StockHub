@@ -9,6 +9,7 @@ import {
   Receipt,
   TrendingUp,
   BarChart2,
+  Calendar,
 } from "lucide-react";
 
 interface FrekuensiItemBackend {
@@ -41,8 +42,11 @@ export default function FrekuensiPembelian({
   periodeFormatted,
   frekuensiItems = [],
 }: Props) {
-  const [selectedMonth, setSelectedMonth] = useState(initialMonth || "2026-09");
+  const [selectedMonth, setSelectedMonth] = useState(
+    initialMonth || new Date().toISOString().slice(0, 7),
+  );
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const formatIDR = (val: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -86,13 +90,8 @@ export default function FrekuensiPembelian({
     });
   };
 
-  const defaultItems: MenuItem[] = [
-    { id: 1, peringkat: 1, namaMenu: "Paket Bebek Goreng", kategori: "Makanan Utama", hargaSatuan: 40000, totalTerjual: 120, totalOmset: 4800000, statusPopularitas: "Sangat Laku" },
-    { id: 2, peringkat: 2, namaMenu: "Paket Ayam Goreng", kategori: "Makanan Utama", hargaSatuan: 35000, totalTerjual: 95, totalOmset: 3325000, statusPopularitas: "Laku" },
-  ];
-
   const parsedItems = mapBackendToUI(frekuensiItems);
-  const menuList = parsedItems.length > 0 ? parsedItems : defaultItems;
+  const menuList = parsedItems;
 
   const filteredItems = menuList.filter(
     (item) =>
@@ -114,6 +113,7 @@ export default function FrekuensiPembelian({
       { bulan: val },
       { preserveState: true, preserveScroll: true }
     );
+    setShowCalendar(false);
   };
 
   const renderStatusBadge = (status: MenuItem["statusPopularitas"]) => {
@@ -256,7 +256,7 @@ export default function FrekuensiPembelian({
         </div>
 
         {/* HEADER & FILTER ACTION WEB */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between no-print">
+        <div className="flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-xs md:flex-row md:items-center md:justify-between no-print">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 mb-1">
               <span>Laporan</span>
@@ -271,13 +271,31 @@ export default function FrekuensiPembelian({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={handleMonthChange}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowCalendar((value) => !value)}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs transition-all hover:bg-gray-50"
+              >
+                <Calendar className="h-4 w-4 text-[#8B5E3C]" />
+                <span>{periodeFormatted || selectedMonth}</span>
+              </button>
+
+              {showCalendar && (
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-gray-100 bg-white p-4 shadow-2xl animate-in fade-in zoom-in-95">
+                  <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                    Pilih periode
+                  </label>
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={handleMonthChange}
+                    className="w-full cursor-pointer rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#8B5E3C]"
+                  />
+                </div>
+              )}
+            </div>
 
             <button
               type="button"
@@ -439,6 +457,15 @@ export default function FrekuensiPembelian({
                     </td>
                   </tr>
                 ))}
+                {filteredItems.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-gray-400">
+                      {menuList.length === 0
+                        ? "Belum ada transaksi penjualan menu pada periode ini."
+                        : "Menu yang dicari tidak ditemukan."}
+                    </td>
+                  </tr>
+                )}
               </tbody>
 
               <tfoot className="bg-gray-50/80 font-extrabold text-gray-900 border-t border-gray-200">
