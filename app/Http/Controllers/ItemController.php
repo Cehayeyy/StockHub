@@ -61,10 +61,10 @@ class ItemController extends Controller
         $items = $query->leftJoin('item_categories', 'items.item_category_id', '=', 'item_categories.id')
             ->select('items.*')
             ->orderByRaw("
-                CASE 
-                    WHEN LOWER(COALESCE(item_categories.name, items.kategori_item, '')) IN ('mentah', 'raw') THEN 1 
-                    WHEN LOWER(COALESCE(item_categories.name, items.kategori_item, '')) IN ('menu', 'finish') THEN 2 
-                    ELSE 3 
+                CASE
+                    WHEN LOWER(COALESCE(item_categories.name, items.kategori_item, '')) IN ('mentah', 'raw') THEN 1
+                    WHEN LOWER(COALESCE(item_categories.name, items.kategori_item, '')) IN ('menu', 'finish') THEN 2
+                    ELSE 3
                 END ASC
             ")
             ->orderBy('items.nama', 'asc')
