@@ -5,6 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\LaporanKerugian;
 use App\Models\ActivityLog;
+use App\Models\Recipe;
+use App\Models\StokHarianMenu;
+use App\Models\StokHarianDapurMenu;
+use App\Models\StokHarianMentah;
+use App\Models\StokHarianDapurMentah;
+use App\Http\Controllers\StokHarianController;
+use App\Http\Controllers\StokHarianDapurController;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -215,10 +222,9 @@ class LaporanKerugianController extends Controller
             'action' => 'required|in:approve,reject'
         ]);
 
-        $laporan = LaporanKerugian::findOrFail($id);
+        $laporan = LaporanKerugian::with('item')->findOrFail($id);
         $user = Auth::user();
 
-        // Mencegah error jika data sudah divaildasi sebelumnya
         if ($laporan->status !== 'Menunggu Verifikasi') {
             return back()->with('error', 'Laporan ini sudah diverifikasi sebelumnya.');
         }
@@ -230,13 +236,100 @@ class LaporanKerugianController extends Controller
                     'supervisor_id' => $user->id
                 ]);
 
-                // Catatan: Logika pemotongan stok otomatis di tabel Stok Harian bisa kita suntikkan di sini nanti
-                // Contoh: StokHarianMentah::where('item_id', $laporan->item_id)->decrement('tersisa', $laporan->kuantitas);
+                $tanggalLaporan = $laporan->created_at->toDateString();
+                $itemId = $laporan->item_id;
+                $jumlahKerugian = (float) $laporan->kuantitas;
+
+                // 1. Potong Stok Bahan Mentah Harian
+                if ($laporan->division === 'bar') {
+                    $stokMentah = StokHarianMentah::where('item_id', $itemId)
+                        ->whereDate('tanggal', $tanggalLaporan)
+                        ->first();
+
+                    if ($stokMentah) {
+                        $stokMentah->stok_keluar = (float) $stokMentah->stok_keluar + $jumlahKerugian;
+                        $stokMentah->stok_akhir = ($stokMentah->stok_awal + $stokMentah->stok_masuk) - $stokMentah->stok_keluar;
+                        $stokMentah->save();
+                    }
+
+                    // 🔥 2. KURANGI STOK MENU BAR YANG MENGGUNAKAN BAHAN INI SECARA PROPORSIONAL
+                    $recipes = Recipe::where('division', 'bar')->get()->filter(function ($recipe) use ($itemId) {
+                        if (!is_array($recipe->ingredients)) return false;
+                        foreach ($recipe->ingredients as $ing) {
+                            if (isset($ing['item_id']) && $ing['item_id'] == $itemId) return true;
+                        }
+                        return false;
+                    });
+
+                    foreach ($recipes as $recipe) {
+                        $amt = 1;
+                        foreach ($recipe->ingredients as $ing) {
+                            if (isset($ing['item_id']) && $ing['item_id'] == $itemId) {
+                                $amt = (float)($ing['amount'] ?? 1);
+                                break;
+                            }
+                        }
+                        // Hitung setara berapa porsi menu yang berkurang
+                        $porsiLoss = $amt > 0 ? ceil($jumlahKerugian / $amt) : $jumlahKerugian;
+
+                        $menuItem = Item::where('nama', $recipe->name)->where('division', 'bar')->first();
+                        if ($menuItem) {
+                            $stokMenu = StokHarianMenu::where('item_id', $menuItem->id)
+                                ->whereDate('tanggal', $tanggalLaporan)
+                                ->first();
+                            if ($stokMenu) {
+                                $stokMenu->stok_keluar = (float)$stokMenu->stok_keluar + $porsiLoss;
+                                $stokMenu->stok_akhir = max(0, ($stokMenu->stok_awal + $stokMenu->stok_masuk) - $stokMenu->stok_keluar);
+                                $stokMenu->save();
+                            }
+                        }
+                    }
+
+                } else {
+                    $stokMentah = StokHarianDapurMentah::where('item_id', $itemId)
+                        ->whereDate('tanggal', $tanggalLaporan)
+                        ->first();
+
+                    if ($stokMentah) {
+                        $stokMentah->stok_keluar = (float) $stokMentah->stok_keluar + $jumlahKerugian;
+                        $stokMentah->stok_akhir = ($stokMentah->stok_awal + $stokMentah->stok_masuk) - $stokMentah->stok_keluar;
+                        $stokMentah->save();
+                    }
+
+                    // 🔥 2. KURANGI STOK MENU DAPUR YANG MENGGUNAKAN BAHAN INI
+                    $recipes = Recipe::where('division', 'dapur')->get()->filter(function ($recipe) use ($itemId) {
+                        if (!is_array($recipe->ingredients)) return false;
+                        foreach ($recipe->ingredients as $ing) {
+                            if (isset($ing['item_id']) && $ing['item_id'] == $itemId) return true;
+                        }
+                        return false;
+                    });
+
+                    foreach ($recipes as $recipe) {
+                        $amt = 1;
+                        foreach ($recipe->ingredients as $ing) {
+                            if (isset($ing['item_id']) && $ing['item_id'] == $itemId) {
+                                $amt = (float)($ing['amount'] ?? 1);
+                                break;
+                            }
+                        }
+                        $porsiLoss = $amt > 0 ? ceil($jumlahKerugian / $amt) : $jumlahKerugian;
+
+                        $stokMenu = StokHarianDapurMenu::where('recipe_id', $recipe->id)
+                            ->whereDate('tanggal', $tanggalLaporan)
+                            ->first();
+                        if ($stokMenu) {
+                            $stokMenu->stok_keluar = (float)$stokMenu->stok_keluar + $porsiLoss;
+                            $stokMenu->stok_akhir = max(0, ($stokMenu->stok_awal + $stokMenu->stok_masuk) - $stokMenu->stok_keluar);
+                            $stokMenu->save();
+                        }
+                    }
+                }
 
                 ActivityLog::create([
                     'user_id' => $user->id,
                     'activity' => 'Approve Kerugian',
-                    'description' => "Menyetujui laporan kerugian bahan '{$laporan->item->nama}' (ID Laporan: {$laporan->id})."
+                    'description' => "Menyetujui laporan kerugian bahan '{$laporan->item->nama}' sebanyak {$jumlahKerugian}."
                 ]);
 
             } else {
@@ -248,12 +341,11 @@ class LaporanKerugianController extends Controller
                 ActivityLog::create([
                     'user_id' => $user->id,
                     'activity' => 'Reject Kerugian',
-                    'description' => "Menolak laporan kerugian bahan '{$laporan->item->nama}' (ID Laporan: {$laporan->id})."
+                    'description' => "Menolak laporan kerugian bahan '{$laporan->item->nama}'."
                 ]);
             }
         });
 
-        $pesan = $request->action === 'approve' ? 'Laporan kerugian staf telah disetujui!' : 'Laporan kerugian ditolak.';
-        return back()->with('success', $pesan);
+        return back()->with('success', 'Laporan kerugian disetujui, stok mentah dan porsi menu harian berhasil disesuaikan!');
     }
 }

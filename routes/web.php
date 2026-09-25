@@ -161,6 +161,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/stok-harian/mentah', [StokHarianController::class, 'storeMentah'])
                 ->name('stok-harian-mentah.store');
 
+            Route::post('/stok-harian/mentah/store-borongan', [StokHarianController::class, 'storeBoronganMentah'])
+                ->name('stok-harian-mentah.store-borongan');
+
             Route::match(['put', 'patch'], '/stok-harian/mentah/{id}', [StokHarianController::class, 'updateMentah'])
                 ->name('stok-harian-mentah.update');
 
@@ -186,6 +189,9 @@ Route::middleware(['auth'])->group(function () {
             // Mentah Dapur
             Route::post('/stok-harian-dapur/mentah', [StokHarianDapurController::class, 'storeMentah'])
                 ->name('stok-harian-dapur-mentah.store');
+            
+            Route::post('/stok-harian-dapur/mentah/store-borongan', [StokHarianDapurController::class, 'storeBoronganMentah'])
+                ->name('stok-harian-dapur-mentah.store-borongan');
 
             Route::match(['put', 'patch'], '/stok-harian-dapur/mentah/{id}', [StokHarianDapurController::class, 'updateMentah'])
                 ->name('stok-harian-dapur-mentah.update');
@@ -269,6 +275,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/recipes', [RecipeController::class, 'index'])
         ->name('recipes.index');
+
+    // Rute Unduh Excel Resep
+    Route::get('/resep/export-excel', [RecipeController::class, 'exportExcel'])
+        ->name('resep.export-excel');
 
     Route::get('/resep/{recipe}', [RecipeController::class, 'show'])
         ->name('resep.show');

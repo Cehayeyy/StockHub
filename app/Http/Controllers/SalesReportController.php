@@ -129,77 +129,68 @@ class SalesReportController extends Controller
             abort(403, 'Akses ditolak.');
         }
 
-        $partnerNota = $request->input('partner_mitra', 'Internal / Umum (Kasir)');
-
         $request->validate([
             'tanggal' => 'required|date',
-            'nomor_nota' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('sales_reports', 'nomor_nota')->where(fn ($query) => $query
-                    ->where('tanggal_transaksi', $request->input('tanggal'))
-                    ->where('partner_nota', $partnerNota)
-                    ->where('user_id', $currentUser->id)),
-            ],
-            'partner_mitra' => 'nullable|string',
-            'items' => 'required|array|min:1',
-            'items.*.recipe_id' => 'required|exists:recipes,id',
-            'items.*.quantity' => 'required|numeric|min:1',
-            'diskon_persen' => 'nullable|numeric|min:0|max:100',
-            'fee_mitra_persen' => 'nullable|numeric|min:0|max:100',
-        ], [
-            'nomor_nota.unique' => 'Nomor nota sudah digunakan untuk tanggal, Staff, dan sumber nota yang sama.',
+            'notas' => 'required|array|min:1',
+            'notas.*.nomor_nota' => 'required|string|max:255',
+            'notas.*.partner_mitra' => 'nullable|string',
+            'notas.*.items' => 'required|array|min:1',
+            'notas.*.items.*.recipe_id' => 'required|exists:recipes,id',
+            'notas.*.items.*.quantity' => 'required|numeric|min:1',
+            'notas.*.diskon_persen' => 'nullable|numeric|min:0|max:100',
+            'notas.*.fee_mitra_persen' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $tanggal = $request->tanggal;
         $userId = Auth::id();
 
         try {
-            DB::transaction(function () use ($request, $tanggal, $userId, $partnerNota, $currentUser) {
+            DB::transaction(function () use ($request, $tanggal, $userId, $currentUser) {
+                
+                // Looping setiap nota yang di-submit secara batch
+                foreach ($request->notas as $notaData) {
+                    $nomorNota = $notaData['nomor_nota'];
+                    $partnerNota = $notaData['partner_mitra'] ?? 'Internal / Umum';
 
-                $subtotalMenu = 0;
-                $processedItems = [];
+                    $subtotalMenu = 0;
+                    $processedItems = [];
 
-                // 1. Hitung subtotal dan siapkan data item
-                foreach ($request->items as $row) {
-                    $recipeId = $row['recipe_id'];
-                    $qty = (float) $row['quantity'];
+                    foreach ($notaData['items'] as $row) {
+                        $recipeId = $row['recipe_id'];
+                        $qty = (float) $row['quantity'];
 
-                    $recipe = Recipe::find($recipeId);
-                    if (! $recipe) {
-                        throw new \RuntimeException('Resep menu tidak ditemukan.');
-                    }
+                        $recipe = Recipe::find($recipeId);
+                        if (! $recipe) {
+                            throw new \RuntimeException('Resep menu tidak ditemukan.');
+                        }
 
-                    $allowedDivisions = $currentUser->role === 'bar' ? ['bar', 'dapur'] : ['dapur'];
-                    if (! in_array($recipe->division, $allowedDivisions, true)) {
-                        throw new \RuntimeException('Menu tersebut tidak dapat dijual oleh divisi Anda.');
-                    }
+                        $allowedDivisions = $currentUser->role === 'bar' ? ['bar', 'dapur'] : ['dapur'];
+                        if (! in_array($recipe->division, $allowedDivisions, true)) {
+                            throw new \RuntimeException("Menu '{$recipe->name}' tidak dapat dijual oleh divisi Anda.");
+                        }
 
-                    $hargaSatuan = (float) ($recipe->harga_jual_real ?? 0);
-                    $lineSubtotal = $hargaSatuan * $qty;
-                    $subtotalMenu += $lineSubtotal;
+                        $hargaSatuan = (float) ($recipe->harga_jual_real ?? $recipe->harga_jual ?? 0);
+                        $lineSubtotal = $hargaSatuan * $qty;
+                        $subtotalMenu += $lineSubtotal;
 
-                    // Cari item_id yang berelasi dengan resep ini
-                    $menuItem = $recipe->item_id
-                        ? Item::whereKey($recipe->item_id)->where('division', $recipe->division)->first()
-                        : Item::where('nama', $recipe->name)->where('division', $recipe->division)->first();
+                        $menuItem = $recipe->item_id
+                            ? Item::whereKey($recipe->item_id)->where('division', $recipe->division)->first()
+                            : Item::where('nama', $recipe->name)->where('division', $recipe->division)->first();
 
-                    if (! $menuItem) {
-                        throw new \RuntimeException("Menu '{$recipe->name}' belum terhubung ke data Item divisi {$recipe->division}.");
-                    }
+                        if (! $menuItem) {
+                            throw new \RuntimeException("Menu '{$recipe->name}' belum terhubung ke data Item divisi {$recipe->division}.");
+                        }
 
-                    $processedItems[] = [
-                        'recipe_id' => $recipeId,
-                        'item_id' => $menuItem->id,
-                        'quantity' => $qty,
-                        'harga_satuan' => $hargaSatuan,
-                        'subtotal' => $lineSubtotal,
-                    ];
+                        $processedItems[] = [
+                            'recipe_id' => $recipeId,
+                            'item_id' => $menuItem->id,
+                            'quantity' => $qty,
+                            'harga_satuan' => $hargaSatuan,
+                            'subtotal' => $lineSubtotal,
+                        ];
 
-                    // 2. Proses Potong Stok Harian (Bar / Dapur)
-                    if ($recipe->division === 'bar') {
-                        if ($menuItem) {
+                        // Potong Stok Harian (Bar / Dapur)
+                        if ($recipe->division === 'bar') {
                             $menuStok = StokHarianMenu::firstOrCreate(
                                 ['item_id' => $menuItem->id, 'tanggal' => $tanggal],
                                 ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'user_id' => $userId]
@@ -220,96 +211,73 @@ class SalesReportController extends Controller
                                     }
                                 }
                             }
-                        }
-                    } else {
-                        $menuStok = StokHarianDapurMenu::firstOrCreate(
-                            ['recipe_id' => $recipeId, 'tanggal' => $tanggal],
-                            ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'user_id' => $userId]
-                        );
-                        $menuStok->stok_keluar = (float) $menuStok->stok_keluar + $qty;
-                        $menuStok->stok_akhir = ($menuStok->stok_awal + $menuStok->stok_masuk) - $menuStok->stok_keluar;
-                        $menuStok->is_submitted = true;
-                        $menuStok->save();
+                        } else {
+                            $menuStok = StokHarianDapurMenu::firstOrCreate(
+                                ['recipe_id' => $recipeId, 'tanggal' => $tanggal],
+                                ['stok_awal' => 0, 'stok_masuk' => 0, 'stok_keluar' => 0, 'stok_akhir' => 0, 'user_id' => $userId]
+                            );
+                            $menuStok->stok_keluar = (float) $menuStok->stok_keluar + $qty;
+                            $menuStok->stok_akhir = ($menuStok->stok_awal + $menuStok->stok_masuk) - $menuStok->stok_keluar;
+                            $menuStok->is_submitted = true;
+                            $menuStok->save();
 
-                        if (is_array($recipe->ingredients)) {
-                            foreach ($recipe->ingredients as $ing) {
-                                $rawQty = $qty * (float) ($ing['amount'] ?? 0);
-                                $mentah = StokHarianDapurMentah::where(['item_id' => $ing['item_id'], 'tanggal' => $tanggal])->first();
-                                if ($mentah) {
-                                    $mentah->stok_keluar = (float) $mentah->stok_keluar + $rawQty;
-                                    $mentah->stok_akhir = ($mentah->stok_awal + $mentah->stok_masuk) - $mentah->stok_keluar;
-                                    $mentah->save();
+                            if (is_array($recipe->ingredients)) {
+                                foreach ($recipe->ingredients as $ing) {
+                                    $rawQty = $qty * (float) ($ing['amount'] ?? 0);
+                                    $mentah = StokHarianDapurMentah::where(['item_id' => $ing['item_id'], 'tanggal' => $tanggal])->first();
+                                    if ($mentah) {
+                                        $mentah->stok_keluar = (float) $mentah->stok_keluar + $rawQty;
+                                        $mentah->stok_akhir = ($mentah->stok_awal + $mentah->stok_masuk) - $mentah->stok_keluar;
+                                        $mentah->save();
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                // 3. Hitung Diskon & Total Bersih Nota
-                $diskonPersen = (float) ($request->diskon_persen ?? 0);
-                $feeMitraPersen = (float) ($request->fee_mitra_persen ?? 0);
-                $nominalDiskon = ($subtotalMenu * $diskonPersen) / 100;
-                $feeMitra = ($subtotalMenu * $feeMitraPersen) / 100;
-                $totalBersih = ($subtotalMenu - $nominalDiskon) - $feeMitra;
+                    $diskonPersen = (float) ($notaData['diskon_persen'] ?? 0);
+                    $feeMitraPersen = (float) ($notaData['fee_mitra_persen'] ?? 0);
+                    $nominalDiskon = ($subtotalMenu * $diskonPersen) / 100;
+                    $feeMitra = ($subtotalMenu * $feeMitraPersen) / 100;
+                    $totalBersih = ($subtotalMenu - $nominalDiskon) - $feeMitra;
 
-                // 4. Simpan ke Tabel Sales Reports (Utama)
-                $salesReport = \App\Models\SalesReport::create([
-                    'nomor_nota' => $request->nomor_nota,
-                    'tanggal_transaksi' => $tanggal,
-                    'partner_nota' => $partnerNota,
-                    'diskon_persen' => $diskonPersen,
-                    'fee_mitra_persen' => $feeMitraPersen,
-                    'fee_mitra' => $feeMitra,
-                    'subtotal' => $subtotalMenu,
-                    'total_bersih' => max(0, $totalBersih),
-                    'user_id' => $userId,
-                ]);
+                    $salesReport = \App\Models\SalesReport::create([
+                        'nomor_nota' => $nomorNota,
+                        'tanggal_transaksi' => $tanggal,
+                        'partner_nota' => $partnerNota,
+                        'diskon_persen' => $diskonPersen,
+                        'fee_mitra_persen' => $feeMitraPersen,
+                        'fee_mitra' => $feeMitra,
+                        'subtotal' => $subtotalMenu,
+                        'total_bersih' => max(0, $totalBersih),
+                        'user_id' => $userId,
+                    ]);
 
-                // 5. Simpan rincian item ke Sales Report Items
-                foreach ($processedItems as $pItem) {
-                    \App\Models\SalesReportItem::create([
-                        'sales_report_id' => $salesReport->id,
-                        'item_id' => $pItem['item_id'],
-                        'quantity' => $pItem['quantity'],
-                        'harga_satuan' => $pItem['harga_satuan'],
-                        'subtotal' => $pItem['subtotal'],
+                    foreach ($processedItems as $pItem) {
+                        \App\Models\SalesReportItem::create([
+                            'sales_report_id' => $salesReport->id,
+                            'item_id' => $pItem['item_id'],
+                            'quantity' => $pItem['quantity'],
+                            'harga_satuan' => $pItem['harga_satuan'],
+                            'subtotal' => $pItem['subtotal'],
+                        ]);
+                    }
+
+                    ActivityLog::create([
+                        'user_id' => $userId,
+                        'activity' => 'Input Sales Report',
+                        'description' => "Berhasil input nota [{$partnerNota}] nomor: {$nomorNota}",
                     ]);
                 }
-
-                $sourceNota = $request->partner_mitra ?? 'Internal';
-                ActivityLog::create([
-                    'user_id' => $userId,
-                    'activity' => 'Input Sales Report',
-                    'description' => "Berhasil input nota/bill [{$sourceNota}] nomor: {$request->nomor_nota}",
-                ]);
             });
 
             session()->forget('sales_report_unlocked');
             session(['sales_report_submitted_today' => true]);
 
-            return back()->with('success', 'Nota berhasil disimpan dan tercatat di laporan analisa.');
+            return back()->with('success', 'Semua nota berhasil disimpan dan stok terpotong otomatis!');
 
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Gagal menyimpan nota: '.$e->getMessage()]);
         }
-        // Contoh potongan logic di SalesReportController.php store()
-$subtotal = 0;
-foreach ($request->items as $item) {
-    $recipe = Recipe::find($item['recipe_id']);
-    $subtotal += ($recipe->harga_jual * $item['quantity']);
-}
-
-$diskonNominal = ($subtotal * ($request->diskon_persen ?? 0)) / 100;
-
-SalesReport::create([
-    'nomor_nota'      => $request->nomor_nota,
-    'tanggal'         => $request->tanggal,
-    'partner_mitra'   => $request->partner_mitra,
-    'subtotal'        => $subtotal,
-    'diskon_nominal'  => $diskonNominal,
-    'fee_mitra'       => $request->fee_mitra ?? 0,
-    'total_bayar'     => max($subtotal - $diskonNominal, 0),
-    'user_id'         => auth()->id(),
-]);
     }
 }

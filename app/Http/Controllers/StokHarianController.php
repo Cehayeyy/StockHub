@@ -341,50 +341,106 @@ class StokHarianController extends Controller
         }
     }
 
+    // --- 1. UNTUK INPUT DATA (MENDAFTARKAN NAMA ITEM BARU) ---
     public function storeMentah(Request $request)
     {
-        // 1. Validasi sekarang mencari Array 'items' (karena sekarang borongan)
         $request->validate([
             'tanggal' => 'required|date',
             'items'   => 'required|array',
-            'items.*.item_id'   => 'required|exists:items,id',
-            'items.*.stok_awal' => 'required|numeric|min:0'
+            'items.*.item_id' => 'required|exists:items,id',
         ]);
 
         try {
             DB::transaction(function () use ($request) {
-                // 2. Looping data yang dikirim dari Frontend
                 foreach ($request->items as $row) {
                     $itemId = $row['item_id'];
-                    $awal   = (float)$row['stok_awal'];
-                    $masuk  = isset($row['stok_masuk']) ? (float)$row['stok_masuk'] : 0;
+                    $itemInfo = Item::find($itemId);
+
+                    // Ambil stok sisa kemarin secara otomatis untuk stok_awal
+                    $lastMentah = StokHarianMentah::where('item_id', $itemId)
+                        ->where('tanggal', '<', $request->tanggal)
+                        ->orderBy('tanggal', 'desc')
+                        ->first();
+                    $stokKemarin = $lastMentah ? (float)$lastMentah->stok_akhir : 0;
 
                     $mentah = StokHarianMentah::firstOrNew([
                         'item_id' => $itemId,
                         'tanggal' => $request->tanggal
                     ]);
 
-                    $mentah->stok_awal = $awal;
-                    $mentah->stok_masuk = $masuk;
-                    // Hitung stok akhir mentah
-                    $mentah->stok_akhir = ($awal + $masuk) - (float)$mentah->stok_keluar;
+                    if (!$mentah->exists) {
+                        $mentah->stok_awal = $stokKemarin;
+                        $mentah->stok_masuk = 0;
+                        $mentah->stok_keluar = 0;
+                        $mentah->unit = $itemInfo->satuan ?? 'unit';
+                    }
+
+                    $mentah->stok_akhir = ($mentah->stok_awal + $mentah->stok_masuk) - $mentah->stok_keluar;
                     $mentah->save();
 
-                    // 3. Sinkronisasi otomatis ke porsi menu
                     $this->distributeStockToMenus($itemId, 0, $request->tanggal);
                 }
 
                 ActivityLog::create([
                     'user_id' => Auth::id(),
-                    'activity' => 'Input Mentah',
-                    'description' => "Input borongan stok mentah"
+                    'activity' => 'Input Item Mentah',
+                    'description' => "Mendaftarkan item bahan mentah baru ke stok harian"
                 ]);
             });
 
-            return back()->with('success', 'Stok bahan mentah berhasil disimpan.');
+            return back()->with('success', 'Item bahan mentah berhasil ditambahkan.');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['stok_awal' => 'Gagal simpan: ' . $e->getMessage()]);
+            return back()->withErrors(['item_id' => 'Gagal simpan: ' . $e->getMessage()]);
+        }
+    }
+
+    public function storeBoronganMentah(Request $request)
+    {
+        $request->validate([
+            'tanggal' => 'required|date',
+            'items'   => 'required|array',
+            'items.*.item_id' => 'required|exists:items,id', // Sesuaikan jika di dapur pakai recipes/items
+            'items.*.stok_masuk' => 'required|numeric|min:0'
+        ]);
+
+        try {
+            DB::transaction(function () use ($request) {
+                foreach ($request->items as $row) {
+                    $itemId = $row['item_id'];
+                    $tambahMasuk = (float)$row['stok_masuk'];
+
+                    if ($tambahMasuk <= 0) continue; // Jika 0 atau kosong, lewati
+
+                    $mentah = StokHarianMentah::where([
+                        'item_id' => $itemId,
+                        'tanggal' => $request->tanggal
+                    ])->first();
+
+                    if ($mentah) {
+                        // 🔥 AKUMULASI: Tambahkan nilai baru ke stok masuk yang sudah ada sebelumnya
+                        $mentah->stok_masuk = (float)$mentah->stok_masuk + $tambahMasuk;
+                        
+                        // Hitung ulang stok akhir secara otomatis
+                        $mentah->stok_akhir = ((float)$mentah->stok_awal + (float)$mentah->stok_masuk) - (float)$mentah->stok_keluar;
+                        $mentah->save();
+
+                        // Sinkronisasi otomatis ke porsi menu terkait
+                        $this->distributeStockToMenus($itemId, 0, $request->tanggal);
+                    }
+                }
+
+                ActivityLog::create([
+                    'user_id' => Auth::id(),
+                    'activity' => 'Input Stok Masuk Borongan',
+                    'description' => "Menambahkan stok masuk bahan mentah secara borongan pada tanggal {$request->tanggal}"
+                ]);
+            });
+
+            return back()->with('success', 'Stok masuk borongan berhasil ditambahkan.');
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['stok_masuk' => 'Gagal simpan borongan: ' . $e->getMessage()]);
         }
     }
 

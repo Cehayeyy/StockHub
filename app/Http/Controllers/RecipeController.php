@@ -77,6 +77,86 @@ class RecipeController extends Controller
         ]);
     }
 
+    public function exportExcel(Request $request)
+    {
+        $user = $request->user();
+        if ($user->role === 'bar' || $user->role === 'dapur') {
+            $division = $user->role === 'dapur' ? 'dapur' : 'bar';
+        } else {
+            $division = $request->input('division', 'bar');
+        }
+
+        $recipes = Recipe::where('division', $division)->with('category')->latest()->get();
+
+        $fileName = 'Laporan_Resep_' . ucfirst($division) . '_' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            "Content-type"        => "text/csv; charset=UTF-8",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $callback = function() use ($recipes, $division) {
+            $file = fopen('php://output', 'w');
+            // BOM untuk UTF-8 Excel agar karakter khusus dan mata uang terbaca sempurna
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // --- HEADER INFORMASI LAPORAN (Dipad dengan kolom kosong agar teks tidak meluber) ---
+            fputcsv($file, ['WARUNG CANGKRUK - REKAP DATA RESEP DIVISI ' . strtoupper($division), '', '', '', '', '', '', '', '', '', ''], ';');
+            fputcsv($file, ['Periode Cetak: ' . date('d F Y'), '', '', '', '', '', '', '', '', '', ''], ';');
+            fputcsv($file, [], ';'); // Baris kosong sebagai pemisah
+
+            // --- HEADER TABEL UTAMA (Total 11 Kolom) ---
+            fputcsv($file, [
+                'No', 
+                'Nama Menu Jadi', 
+                'Kategori', 
+                'Total Bahan', 
+                'Komposisi Bahan & Jumlah', 
+                'Total HPP (Rp)', 
+                'Target Margin (%)', 
+                'Harga Jual Hitungan (Rp)', 
+                'Harga Jual Real (Rp)', 
+                'Profit Real (Rp)', 
+                'Tanggal Dibuat'
+            ], ';');
+
+            // --- ISI DATA TABEL ---
+            foreach ($recipes as $index => $r) {
+                $ingredientsList = '';
+                if (is_array($r->ingredients)) {
+                    $arr = [];
+                    foreach ($r->ingredients as $ing) {
+                        $arr[] = ($ing['item_name'] ?? 'Bahan') . ' (' . $ing['amount'] . ' ' . $ing['unit'] . ')';
+                    }
+                    $ingredientsList = implode(', ', $arr);
+                }
+
+                $tanggalDibuat = $r->created_at ? "\t" . $r->created_at->format('d/m/Y') : '-';
+
+                fputcsv($file, [
+                    $index + 1,
+                    $r->name,
+                    $r->category->name ?? '-',
+                    $r->total_ingredients,
+                    $ingredientsList,
+                    $r->total_hpp ?? 0,
+                    $r->target_margin ?? 0,
+                    $r->harga_jual_hitungan ?? 0,
+                    $r->harga_jual_real ?? 0,
+                    $r->profit_real ?? 0,
+                    $tanggalDibuat
+                ], ';');
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function store(Request $request)
     {
         $user = $request->user();
@@ -248,7 +328,6 @@ class RecipeController extends Controller
             ]);
         });
 
-        // 🔥 UBAH BAGIAN INI MENJADI back() AGAR TETAP DI HALAMAN YANG SAMA
         return back()->with('success', 'Resep diperbarui & Stok Harian disinkronkan.');
     }
 
@@ -310,7 +389,6 @@ class RecipeController extends Controller
             ]);
         });
 
-        // 🔥 Tetap di halaman saat ini setelah menghapus data
         return back()->with('success', 'Resep berhasil dihapus.');
     }
 
@@ -320,8 +398,8 @@ class RecipeController extends Controller
 
         if ($menuItem) {
             $stokMenu = StokHarianMenu::where('item_id', $menuItem->id)
-                                      ->whereDate('tanggal', $tanggal)
-                                      ->first();
+                                        ->whereDate('tanggal', $tanggal)
+                                        ->first();
 
             $stokAwalBaru = $this->calculateCapacity($recipe->ingredients, 'bar', $tanggal);
 
@@ -361,9 +439,6 @@ class RecipeController extends Controller
         }
     }
 
-    /**
-     * Hitung total HPP berdasarkan bahan mentah × harga dasar
-     */
     private function validateRecipeReferences(array $validated): void
     {
         $categoryIsValid = ItemCategory::whereKey($validated['category_id'])

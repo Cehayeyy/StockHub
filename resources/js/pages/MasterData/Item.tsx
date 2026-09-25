@@ -394,7 +394,7 @@ export default function ItemPage() {
                   <button
                     type="button"
                     onClick={() => setShowDivisionDropdown((prev) => !prev)}
-                    className="flex w-full items-center justify-between rounded-xl bg-[#F6EFEB] hover:bg-[#EFE6DF] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-[#EADBCE] shadow-2xs transition"
+                    className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] hover:bg-[#F6EFEB] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-amber-100 shadow-2xs transition"
                   >
                     <span className="capitalize">
                       {division === "bar" ? "Bar" : "Dapur"}
@@ -428,13 +428,13 @@ export default function ItemPage() {
                   )}
                 </div>
               ) : (
-                <div className="px-4 py-2.5 rounded-xl bg-[#F6EFEB] text-sm font-bold text-[#8B5E3C] border border-[#EADBCE] capitalize w-fit shadow-2xs">
+                <div className="px-4 py-2.5 rounded-xl bg-[#FDF3E4] text-sm font-bold text-[#8B5E3C] border border-amber-100 capitalize w-fit shadow-2xs">
                   {division}
                 </div>
               )}
 
               {/* Category Filter Tabs: Semua, Menu, Mentah */}
-              <div className="flex items-center gap-1.5 bg-[#F6EFEB] p-1 rounded-2xl border border-[#EADBCE]">
+              <div className="flex items-center gap-1.5 bg-[#FAF7F2] p-1 rounded-2xl border border-amber-100">
                 {(["semua", "menu", "mentah"] as const).map((tab) => {
                   const isActive = currentCategory === tab;
                   const labels: Record<string, string> = {
@@ -465,22 +465,24 @@ export default function ItemPage() {
               {!isStaff && (
                 <button
                   onClick={openModalAdd}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#8B5E3C] hover:bg-[#6F4E37] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95 w-full sm:w-auto"
+                  className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] hover:bg-[#c4925e] px-5 py-2 text-sm font-bold text-white shadow-md transition active:scale-95 w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
                   Tambah Item
                 </button>
               )}
 
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-full sm:w-56">
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search...."
                   value={search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 pr-10 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]/20 focus:border-[#8B5E3C] transition"
+                  className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
-                <Search className="h-4 w-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Search className="h-4 w-4" />
+                </span>
               </div>
             </div>
           </div>

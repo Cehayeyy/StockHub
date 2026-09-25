@@ -6,10 +6,11 @@ import {
   Search,
   Flame,
   AlertTriangle,
-  Receipt,
   TrendingUp,
   BarChart2,
   Calendar,
+  DollarSign,
+  Award,
 } from "lucide-react";
 
 interface FrekuensiItemBackend {
@@ -18,6 +19,7 @@ interface FrekuensiItemBackend {
   frekuensi_pembelian: number;
   total_kuantitas: number;
   total_nominal: number;
+  total_profit: number;
 }
 
 interface MenuItem {
@@ -28,6 +30,7 @@ interface MenuItem {
   hargaSatuan: number;
   totalTerjual: number;
   totalOmset: number;
+  totalProfit: number;
   statusPopularitas: "Sangat Laku" | "Laku" | "Stabil" | "Perlu Evaluasi" | "Kurang Diminati";
 }
 
@@ -61,6 +64,7 @@ export default function FrekuensiPembelian({
     return items.map((item, index) => {
       const totalTerjual = Number(item.total_kuantitas) || 0;
       const totalOmset = Number(item.total_nominal) || 0;
+      const totalProfit = Number(item.total_profit) || 0;
       const hargaSatuan = totalTerjual > 0 ? Math.round(totalOmset / totalTerjual) : 0;
       const peringkat = index + 1;
 
@@ -85,13 +89,13 @@ export default function FrekuensiPembelian({
         hargaSatuan,
         totalTerjual,
         totalOmset,
+        totalProfit,
         statusPopularitas,
       };
     });
   };
 
-  const parsedItems = mapBackendToUI(frekuensiItems);
-  const menuList = parsedItems;
+  const menuList = mapBackendToUI(frekuensiItems);
 
   const filteredItems = menuList.filter(
     (item) =>
@@ -101,9 +105,13 @@ export default function FrekuensiPembelian({
 
   const totalPorsiTerjual = menuList.reduce((acc, curr) => acc + curr.totalTerjual, 0);
   const totalOmsetKeseluruhan = menuList.reduce((acc, curr) => acc + curr.totalOmset, 0);
+  const totalProfitKeseluruhan = menuList.reduce((acc, curr) => acc + curr.totalProfit, 0);
 
-  const menuTerlaris = menuList[0] || { namaMenu: "-", totalTerjual: 0 };
-  const menuKurangDiminati = menuList[menuList.length - 1] || { namaMenu: "-", totalTerjual: 0 };
+  // 4 Kategori Utama sesuai Rapat Klien
+  const menuTerlaris = menuList.length > 0 ? [...menuList].sort((a, b) => b.totalTerjual - a.totalTerjual)[0] : { namaMenu: "-", totalTerjual: 0 };
+  const menuKurangDiminati = menuList.length > 0 ? [...menuList].sort((a, b) => a.totalTerjual - b.totalTerjual)[0] : { namaMenu: "-", totalTerjual: 0 };
+  const menuProfitTertinggi = menuList.length > 0 ? [...menuList].sort((a, b) => b.totalProfit - a.totalProfit)[0] : { namaMenu: "-", totalProfit: 0 };
+  const menuProfitTerendah = menuList.length > 0 ? [...menuList].sort((a, b) => a.totalProfit - b.totalProfit)[0] : { namaMenu: "-", totalProfit: 0 };
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -119,40 +127,15 @@ export default function FrekuensiPembelian({
   const renderStatusBadge = (status: MenuItem["statusPopularitas"]) => {
     switch (status) {
       case "Sangat Laku":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Sangat Laku
-          </span>
-        );
+        return <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Sangat Laku</span>;
       case "Laku":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Laku
-          </span>
-        );
+        return <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600">Laku</span>;
       case "Stabil":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-            Stabil
-          </span>
-        );
+        return <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600">Stabil</span>;
       case "Perlu Evaluasi":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            Perlu Evaluasi
-          </span>
-        );
+        return <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600">Perlu Evaluasi</span>;
       case "Kurang Diminati":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-            Kurang Diminati
-          </span>
-        );
+        return <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600">Kurang Diminati</span>;
       default:
         return null;
     }
@@ -162,112 +145,15 @@ export default function FrekuensiPembelian({
     <AppLayout header="Laporan Frekuensi Pembelian Menu (Bulanan)">
       <Head title="Laporan Frekuensi Pembelian Menu" />
 
-      {/* STYLING MEDIA PRINT SUPAYA PDF PAS DI KERTAS & TIDAK KEPOTONG */}
-      <style>{`
-        @keyframes waveAnimation {
-          0% { transform: translateY(0px) scale(1) rotate(0deg); }
-          50% { transform: translateY(-8px) scale(1.05) rotate(2deg); }
-          100% { transform: translateY(0px) scale(1) rotate(0deg); }
-        }
-
-        .wave-card {
-          position: relative;
-          overflow: hidden;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .wave-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.08);
-        }
-
-        @media print {
-          /* Sembunyikan elemen navigasi & tombol */
-          header, aside, button, select, input, .no-print {
-            display: none !important;
-          }
-
-          /* Paksa orientasi kertas ke Landscape agar tabel muat sempurna */
-          @page {
-            size: A4 landscape;
-            margin: 10mm;
-          }
-
-          body {
-            background-color: white !important;
-            color: black !important;
-            font-size: 10pt !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          .print-container {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          /* Header khusus untuk versi PDF/Print */
-          .print-header {
-            display: block !important;
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-          }
-
-          .print-header h1 {
-            font-size: 16pt !important;
-            font-weight: bold;
-          }
-
-          /* Atur tabel agar menyesuaikan lebar 100% tanpa scrollbar */
-          table {
-            width: 100% !important;
-            table-layout: auto !important;
-            border-collapse: collapse !important;
-          }
-
-          th, td {
-            padding: 6px 10px !important;
-            font-size: 9pt !important;
-          }
-
-          .summary-cards {
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 10px !important;
-            margin-bottom: 15px !important;
-          }
-        }
-
-        .print-header {
-          display: none;
-        }
-      `}</style>
-
-      <div className="space-y-6 pb-12 print-container">
-        {/* KOP LAPORAN UNTUK PDF */}
-        <div className="print-header">
-          <h1>WARUNG CANGKRUK</h1>
-          <p className="text-xs text-gray-600">Laporan Frekuensi Pembelian Menu (Popularitas Penjualan)</p>
-          <p className="text-xs font-semibold mt-1">Periode: {periodeFormatted || selectedMonth}</p>
-        </div>
-
-        {/* HEADER & FILTER ACTION WEB */}
-        <div className="flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-xs md:flex-row md:items-center md:justify-between no-print">
+      <div className="space-y-6 pb-12">
+        {/* HEADER & FILTER */}
+        <div className="flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white p-5 shadow-xs md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 mb-1">
-              <span>Laporan</span>
-              <span>&rsaquo;</span>
-              <span className="text-gray-600">Frekuensi Pembelian Bulanan</span>
-            </div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Laporan Frekuensi Pembelian Menu (Bulanan)
+              Laporan Frekuensi & Analisis Menu (Bulanan)
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Peringkat popularitas dan akumulasi penjualan menu dalam satu bulan.
+              Peringkat popularitas, kuantitas terjual, dan profitabilitas menu dalam satu bulan.
             </p>
           </div>
 
@@ -276,14 +162,14 @@ export default function FrekuensiPembelian({
               <button
                 type="button"
                 onClick={() => setShowCalendar((value) => !value)}
-                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs transition-all hover:bg-gray-50"
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50"
               >
                 <Calendar className="h-4 w-4 text-[#8B5E3C]" />
                 <span>{periodeFormatted || selectedMonth}</span>
               </button>
 
               {showCalendar && (
-                <div className="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-gray-100 bg-white p-4 shadow-2xl animate-in fade-in zoom-in-95">
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-gray-100 bg-white p-4 shadow-2xl">
                   <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-gray-700">
                     Pilih periode
                   </label>
@@ -291,7 +177,7 @@ export default function FrekuensiPembelian({
                     type="month"
                     value={selectedMonth}
                     onChange={handleMonthChange}
-                    className="w-full cursor-pointer rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#8B5E3C]"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#8B5E3C]"
                   />
                 </div>
               )}
@@ -300,7 +186,7 @@ export default function FrekuensiPembelian({
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition cursor-pointer"
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition"
             >
               <Download className="h-4 w-4" />
               Export PDF
@@ -308,61 +194,46 @@ export default function FrekuensiPembelian({
           </div>
         </div>
 
-        {/* 3 TOP SUMMARY CARDS */}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3 summary-cards">
-          {/* Card 1: Total Porsi Terjual */}
-          <div className="wave-card rounded-2xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/20 to-blue-50/40 p-5 shadow-xs flex items-center justify-between group">
-            <div className="space-y-1 relative z-10">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                TOTAL PORSI TERJUAL
-              </p>
-              <h3 className="text-3xl font-black text-gray-900">
-                {totalPorsiTerjual} <span className="text-lg font-bold">Porsi</span>
-              </h3>
-              <div className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-600 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                Realisasi Penjualan Nota
-              </div>
+        {/* 4 KATEGORI UTAMA SUMMARY CARDS (SESUAI PERMINTAAN RAPAT) */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* 1. Menu Terlaris */}
+          <div className="rounded-2xl border border-amber-100 bg-white p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">1. Menu Terlaris</p>
+              <h3 className="text-base font-extrabold text-emerald-600 mt-0.5">{menuTerlaris.namaMenu}</h3>
+              <p className="text-xs text-gray-500 font-semibold mt-1"> {menuTerlaris.totalTerjual} Porsi Terjual</p>
             </div>
-            <div className="rounded-2xl bg-blue-50 p-3 text-blue-600 no-print">
-              <Receipt className="h-6 w-6" />
-            </div>
+            <div className="rounded-2xl bg-amber-50 p-3 text-amber-500"><Flame className="h-5 w-5" /></div>
           </div>
 
-          {/* Card 2: Menu Terlaris (#1) */}
-          <div className="wave-card rounded-2xl border border-amber-100 bg-gradient-to-br from-white via-amber-50/20 to-amber-50/40 p-5 shadow-xs flex items-center justify-between group">
-            <div className="space-y-1 relative z-10">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                MENU TERLARIS (#1)
-              </p>
-              <h3 className="text-xl font-extrabold text-emerald-600">
-                {menuTerlaris.namaMenu}
-              </h3>
-              <p className="text-xs text-gray-500 font-semibold flex items-center gap-1 mt-1">
-                <span>🏆</span> {menuTerlaris.totalTerjual} Porsi terjual
-              </p>
+          {/* 2. Menu Kurang Diminati */}
+          <div className="rounded-2xl border border-red-100 bg-white p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">2. Kurang Diminati</p>
+              <h3 className="text-base font-extrabold text-red-500 mt-0.5">{menuKurangDiminati.namaMenu}</h3>
+              <p className="text-xs text-gray-500 font-semibold mt-1"> {menuKurangDiminati.totalTerjual} Porsi Terjual</p>
             </div>
-            <div className="rounded-2xl bg-amber-50 p-3 text-amber-500 no-print">
-              <Flame className="h-6 w-6" />
-            </div>
+            <div className="rounded-2xl bg-red-50 p-3 text-red-400"><AlertTriangle className="h-5 w-5" /></div>
           </div>
 
-          {/* Card 3: Kurang Diminati */}
-          <div className="wave-card rounded-2xl border border-red-100 bg-gradient-to-br from-white via-red-50/20 to-red-50/40 p-5 shadow-xs flex items-center justify-between group">
-            <div className="space-y-1 relative z-10">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                KURANG DIMINATI
-              </p>
-              <h3 className="text-xl font-extrabold text-red-500">
-                {menuKurangDiminati.namaMenu}
-              </h3>
-              <div className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-500 mt-1">
-                <span>&darr;</span> Hanya {menuKurangDiminati.totalTerjual} Porsi terjual
-              </div>
+          {/* 3. Profit Tertinggi */}
+          <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">3. Profit Tertinggi</p>
+              <h3 className="text-base font-extrabold text-blue-600 mt-0.5">{menuProfitTertinggi.namaMenu}</h3>
+              <p className="text-xs font-semibold text-emerald-600 mt-1">{formatIDR(menuProfitTertinggi.totalProfit || 0)}</p>
             </div>
-            <div className="rounded-2xl bg-red-50 p-3 text-red-400 no-print">
-              <AlertTriangle className="h-6 w-6" />
+            <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600"><Award className="h-5 w-5" /></div>
+          </div>
+
+          {/* 4. Profit Terendah */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">4. Profit Terendah</p>
+              <h3 className="text-base font-extrabold text-gray-700 mt-0.5">{menuProfitTerendah.namaMenu}</h3>
+              <p className="text-xs font-semibold text-gray-500 mt-1">{formatIDR(menuProfitTerendah.totalProfit || 0)}</p>
             </div>
+            <div className="rounded-2xl bg-gray-50 p-3 text-gray-500"><DollarSign className="h-5 w-5" /></div>
           </div>
         </div>
 
@@ -370,115 +241,69 @@ export default function FrekuensiPembelian({
         <div className="rounded-2xl border border-gray-100 bg-white shadow-xs overflow-hidden">
           <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 md:flex-row md:items-center md:justify-between bg-white">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-amber-50 p-2 text-[#8B5E3C] no-print">
+              <div className="rounded-xl bg-amber-50 p-2 text-[#8B5E3C]">
                 <BarChart2 className="h-5 w-5" />
               </div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-bold text-gray-800 text-base">
-                  Peringkat Popularitas Menu &ndash; {periodeFormatted || selectedMonth}
-                </h2>
-                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600 no-print">
-                  {menuList.length} Menu Terdaftar
-                </span>
-              </div>
+              <h2 className="font-bold text-gray-800 text-base">
+                Rincian Peringkat & Profit Menu &ndash; {periodeFormatted || selectedMonth}
+              </h2>
             </div>
 
-            <div className="relative w-full md:w-64 no-print">
+            <div className="relative w-full md:w-64">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari menu..."
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 pl-9 pr-4 py-2 text-xs font-semibold text-gray-700 focus:bg-white focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C]/20 focus:outline-none"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 pl-9 pr-4 py-2 text-xs font-semibold text-gray-700 focus:bg-white focus:border-[#8B5E3C] focus:outline-none"
               />
             </div>
           </div>
 
-          {/* TABEL PERINGKAT POPULARITAS */}
+          {/* TABEL */}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50/50 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 border-b border-gray-100">
                 <tr>
-                  <th className="px-6 py-3.5 text-center w-20">PERINGKAT</th>
-                  <th className="px-6 py-3.5">NAMA MENU</th>
-                  <th className="px-6 py-3.5 text-right">ESTIMASI HARGA</th>
-                  <th className="px-6 py-3.5 text-center">TOTAL TERJUAL</th>
-                  <th className="px-6 py-3.5 text-right">TOTAL OMSET</th>
-                  <th className="px-6 py-3.5 text-center">STATUS POPULARITAS</th>
+                  <th className="px-6 py-3.5 text-center w-20">Peringkat</th>
+                  <th className="px-6 py-3.5">Nama Menu</th>
+                  <th className="px-6 py-3.5 text-right">Estimasi Harga</th>
+                  <th className="px-6 py-3.5 text-center">Total Terjual</th>
+                  <th className="px-6 py-3.5 text-right">Total Omset</th>
+                  <th className="px-6 py-3.5 text-right">Total Profit</th>
+                  <th className="px-6 py-3.5 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 font-semibold text-gray-700">
                 {filteredItems.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-6 py-4 text-center">
-                      <span
-                        className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                          item.peringkat === 1
-                            ? "bg-amber-100 text-amber-800 border border-amber-300"
-                            : item.peringkat === 2
-                            ? "bg-slate-200 text-slate-700 border border-slate-300"
-                            : item.peringkat === 3
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : "text-gray-400"
-                        }`}
-                      >
+                      <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                        item.peringkat === 1 ? "bg-amber-100 text-amber-800 border border-amber-300" : "text-gray-400"
+                      }`}>
                         #{item.peringkat}
                       </span>
                     </td>
-
                     <td className="px-6 py-4">
-                      <div className={`font-bold ${item.statusPopularitas === "Kurang Diminati" ? "text-red-500" : "text-gray-900"}`}>
-                        {item.namaMenu}
-                      </div>
-                      <div className="text-[11px] font-semibold text-gray-400">
-                        Kategori: {item.kategori}
-                      </div>
+                      <div className="font-bold text-gray-900">{item.namaMenu}</div>
+                      <div className="text-[11px] font-semibold text-gray-400">Kategori: {item.kategori}</div>
                     </td>
-
-                    <td className="px-6 py-4 text-right text-gray-500">
-                      {formatIDR(item.hargaSatuan)}
-                    </td>
-
-                    <td className="px-6 py-4 text-center">
-                      <span className={`font-bold ${item.statusPopularitas === "Kurang Diminati" ? "text-red-500" : "text-gray-900"}`}>
-                        {item.totalTerjual} porsi
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4 text-right">
-                      <span className={`font-extrabold ${item.statusPopularitas === "Kurang Diminati" ? "text-red-500" : "text-gray-900"}`}>
-                        {formatIDR(item.totalOmset)}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4 text-center">
-                      {renderStatusBadge(item.statusPopularitas)}
-                    </td>
+                    <td className="px-6 py-4 text-right text-gray-500">{formatIDR(item.hargaSatuan)}</td>
+                    <td className="px-6 py-4 text-center text-gray-900">{item.totalTerjual} porsi</td>
+                    <td className="px-6 py-4 text-right text-gray-900">{formatIDR(item.totalOmset)}</td>
+                    <td className="px-6 py-4 text-right text-emerald-600 font-extrabold">{formatIDR(item.totalProfit)}</td>
+                    <td className="px-6 py-4 text-center">{renderStatusBadge(item.statusPopularitas)}</td>
                   </tr>
                 ))}
-                {filteredItems.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-gray-400">
-                      {menuList.length === 0
-                        ? "Belum ada transaksi penjualan menu pada periode ini."
-                        : "Menu yang dicari tidak ditemukan."}
-                    </td>
-                  </tr>
-                )}
               </tbody>
 
               <tfoot className="bg-gray-50/80 font-extrabold text-gray-900 border-t border-gray-200">
                 <tr>
-                  <td colSpan={3} className="px-6 py-4">
-                    Total Keseluruhan
-                  </td>
-                  <td className="px-6 py-4 text-center text-base">
-                    {totalPorsiTerjual} Porsi
-                  </td>
-                  <td className="px-6 py-4 text-right text-lg text-blue-600">
-                    {formatIDR(totalOmsetKeseluruhan)}
-                  </td>
+                  <td colSpan={3} className="px-6 py-4">Total Keseluruhan</td>
+                  <td className="px-6 py-4 text-center">{totalPorsiTerjual} Porsi</td>
+                  <td className="px-6 py-4 text-right text-blue-600">{formatIDR(totalOmsetKeseluruhan)}</td>
+                  <td className="px-6 py-4 text-right text-emerald-600">{formatIDR(totalProfitKeseluruhan)}</td>
                   <td></td>
                 </tr>
               </tfoot>

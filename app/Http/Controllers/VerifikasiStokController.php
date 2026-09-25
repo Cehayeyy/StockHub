@@ -21,26 +21,40 @@ class VerifikasiStokController extends Controller
     {
         $tab = $request->get('tab', 'bar');
         $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
-        $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
+
+        // 🔥 UBAH: Gunakan tanggal persis yang dipilih (bukan dipaksa ke hari Senin)
+        $targetDate = Carbon::parse($rawDate)->toDateString();
+
+        // Pastikan data stok harian untuk tanggal tersebut sudah ter-generate
+        $stokController = new StokHarianController();
+        $dapurController = new StokHarianDapurController();
+
+        if ($targetDate <= Carbon::now()->toDateString()) {
+            if ($tab === 'bar') {
+                $stokController->ensureStokExists($targetDate);
+            } else {
+                $dapurController->ensureStokExists($targetDate);
+            }
+        }
 
         if ($tab === 'bar') {
             $items = StokHarianMentah::with('item')
-                ->whereDate('tanggal', $mondayDate)
+                ->whereDate('tanggal', $targetDate)
                 ->get()
                 ->map(fn($item) => [
                     'id' => $item->id,
-                    'nama' => $item->item->nama,
-                    'satuan' => $item->unit ?? $item->item->satuan,
+                    'nama' => optional($item->item)->nama ?? '-',
+                    'satuan' => $item->unit ?? optional($item->item)->satuan ?? 'unit',
                     'stok_sistem' => $item->stok_akhir,
                 ]);
         } else {
             $items = StokHarianDapurMentah::with('item')
-                ->whereDate('tanggal', $mondayDate)
+                ->whereDate('tanggal', $targetDate)
                 ->get()
                 ->map(fn($item) => [
                     'id' => $item->id,
-                    'nama' => $item->item->nama,
-                    'satuan' => $item->unit ?? $item->item->satuan,
+                    'nama' => optional($item->item)->nama ?? '-',
+                    'satuan' => $item->unit ?? optional($item->item)->satuan ?? 'unit',
                     'stok_sistem' => $item->stok_akhir,
                 ]);
         }
@@ -48,22 +62,18 @@ class VerifikasiStokController extends Controller
         return Inertia::render('Verifikasi/VerifikasiStok', [
             'items'          => $items,
             'tab'            => $tab,
-            'tanggal_picker' => $rawDate,
-            'tanggal_data'   => $mondayDate
+            'tanggal_picker' => $targetDate,
+            'tanggal_data'   => $targetDate
         ]);
     }
 
-    // ==================== 🔽 SIMPAN KE DATABASE & SINKRONISASI 🔽 ====================
-    // ==================== 🔽 SIMPAN KE DATABASE & EFEK DOMINO 🔽 ====================
-    // ==================== 🔽 SIMPAN KE DATABASE & EFEK DOMINO MURNI 🔽 ====================
-    // ==================== 🔽 SIMPAN KE DATABASE & EFEK DOMINO MURNI 🔽 ====================
     public function store(Request $request)
     {
         $tab = $request->input('tab', 'bar');
-        $tanggal = $request->input('tanggal') ?: Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
+        $tanggal = $request->input('tanggal') ?: Carbon::now()->toDateString();
         $fisikData = $request->input('fisik', []);
 
-        DB::transaction(function () use ($tab, $fisikData) {
+        DB::transaction(function () use ($tab, $tanggal, $fisikData) {
             foreach ($fisikData as $id => $stokFisik) {
                 $stokFisik = (float)$stokFisik;
 
@@ -73,7 +83,6 @@ class VerifikasiStokController extends Controller
                         $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
                         $selisih = $stokFisik - $stokSistem;
 
-                        // 1. KOREKSI HARI VERIFIKASI (Hanya ubah keluar/masuk jika ada selisih)
                         if ($selisih != 0) {
                             if ($selisih < 0) {
                                 $mentah->stok_keluar += abs($selisih);
@@ -84,47 +93,35 @@ class VerifikasiStokController extends Controller
                             $mentah->save();
                         }
 
-                        // Sinkronkan ke menu Bar
                         $this->syncMenuBar($mentah->item_id, $mentah->tanggal);
 
-                        // 2. 🔥 EFEK DOMINO MURNI (CASCADE) 🔥
-                        // DIKELUARKAN DARI SYARAT IF, AGAR SELALU JALAN SAAT DIKLIK SIMPAN!
+                        // Efek Domino Estafet ke hari-hari berikutnya
                         $startDate = Carbon::parse($mentah->tanggal)->addDay();
                         $endDate = Carbon::now();
-
-                        $stokEstafet = $stokFisik; // Bawa stok fisik terbaru (misal: 17)
+                        $stokEstafet = $stokFisik;
 
                         for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
                             $currentDateStr = $date->toDateString();
 
-                            // Cari atau Buat Jembatan
                             $hariIni = StokHarianMentah::firstOrCreate(
                                 ['item_id' => $mentah->item_id, 'tanggal' => $currentDateStr],
                                 ['stok_masuk' => 0, 'stok_keluar' => 0, 'unit' => $mentah->unit]
                             );
 
-                            // Timpa Stok Awal dengan estafet dari hari sebelumnya
                             $hariIni->stok_awal = $stokEstafet;
-
-                            // Hitung ulang Stok Akhir
                             $hariIni->stok_akhir = ($hariIni->stok_awal + $hariIni->stok_masuk) - $hariIni->stok_keluar;
                             $hariIni->save();
 
-                            // Sinkronkan ke menu matang di hari tersebut
                             $this->syncMenuBar($mentah->item_id, $currentDateStr);
-
-                            // Jadikan stok akhir hari ini sebagai estafet untuk besok
                             $stokEstafet = $hariIni->stok_akhir;
                         }
                     }
                 } else {
-                    // LOGIKA EFEK DOMINO UNTUK DAPUR
                     $mentah = StokHarianDapurMentah::find($id);
                     if ($mentah) {
                         $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
                         $selisih = $stokFisik - $stokSistem;
 
-                        // 1. KOREKSI HARI VERIFIKASI (Hanya ubah keluar/masuk jika ada selisih)
                         if ($selisih != 0) {
                             if ($selisih < 0) {
                                 $mentah->stok_keluar += abs($selisih);
@@ -137,11 +134,9 @@ class VerifikasiStokController extends Controller
 
                         $this->syncMenuDapur($mentah->item_id, $mentah->tanggal);
 
-                        // 2. 🔥 EFEK DOMINO MURNI DAPUR 🔥
-                        // DIKELUARKAN DARI SYARAT IF, AGAR SELALU JALAN SAAT DIKLIK SIMPAN!
+                        // Efek Domino Estafet Dapur ke hari-hari berikutnya
                         $startDate = Carbon::parse($mentah->tanggal)->addDay();
                         $endDate = Carbon::now();
-
                         $stokEstafet = $stokFisik;
 
                         for ($date = $startDate; $date->lte($endDate); $date->addDay()) {
@@ -157,7 +152,6 @@ class VerifikasiStokController extends Controller
                             $hariIni->save();
 
                             $this->syncMenuDapur($mentah->item_id, $currentDateStr);
-
                             $stokEstafet = $hariIni->stok_akhir;
                         }
                     }
@@ -179,7 +173,6 @@ class VerifikasiStokController extends Controller
         return back()->with('success', 'Stok berhasil diverifikasi dan disinkronkan ke semua hari!');
     }
 
-    // --- Logika Sinkronisasi Menu Bar ---
     private function syncMenuBar($rawItemId, $date)
     {
         $recipes = Recipe::all()->filter(function ($recipe) use ($rawItemId) {
@@ -227,7 +220,6 @@ class VerifikasiStokController extends Controller
         }
     }
 
-    // --- Logika Sinkronisasi Menu Dapur ---
     private function syncMenuDapur($rawItemId, $date)
     {
         $recipes = Recipe::where('division', 'dapur')->get()->filter(function ($recipe) use ($rawItemId) {
@@ -273,26 +265,23 @@ class VerifikasiStokController extends Controller
         }
     }
 
-    // ==================== 🔽 EXPORT EXCEL (TIDAK ADA YANG DIHILANGKAN) 🔽 ====================
     public function export(Request $request)
     {
         $tab = $request->get('tab', 'bar');
         $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
-        $mondayDate = Carbon::parse($rawDate)->startOfWeek(Carbon::MONDAY)->toDateString();
 
-        // Tangkap data fisik & catatan yang dikirim dari React
         $fisikData = json_decode($request->get('fisik', '{}'), true);
         $sistemData = json_decode($request->get('sistem', '{}'), true);
         $catatanData = json_decode($request->get('catatan', '{}'), true);
 
         $items = $tab === 'bar'
-            ? StokHarianMentah::with('item')->whereDate('tanggal', $mondayDate)->get()
-            : StokHarianDapurMentah::with('item')->whereDate('tanggal', $mondayDate)->get();
+            ? StokHarianMentah::with('item')->whereDate('tanggal', $rawDate)->get()
+            : StokHarianDapurMentah::with('item')->whereDate('tanggal', $rawDate)->get();
 
         $divisionName = $tab === 'bar' ? 'Bar' : 'Dapur';
-        $filename = "verifikasi-stok-{$tab}-{$mondayDate}.xls";
+        $filename = "verifikasi-stok-{$tab}-{$rawDate}.xls";
 
-        $html = $this->generateExcelHTML($items, $mondayDate, $divisionName, $fisikData, $catatanData, $sistemData);
+        $html = $this->generateExcelHTML($items, $rawDate, $divisionName, $fisikData, $catatanData, $sistemData);
 
         return response($html, 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
@@ -323,21 +312,19 @@ class VerifikasiStokController extends Controller
         $html .= '.subtitle { font-size: 12px; text-align: center; padding: 5px; color: #666; }';
         $html .= '</style></head><body>';
 
-        $html .= '<div class="title">VERIFIKASI STOK MINGGUAN - ' . strtoupper($division) . '</div>';
-        $html .= '<div class="subtitle">Tanggal Acuan: ' . $formattedDate . ' (Senin)</div><br/>';
+        $html .= '<div class="title">VERIFIKASI STOK - ' . strtoupper($division) . '</div>';
+        $html .= '<div class="subtitle">Tanggal Verifikasi: ' . $formattedDate . '</div><br/>';
 
         $html .= '<table><thead><tr>';
-        $html .= '<th>No</th><th>Nama Item</th><th>Satuan</th><th>Stok Sistem (Senin)</th>';
+        $html .= '<th>No</th><th>Nama Item</th><th>Satuan</th><th>Stok Sistem</th>';
         $html .= '<th>Stok Fisik</th><th>Selisih</th><th>Status</th><th>Catatan</th>';
         $html .= '</tr></thead><tbody>';
 
         foreach ($items as $index => $item) {
             $namaItem = htmlspecialchars(optional($item->item)->nama ?? '-');
             $satuan = htmlspecialchars($item->unit ?? optional($item->item)->satuan ?? '-');
-            // Gunakan snapshot stok sistem dari frontend agar tidak berubah setelah proses simpan sinkronisasi
             $stokSistem = isset($sistemData[$item->id]) ? (float) $sistemData[$item->id] : ($item->stok_akhir ?? 0);
 
-            // Membaca input fisik dari layar, jika kosong default ke stok sistem
             $stokFisik = isset($fisikData[$item->id]) ? $fisikData[$item->id] : $stokSistem;
             $selisih = $stokFisik - $stokSistem;
             $status = $selisih == 0 ? 'Sesuai' : ($selisih > 0 ? 'Lebih' : 'Kurang');

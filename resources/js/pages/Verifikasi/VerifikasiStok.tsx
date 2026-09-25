@@ -215,7 +215,7 @@ export default function VerifikasiStok() {
   );
 
   return (
-    <AppLayout header="Verifikasi Stok Mingguan">
+    <AppLayout header="Verifikasi Stok">
       <Head title="Verifikasi Stok" />
 
       <div className="py-6 space-y-6">
@@ -225,11 +225,11 @@ export default function VerifikasiStok() {
             <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-[#8B5E3C] font-extrabold text-base">Verifikasi Mingguan</h3>
+            <h3 className="text-[#8B5E3C] font-extrabold text-base">Verifikasi Stok</h3>
             <p className="text-gray-600 text-xs sm:text-sm mt-1 leading-relaxed">
               Anda memilih tanggal <strong>{new Date(tanggal_picker).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
               <br className="hidden md:block"/>
-              <span className="md:ml-0.5">Sistem menampilkan data stok acuan dari hari <strong>Senin, {new Date(tanggal_data).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.</span>
+              <span className="md:ml-0.5">Sistem menampilkan data stok acuan sesuai tanggal yang dipilih secara real-time.</span>
             </p>
           </div>
         </div>
@@ -313,7 +313,7 @@ export default function VerifikasiStok() {
                   <tr>
                     <th className="px-6 py-4 text-center w-16">No</th>
                     <th className="px-6 py-4">Nama Item</th>
-                    <th className="px-6 py-4 text-center w-40">Stok Sistem (Senin)</th>
+                    <th className="px-6 py-4 text-center w-40">Stok Sistem</th>
                     <th className="px-6 py-4 text-center w-40">Stok Fisik</th>
                     <th className="px-6 py-4 text-center w-32">Selisih</th>
                     <th className="px-6 py-4 text-center w-36">Status</th>

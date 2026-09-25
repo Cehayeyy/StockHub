@@ -39,58 +39,40 @@ class LaporanFrekuensiController extends Controller
             $query = DB::table('sales_report_items')
                 ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id');
 
-            // Cek ketersediaan kolom relasi secara dinamis
-            $hasRecipeId = in_array('recipe_id', $itemCols) && Schema::hasTable('recipes');
-            $hasItemId   = in_array('item_id', $itemCols) && Schema::hasTable('items');
-
-            if ($hasRecipeId) {
-                $query->leftJoin('recipes', 'sales_report_items.recipe_id', '=', 'recipes.id');
-            }
-
-            $hasItemCategory = $hasItemId
-                && Schema::hasColumn('items', 'item_category_id')
-                && Schema::hasTable('item_categories');
+            $hasItemId = in_array('item_id', $itemCols) && Schema::hasTable('items');
+            $hasRecipes = Schema::hasTable('recipes');
 
             if ($hasItemId) {
                 $query->leftJoin('items', 'sales_report_items.item_id', '=', 'items.id');
 
-                // Samakan cakupan dengan Laporan Analisa: hanya menu yang
-                // dijual oleh bagian Bar/Dapur, bukan bahan baku.
                 $itemColumns = Schema::getColumnListing('items');
                 if (in_array('division', $itemColumns)) {
                     $query->whereIn('items.division', ['bar', 'dapur', 'kitchen']);
                 }
 
-                if ($hasItemCategory) {
+                if (Schema::hasColumn('items', 'item_category_id') && Schema::hasTable('item_categories')) {
                     $query->leftJoin('item_categories', 'items.item_category_id', '=', 'item_categories.id');
                 }
             }
 
-            // Laporan analisa menggunakan nota yang dicatat oleh petugas Bar
-            // dan Dapur. Terapkan sumber transaksi yang sama di sini.
+            // Hubungkan ke tabel recipes berdasarkan nama menu (items.nama = recipes.name) untuk mengambil HPP
+            if ($hasRecipes && $hasItemId) {
+                $query->leftJoin('recipes', 'items.nama', '=', 'recipes.name');
+            }
+
             if (in_array('user_id', $salesCols) && Schema::hasTable('users')) {
                 $query->join('users', 'sales_reports.user_id', '=', 'users.id')
                     ->whereIn('users.role', ['bar', 'dapur', 'kitchen', 'staff_kitchen']);
             }
 
             // Ekspresi Seleksi Nama & Kategori
-            if ($hasRecipeId && $hasItemId) {
-                $selectNama = "COALESCE(recipes.name, items.nama, 'Menu Unnamed')";
-                $selectKategori = $hasItemCategory
-                    ? "COALESCE(item_categories.name, recipes.division, items.kategori_item, 'Menu')"
-                    : "COALESCE(recipes.division, items.kategori_item, 'Menu')";
-            } elseif ($hasRecipeId) {
-                $selectNama = "COALESCE(recipes.name, 'Menu Unnamed')";
-                $selectKategori = "COALESCE(recipes.division, 'Menu')";
-            } elseif ($hasItemId) {
-                $selectNama = "COALESCE(items.nama, 'Menu Unnamed')";
-                $selectKategori = $hasItemCategory
-                    ? "COALESCE(item_categories.name, items.kategori_item, 'Menu')"
-                    : "COALESCE(items.kategori_item, 'Menu')";
-            } else {
-                $selectNama = "'Menu Unnamed'";
-                $selectKategori = "'Menu'";
-            }
+            $selectNama = $hasItemId ? "COALESCE(items.nama, 'Menu Unnamed')" : "'Menu Unnamed'";
+            $selectKategori = (Schema::hasTable('item_categories') && $hasItemId)
+                ? "COALESCE(item_categories.name, items.kategori_item, 'Menu')"
+                : "COALESCE(items.kategori_item, 'Menu')";
+
+            // Ambil total_hpp dari tabel recipes
+            $hppExpr = $hasRecipes ? "COALESCE(recipes.total_hpp, 0)" : "0";
 
             $frekuensiData = $query
                 ->whereYear($dateCol, $year)
@@ -100,10 +82,12 @@ class LaporanFrekuensiController extends Controller
                     DB::raw("{$selectKategori} as kategori"),
                     DB::raw("COUNT(DISTINCT sales_reports.id) as frekuensi_pembelian"),
                     DB::raw("SUM(sales_report_items.quantity) as total_kuantitas"),
-                    DB::raw("SUM(sales_report_items.quantity * sales_report_items.harga_satuan) as total_nominal")
+                    DB::raw("SUM(sales_report_items.quantity * sales_report_items.harga_satuan) as total_nominal"),
+                    // Kalkulasi Profit Real: (Harga Satuan - HPP) * Kuantitas terjual
+                    DB::raw("SUM(sales_report_items.quantity * (sales_report_items.harga_satuan - {$hppExpr})) as total_profit")
                 )
                 ->groupBy('nama_item', 'kategori')
-                ->orderBy('frekuensi_pembelian', 'desc')
+                ->orderBy('total_kuantitas', 'desc') // Urutkan utama dari porsi terbanyak (Terlaris)
                 ->get();
         }
 

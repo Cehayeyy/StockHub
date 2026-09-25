@@ -132,14 +132,10 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item.
   );
 };
 
-// --- MODAL INPUT (CREATE) ---
+// --- MODAL INPUT DATA (MURNI HANYA NAMA ITEM) ---
 interface FormItem {
   id: number;
   target_id: string;
-  satuan: string;
-  stok_awal: string;
-  stok_masuk: string;
-  pemakaian: string;
   selectedItemInfo: any;
 }
 
@@ -148,10 +144,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     {
       id: Date.now(),
       target_id: "",
-      satuan: "porsi",
-      stok_awal: "",
-      stok_masuk: "",
-      pemakaian: "",
       selectedItemInfo: null,
     }
   ]);
@@ -165,10 +157,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
         {
           id: Date.now(),
           target_id: "",
-          satuan: "porsi",
-          stok_awal: "",
-          stok_masuk: "",
-          pemakaian: "",
           selectedItemInfo: null,
         }
       ]);
@@ -185,21 +173,10 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
       const selected = inputableMenus.find((m: any) =>
         Number(m.id) === Number(id) || Number(m.recipe_id) === Number(id)
       );
-
-      if (selected) {
-        newItems[index].selectedItemInfo = selected;
-        newItems[index].stok_awal = selected.stok_awal !== undefined ? selected.stok_awal.toString() : "0";
-        newItems[index].satuan = selected.satuan || "porsi";
-      }
+      newItems[index].selectedItemInfo = selected || null;
     } else {
       newItems[index].selectedItemInfo = null;
     }
-    setItems(newItems);
-  };
-
-  const handleFieldChange = (index: number, field: keyof FormItem, value: any) => {
-    const newItems = [...items];
-    (newItems[index] as any)[field] = value;
     setItems(newItems);
   };
 
@@ -207,18 +184,13 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     setItems([...items, {
       id: Date.now(),
       target_id: "",
-      satuan: "porsi",
-      stok_awal: "",
-      stok_masuk: "",
-      pemakaian: "",
       selectedItemInfo: null,
     }]);
   };
 
   const removeItem = (index: number) => {
     if (items.length > 1) {
-      const newItems = items.filter((_, i) => i !== index);
-      setItems(newItems);
+      setItems(items.filter((_, i) => i !== index));
     }
   };
 
@@ -227,31 +199,24 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     setWarningMessage(null);
 
     const itemsToSubmit = items
-      .filter(item => {
-        if (!item.target_id) return false;
-        if (tab === "menu") {
-          return item.pemakaian !== "" && Number(item.pemakaian) > 0;
-        } else {
-          return item.stok_awal !== "" && Number(item.stok_awal) >= 0;
-        }
-      })
+      .filter(item => Boolean(item.target_id))
       .map(item => {
         if (tab === "menu") {
           return {
             item_id: item.target_id.toString(),
-            pemakaian: item.pemakaian.toString(),
+            pemakaian: "0",
           };
         } else {
           return {
             item_id: item.target_id.toString(),
-            stok_awal: item.stok_awal.toString(),
-            stok_masuk: (item as any).stok_masuk ? (item as any).stok_masuk.toString() : "0",
+            stok_awal: "0",
+            stok_masuk: "0",
           };
         }
       });
 
     if (itemsToSubmit.length === 0) {
-      setWarningMessage(tab === "menu" ? "Isi pemakaian menu!" : "Isi stok awal bahan!");
+      setWarningMessage("Mohon pilih setidaknya satu item.");
       return;
     }
 
@@ -278,13 +243,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
     });
   };
 
-  const isMenuTab = tab === "menu";
-  const isMentahTab = tab === "mentah";
-  const isButtonDisabled = processing || items.some(item =>
-    !item.target_id ||
-    (isMenuTab && (item.pemakaian === "" || item.pemakaian === null)) ||
-    (isMentahTab && (item.stok_awal === "" || item.stok_awal === null))
-  );
+  const isButtonDisabled = processing || items.some(item => !item.target_id);
 
   if (!show) return null;
 
@@ -296,7 +255,7 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
         className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto border border-gray-100"
       >
         <h3 className="font-extrabold text-xl text-center mb-6 text-gray-800">
-          Input Data Dapur ({tab === "menu" ? "Menu" : "Bahan Mentah"})
+          Input Data Dapur
         </h3>
 
         <form onSubmit={submit} className="space-y-5">
@@ -332,62 +291,6 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
                   placeholder="Ketik atau pilih item..."
                 />
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Satuan</label>
-                <input
-                  type="text"
-                  value={item.selectedItemInfo?.satuan || "porsi"}
-                  disabled
-                  className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-500 font-medium cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stok Awal</label>
-                {tab === "menu" ? (
-                  <input
-                    type="text"
-                    value={item.selectedItemInfo?.stok_awal ?? "0"}
-                    disabled
-                    className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-600 font-bold cursor-not-allowed"
-                  />
-                ) : (
-                  <input
-                    type="number"
-                    value={item.stok_awal}
-                    onChange={(e) => handleFieldChange(index, 'stok_awal', e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
-                    placeholder="0"
-                  />
-                )}
-              </div>
-
-              {tab === "mentah" && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stok Masuk</label>
-                  <input
-                    type="number"
-                    value={item.stok_masuk}
-                    onChange={(e) => handleFieldChange(index, 'stok_masuk', e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
-                    placeholder="0"
-                  />
-                </div>
-              )}
-
-              {tab === "menu" && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Pemakaian</label>
-                  <input
-                    type="number"
-                    value={item.pemakaian}
-                    onChange={(e) => handleFieldChange(index, 'pemakaian', e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
-                    placeholder="0"
-                  />
-                </div>
-              )}
             </div>
           ))}
 
@@ -473,6 +376,148 @@ const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess
   );
 };
 
+// --- MODAL INPUT STOK MASUK (BORONGAN / TOTAL SEMUA ITEM) ---
+interface StokMasukItem {
+  id: number;
+  item_id: number;
+  nama: string;
+  stok_masuk: string | number;
+}
+
+const ModalInputStokMasukBorongan = ({ show, onClose, inputableMenus, tanggal, onSuccess }: any) => {
+  const [items, setItems] = useState<StokMasukItem[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (show && inputableMenus) {
+      setItems(
+        inputableMenus.map((m: any) => ({
+          id: m.id || m.item_id || m.recipe_id,
+          item_id: m.item_id || m.id || m.recipe_id,
+          nama: m.nama,
+          stok_masuk: 0, // 🔥 Pastikan di Dapur.tsx juga diset 0
+        }))
+      );
+      setWarningMessage(null);
+    }
+  }, [show, inputableMenus]);
+
+  const handleStokMasukChange = (index: number, value: string) => {
+    const updated = [...items];
+    updated[index].stok_masuk = value;
+    setItems(updated);
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWarningMessage(null);
+
+    const itemsToSubmit = items.map(item => ({
+      item_id: item.item_id.toString(),
+      stok_masuk: item.stok_masuk === "" ? "0" : item.stok_masuk.toString(),
+    }));
+
+    setProcessing(true);
+
+    router.post(route("stok-harian-dapur-mentah.store-borongan"), {
+      tanggal: tanggal,
+      items: itemsToSubmit
+    }, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        setProcessing(false);
+        onClose();
+        if (onSuccess) onSuccess();
+      },
+      onError: (errors) => {
+        setProcessing(false);
+        const firstError = Object.values(errors)[0];
+        setWarningMessage(firstError as string || "Terjadi kesalahan saat menyimpan stok masuk.");
+      },
+      onFinish: () => setProcessing(false)
+    });
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-all">
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl p-6 md:p-8 max-h-[90vh] overflow-y-auto border border-gray-100 flex flex-col"
+      >
+        <h3 className="font-extrabold text-xl text-center mb-2 text-gray-800">
+          Input Stok Masuk Bahan Mentah
+        </h3>
+        <p className="text-xs text-gray-500 text-center mb-6">
+          Masukkan jumlah penambahan stok masuk untuk seluruh bahan pada tanggal {new Date(tanggal).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}.
+        </p>
+
+        <form onSubmit={submit} className="space-y-4 flex-1 flex flex-col">
+          <div className="border border-gray-100 rounded-2xl overflow-hidden max-h-[50vh] overflow-y-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="bg-[#FAF7F2] text-gray-500 font-bold uppercase text-[11px] tracking-wider sticky top-0 z-10 border-b border-gray-100">
+                <tr>
+                  <th className="px-4 py-3 w-12 text-center">No</th>
+                  <th className="px-4 py-3">Nama Bahan Mentah</th>
+                  <th className="px-4 py-3 text-right w-48">Stok Masuk / Penambahan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {items.length > 0 ? (
+                  items.map((item, index) => (
+                    <tr key={item.item_id} className="hover:bg-gray-50/50 transition">
+                      <td className="px-4 py-3 text-center text-gray-400 font-medium">{index + 1}</td>
+                      <td className="px-4 py-3 font-bold text-gray-800">{item.nama}</td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="number"
+                          value={item.stok_masuk}
+                          onChange={(e) => handleStokMasukChange(index, e.target.value)}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-right focus:outline-none focus:ring-2 focus:ring-[#8B5E3C] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0"
+                        />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-gray-400 italic">
+                      Belum ada item bahan mentah terdaftar. Silakan input data nama item terlebih dahulu.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 mt-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 bg-gray-100 rounded-2xl font-bold text-sm text-gray-700 hover:bg-gray-200 transition"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={processing || items.length === 0}
+              className={`flex-1 px-6 py-3 rounded-2xl text-white font-bold text-sm shadow-md transition ${
+                processing || items.length === 0 ? "bg-gray-300 cursor-not-allowed" : "bg-[#8B5E3C] hover:bg-[#6F4E37]"
+              }`}
+            >
+              {processing ? "Menyimpan..." : "Simpan Semua Stok Masuk"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
 // === MAIN COMPONENT ===
 export default function Dapur() {
   const { items, inputableMenus, tab, tanggal, lowStockItems, auth, canInput, isPastCutoff, search: initialSearch } = usePage<any>().props as PageProps;
@@ -481,6 +526,7 @@ export default function Dapur() {
   const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
   const [showInputModal, setShowInputModal] = useState(false);
+  const [showBoronganModal, setShowBoronganModal] = useState(false);
   const isFirstRender = useRef(true);
 
   // Edit States
@@ -490,11 +536,8 @@ export default function Dapur() {
   const [formRecordId, setFormRecordId] = useState<number | null>(null);
   const [formItemId, setFormItemId] = useState<number | "">("");
   const [formItemName, setFormItemName] = useState("");
-  const [formStokAwal, setFormStokAwal] = useState<number | "">("");
-  const [formStokTersisa, setFormStokTersisa] = useState<number | "">("");
   const [formStokMasuk, setFormStokMasuk] = useState<number | "">("");
   const [formPemakaian, setFormPemakaian] = useState<number | "">("");
-  const [formSatuan, setFormSatuan] = useState("porsi");
 
   const isAlreadySubmitted = items.data.some((item: ItemData) => item.is_submitted === 1);
   const isStaff = role !== 'owner' && role !== 'supervisor';
@@ -559,11 +602,8 @@ export default function Dapur() {
     setFormRecordId(null);
     setFormItemId("");
     setFormItemName("");
-    setFormStokAwal("");
-    setFormStokTersisa("");
     setFormStokMasuk("");
     setFormPemakaian("");
-    setFormSatuan("porsi");
   };
 
   const handleEditClick = (item: ItemData) => {
@@ -571,11 +611,8 @@ export default function Dapur() {
     setFormRecordId(item.id);
     setFormItemId(item.recipe_id ?? item.item_id ?? "");
     setFormItemName(item.nama);
-    setFormStokAwal(item.stok_awal);
-    setFormStokTersisa(item.tersisa);
     setFormStokMasuk(item.stok_masuk ?? "");
     setFormPemakaian(item.pemakaian);
-    setFormSatuan(item.satuan || "porsi");
     setShowEditModal(true);
   };
 
@@ -589,7 +626,7 @@ export default function Dapur() {
     }
 
     const routeName = tab === "menu" ? "stok-harian-dapur-menu.update" : "stok-harian-dapur-mentah.update";
-    const payload: any = { stok_awal: Number(formStokAwal) };
+    const payload: any = {};
 
     if (tab === "mentah") payload.stok_masuk = Number(formStokMasuk);
     if (tab === "menu") payload.stok_keluar = Number(formPemakaian);
@@ -636,19 +673,21 @@ export default function Dapur() {
       } else if (showInputModal && e.key === "Escape") {
         e.preventDefault();
         setShowInputModal(false);
+      } else if (showBoronganModal && e.key === "Escape") {
+        e.preventDefault();
+        setShowBoronganModal(false);
       }
     };
 
-    if (showDeleteModal || showEditModal || showInputModal) {
+    if (showDeleteModal || showEditModal || showInputModal || showBoronganModal) {
       window.addEventListener("keydown", handleKeyDown);
     }
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showDeleteModal, showEditModal, showInputModal, formRecordId]);
+  }, [showDeleteModal, showEditModal, showInputModal, showBoronganModal, formRecordId]);
 
-  // 🔥 TOMBOL INPUT DATA HANYA MUNCUL DI TAB "MENTAH" SAJA
   const showInputButton = tab === "mentah";
 
   return (
@@ -661,6 +700,20 @@ export default function Dapur() {
             onClose={() => setShowInputModal(false)}
             inputableMenus={inputableMenus}
             tab={tab}
+            tanggal={tanggal}
+            onSuccess={() =>
+              router.visit(route("stok-harian.dapur"), {
+                data: { tab, tanggal },
+                preserveScroll: true,
+              })
+            }
+          />
+        )}
+        {showBoronganModal && (
+          <ModalInputStokMasukBorongan
+            show={showBoronganModal}
+            onClose={() => setShowBoronganModal(false)}
+            inputableMenus={inputableMenus}
             tanggal={tanggal}
             onSuccess={() =>
               router.visit(route("stok-harian.dapur"), {
@@ -725,20 +778,38 @@ export default function Dapur() {
           )}
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div className="flex gap-3 w-full md:w-auto">
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
               {showInputButton && (
-                <button
-                  onClick={() => setShowInputModal(true)}
-                  disabled={isLocked}
-                  className={`flex-1 md:flex-none justify-center px-6 py-2.5 rounded-full text-sm font-bold flex gap-2 items-center transition shadow-md ${
-                    isLocked
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50 shadow-none'
-                      : 'bg-[#D9A978] text-white hover:bg-[#c4925e]'
-                  }`}
-                >
-                  <Plus className="w-4 h-4" />
-                  Input Data
-                </button>
+                <>
+                  {/* 🔥 Sembunyikan tombol Input Data Nama Item jika yang login adalah Staff */}
+                  {!isStaff && (
+                    <button
+                      onClick={() => setShowInputModal(true)}
+                      disabled={isLocked}
+                      className={`flex-1 md:flex-none justify-center px-6 py-2.5 rounded-full text-sm font-bold flex gap-2 items-center transition shadow-md ${
+                        isLocked
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50 shadow-none'
+                          : 'bg-[#D9A978] text-white hover:bg-[#c4925e]'
+                      }`}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Input Data Nama Item
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setShowBoronganModal(true)}
+                    disabled={isLocked}
+                    className={`flex-1 md:flex-none justify-center px-6 py-2.5 rounded-full text-sm font-bold flex gap-2 items-center transition shadow-md ${
+                      isLocked
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50 shadow-none'
+                        : 'bg-[#8B5E3C] text-white hover:bg-[#6F4E37]'
+                    }`}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Input Stok Masuk
+                  </button>
+                </>
               )}
             </div>
 
@@ -981,7 +1052,6 @@ export default function Dapur() {
               </div>
             </div>
           )}
-
         </div>
 
         <div className="bg-[#F2ECE4] p-6 md:p-8 rounded-3xl shadow-sm border border-amber-200/60">
@@ -1021,6 +1091,7 @@ export default function Dapur() {
         </div>
       </div>
 
+      {/* --- MODAL EDIT STOK MENTAH (TANPA STOK AWAL) --- */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-all">
           <div className="bg-white w-full max-w-sm md:max-w-md rounded-3xl p-6 md:p-8 shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100">
@@ -1043,30 +1114,6 @@ export default function Dapur() {
                   className="w-full bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-medium text-gray-500 cursor-not-allowed"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Stok Awal</label>
-                <input
-                  type="number"
-                  value={formStokAwal}
-                  onChange={(e) => setFormStokAwal(Number(e.target.value))}
-                  disabled={tab === "menu"}
-                  className={`w-full border rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none transition-colors ${
-                    tab === "menu" ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200" : "bg-gray-50 border-gray-200 focus:ring-2 focus:ring-[#8B5E3C]"
-                  }`}
-                />
-              </div>
-
-              {tab === "mentah" && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 ml-1">Sisa Stok Saat Ini</label>
-                  <input
-                    type="text"
-                    value={formStokTersisa}
-                    disabled
-                    className="w-full bg-gray-100 border border-gray-200 text-gray-600 rounded-2xl px-4 py-3 text-sm font-black cursor-not-allowed"
-                  />
-                </div>
-              )}
 
               {tab === "mentah" ? (
                 <div>
@@ -1075,7 +1122,9 @@ export default function Dapur() {
                     type="number"
                     value={formStokMasuk}
                     onChange={(e) => setFormStokMasuk(e.target.value === "" ? "" : Number(e.target.value))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#8B5E3C] outline-none"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#8B5E3C] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="0"
+                    autoFocus
                   />
                 </div>
               ) : (
@@ -1085,10 +1134,13 @@ export default function Dapur() {
                     type="number"
                     value={formPemakaian}
                     onChange={(e) => setFormPemakaian(Number(e.target.value))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#8B5E3C] outline-none"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#8B5E3C] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="0"
+                    autoFocus
                   />
                 </div>
               )}
+
               <div className="flex justify-between gap-3 mt-6">
                 <button
                   type="button"

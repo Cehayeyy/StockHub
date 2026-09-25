@@ -40,8 +40,8 @@ class LaporanKeuanganController extends Controller
             $cols = Schema::getColumnListing('sales_reports');
 
             $dateCol = in_array('tanggal_transaksi', $cols) ? 'tanggal_transaksi' :
-                      (in_array('tanggal', $cols) ? 'tanggal' :
-                      (in_array('created_at', $cols) ? 'created_at' : 'date'));
+                     (in_array('tanggal', $cols) ? 'tanggal' :
+                     (in_array('created_at', $cols) ? 'created_at' : 'date'));
 
             $kotorCol = in_array('subtotal', $cols) ? 'subtotal' :
                        (in_array('total_kotor', $cols) ? 'total_kotor' :
@@ -84,70 +84,30 @@ class LaporanKeuanganController extends Controller
         }
 
         // =========================================================================
-        // 2. HITUNG TOTAL HPP DARI DETAIL ITEM NOTA (DENGAN FALLBACK DARURAT)
+        // 2. HITUNG TOTAL HPP DARI DETAIL ITEM NOTA
         // =========================================================================
         $hppMenuTerjual = 0;
 
-        if (Schema::hasTable('sales_report_items') && Schema::hasColumn('sales_report_items', 'quantity')) {
-            $salesCols      = Schema::getColumnListing('sales_reports');
-            $itemDetailCols = Schema::getColumnListing('sales_report_items');
+        if (Schema::hasTable('sales_report_items') && Schema::hasTable('sales_reports') && Schema::hasTable('items') && Schema::hasTable('recipes')) {
+            $salesCols = Schema::getColumnListing('sales_reports');
+            $salesDateCol = in_array('tanggal_transaksi', $salesCols) ? 'tanggal_transaksi' :
+                           (in_array('tanggal', $salesCols) ? 'tanggal' : 'created_at');
 
-            $salesDateCol = in_array('tanggal_transaksi', $salesCols) ? 'sales_reports.tanggal_transaksi' :
-                           (in_array('tanggal', $salesCols) ? 'sales_reports.tanggal' : 'sales_reports.created_at');
+            $recipeCols = Schema::getColumnListing('recipes');
+            $hppCol = in_array('total_hpp', $recipeCols) ? 'total_hpp' :
+                     (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' :
+                     (in_array('hpp', $recipeCols) ? 'hpp' : null));
 
-            // Opsi 1: Hitung dari HPP resep yang tersimpan. Pada struktur saat ini
-            // item nota menunjuk ke item menu, sehingga relasinya adalah recipes.item_id.
-            if (in_array('recipe_id', $itemDetailCols) && Schema::hasTable('recipes')) {
-                $recipeCols = Schema::getColumnListing('recipes');
-                $hppCol = in_array('total_hpp', $recipeCols) ? 'total_hpp' :
-                         (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' :
-                         (in_array('hpp', $recipeCols) ? 'hpp' :
-                         (in_array('total_cost', $recipeCols) ? 'total_cost' : null)));
-
-                if ($hppCol) {
-                    $hppMenuTerjual = (float) DB::table('sales_report_items')
-                        ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
-                        ->join('recipes', 'sales_report_items.recipe_id', '=', 'recipes.id')
-                        ->whereYear($salesDateCol, $year)
-                        ->whereMonth($salesDateCol, $month)
-                        ->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
-                }
+            if ($hppCol) {
+                // Hubungkan sales_report_items -> items -> recipes berdasarkan nama menu
+                $hppMenuTerjual = (float) DB::table('sales_report_items')
+                    ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
+                    ->join('items', 'sales_report_items.item_id', '=', 'items.id')
+                    ->join('recipes', 'items.nama', '=', 'recipes.name')
+                    ->whereYear("sales_reports.{$salesDateCol}", $year)
+                    ->whereMonth("sales_reports.{$salesDateCol}", $month)
+                    ->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
             }
-
-            if ($hppMenuTerjual == 0 && Schema::hasTable('recipes') && in_array('item_id', $itemDetailCols)) {
-                $recipeCols = Schema::getColumnListing('recipes');
-                $hppCol = in_array('total_hpp', $recipeCols) ? 'total_hpp' :
-                    (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' : null);
-
-                if ($hppCol) {
-                    $hppMenuTerjual = (float) DB::table('sales_report_items')
-                        ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
-                        ->join('recipes', 'sales_report_items.item_id', '=', 'recipes.item_id')
-                        ->whereYear($salesDateCol, $year)
-                        ->whereMonth($salesDateCol, $month)
-                        ->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
-                }
-            }
-
-            // Opsi 2: Coba hitung HPP dari item_id
-            if ($hppMenuTerjual == 0 && in_array('item_id', $itemDetailCols) && Schema::hasTable('items')) {
-                $itemCols = Schema::getColumnListing('items');
-                $hppCol = in_array('harga_dasar', $itemCols) ? 'harga_dasar' :
-                         (in_array('harga_beli', $itemCols) ? 'harga_beli' :
-                         (in_array('harga_hpp', $itemCols) ? 'harga_hpp' : null));
-
-                if ($hppCol) {
-                    $hppMenuTerjual = (float) DB::table('sales_report_items')
-                        ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
-                        ->join('items', 'sales_report_items.item_id', '=', 'items.id')
-                        ->whereYear($salesDateCol, $year)
-                        ->whereMonth($salesDateCol, $month)
-                        ->sum(DB::raw("sales_report_items.quantity * COALESCE(items.{$hppCol}, 0)"));
-                }
-            }
-
-            // Tidak menggunakan estimasi persentase harga jual. Jika HPP belum
-            // diisi pada resep/item, nilainya tetap nol agar tidak menjadi data dummy.
         }
 
         // =========================================================================

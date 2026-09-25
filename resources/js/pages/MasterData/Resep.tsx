@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Head, usePage, router } from "@inertiajs/react";
-import { Search, Trash, ChevronDown, Plus, BookOpen, Calculator, TrendingUp, DollarSign, ReceiptText, Percent, X, Edit, Trash2, Eye } from "lucide-react";
+import { Search, Trash, ChevronDown, Plus, BookOpen, Calculator, TrendingUp, DollarSign, ReceiptText, Percent, X, Edit, Trash2, Eye, Download } from "lucide-react";
 import CustomSelect from "@/components/CustomSelect";
 
 // --- INTERFACES ---
@@ -490,6 +490,15 @@ const Resep: React.FC = () => {
             )}
 
             <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
+              {/* TOMBOL UNDUH KE EXCEL */}
+              <a
+                href={route('resep.export-excel', { division: selectedDivision })}
+                className="flex items-center justify-center gap-2 rounded-full bg-[#8B5E3C] hover:bg-[#6F4E37] px-5 py-2 text-sm font-bold text-white shadow-md transition w-full md:w-auto"
+              >
+                <Download className="h-4 w-4" />
+                Unduh ke Excel
+              </a>
+
               {!isStaff && (
                 <button
                   onClick={() => setShowModal(true)}
@@ -931,4 +940,4 @@ const Resep: React.FC = () => {
   );
 };
 
-export default Resep; 
+export default Resep;
