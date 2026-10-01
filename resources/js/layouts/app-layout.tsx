@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { motion } from "framer-motion";
+import ThemeToggle from '@/components/ThemeToggle';
 import {
   LayoutDashboard,
   Users,
@@ -222,10 +223,10 @@ export default function AppLayout({ header, children }: LayoutProps) {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const SidebarContent = () => (
-    <div className="w-[280px] p-4 sm:p-5 flex flex-col h-[calc(100vh-2rem)] bg-[#6F4E37] text-white/90 rounded-3xl shadow-2xl border border-white/10 my-4 ml-4">
+    <div className="w-[280px] p-4 sm:p-5 flex flex-col h-[calc(100vh-2rem)] bg-[#6F4E37] dark:bg-[#523522] text-white/90 rounded-3xl shadow-2xl border border-white/10 dark:border-white/15 my-4 ml-4 transition-colors duration-300">
 
       {/* HEADER PROFIL */}
-      <div className="flex items-center justify-between mb-6 flex-shrink-0 bg-black/20 p-3 rounded-2xl border border-white/10">
+      <div className="flex items-center justify-between mb-6 flex-shrink-0 bg-black/20 dark:bg-black/30 p-3 rounded-2xl border border-white/10 dark:border-white/15">
         <div className="flex items-center overflow-hidden">
           <div className="w-11 h-11 rounded-xl bg-white/10 text-white font-bold flex items-center justify-center mr-3 flex-shrink-0 shadow-inner">
             <span>
@@ -446,7 +447,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
   );
 
   return (
-    <div className="flex min-h-screen w-full bg-[#FAF7F2] overflow-visible relative lg:h-screen lg:overflow-hidden">
+    <div className="flex min-h-screen w-full bg-[#FAF7F2] dark:bg-[#1E1915] overflow-visible relative lg:h-screen lg:overflow-hidden transition-colors duration-300">
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
@@ -471,13 +472,13 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-w-sm w-full text-center">
+          <div className="bg-white dark:bg-[#2C231D] border border-transparent dark:border-[#45372E] rounded-2xl shadow-xl p-6 sm:p-8 max-w-sm w-full text-center transition-colors">
             <CheckCircle2 size={50} className="text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Berhasil!</h2>
-            <p className="text-gray-600 mb-6">{flash?.login_success}</p>
+            <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-[#FAF5ED]">Berhasil!</h2>
+            <p className="text-gray-600 dark:text-[#C5B8A8] mb-6">{flash?.login_success}</p>
             <button
               onClick={() => setShowModal(false)}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600"
+              className="px-6 py-2 bg-[#6F4E37] hover:bg-[#523522] text-white rounded-lg font-semibold transition"
             >
               OK
             </button>
@@ -497,14 +498,14 @@ export default function AppLayout({ header, children }: LayoutProps) {
         <SidebarContent />
       </motion.aside>
 
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 bg-[#FAF7F2] relative lg:h-screen">
-        <header className="bg-white/80 backdrop-blur-md shadow-2xs border-b border-amber-100/60 p-3 sm:p-4 md:p-6 flex-shrink-0 z-10 w-full">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 bg-[#FAF7F2] dark:bg-[#1E1915] relative lg:h-screen transition-colors duration-300">
+        <header className="bg-[#FAF7F2] dark:bg-[#1E1915] p-3 sm:p-4 md:p-6 flex-shrink-0 z-10 w-full transition-colors duration-300">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
               {!isSidebarOpen && (
                 <button
                   onClick={() => setIsSidebarOpen(true)}
-                  className="hidden lg:flex w-10 h-10 items-center justify-center rounded-xl bg-[#6F4E37] text-white hover:bg-[#402105] transition shadow-md group"
+                  className="hidden lg:flex w-10 h-10 items-center justify-center rounded-xl bg-[#6F4E37] text-white hover:bg-[#402105] dark:bg-[#523522] dark:hover:bg-[#63422C] transition shadow-md group"
                   title="Buka Sidebar"
                 >
                   <PanelLeftOpen size={20} className="group-hover:scale-110 transition-transform" />
@@ -524,32 +525,36 @@ export default function AppLayout({ header, children }: LayoutProps) {
                 className="h-8 sm:h-10"
               />
               {header && (
-                <div className="ml-2 sm:ml-4 md:ml-6 text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 hidden sm:block">
+                <div className="ml-2 sm:ml-4 md:ml-6 text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 dark:text-[#FAF5ED] hidden sm:block transition-colors">
                   {header}
                 </div>
               )}
             </div>
 
-            <div className="flex items-center">
-              <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-amber-100/80 shadow-2xs">
-                <div className="w-9 h-9 rounded-xl bg-[#8B5E3C]/10 text-[#8B5E3C] flex items-center justify-center font-bold text-xs flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Tombol Dark Mode Toggle selalu ada di bagian kiri profile */}
+              <ThemeToggle />
+
+              {/* Header Profil User */}
+              <div className="flex items-center gap-3 bg-white dark:bg-[#2A221C] px-3 sm:px-4 py-2 rounded-2xl border border-amber-100/80 dark:border-[#3E3228] shadow-xs transition-colors">
+                <div className="w-9 h-9 rounded-xl bg-[#8B5E3C]/10 text-[#8B5E3C] dark:bg-amber-400/20 dark:text-amber-300 flex items-center justify-center font-bold text-xs flex-shrink-0 transition-colors">
                   {(auth?.user?.name || auth?.user?.username || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="text-right flex flex-col">
-                  <div className="font-bold text-gray-800 text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none">
+                  <div className="font-bold text-gray-800 dark:text-[#FAF5ED] text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none transition-colors">
                     {auth.user.name || auth.user.username}
-                    <span className="text-gray-400 font-medium">
+                    <span className="text-gray-400 dark:text-[#B5A898] font-medium">
                       {auth.user.username ? ` (@${auth.user.username})` : ''}
                     </span>
                   </div>
-                  <div className="flex items-center justify-end gap-1.5 text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">
+                  <div className="flex items-center justify-end gap-1.5 text-[10px] sm:text-xs text-gray-400 dark:text-[#B5A898] font-medium mt-0.5">
                     <span className="flex items-center gap-1">
-                      <Calendar size={10} className="text-[#8B5E3C]" />
+                      <Calendar size={10} className="text-[#8B5E3C] dark:text-amber-400" />
                       {formattedDate}
                     </span>
                     <span>•</span>
-                    <span className="flex items-center gap-1 font-mono font-bold text-[#8B5E3C]">
-                      <Clock size={10} className="text-[#8B5E3C]" />
+                    <span className="flex items-center gap-1 font-mono font-bold text-[#8B5E3C] dark:text-amber-400">
+                      <Clock size={10} className="text-[#8B5E3C] dark:text-amber-400" />
                       {formattedTime}
                     </span>
                   </div>

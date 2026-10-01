@@ -30,7 +30,9 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
 
   const isSesuai = selisih === 0;
   const statusText = isSesuai ? "Sesuai" : (selisih < 0 ? "Kurang" : "Lebih");
-  const statusColor = isSesuai ? "text-emerald-700 bg-emerald-50 border border-emerald-200" : "text-rose-700 bg-rose-50 border border-rose-200";
+  const statusColor = isSesuai 
+    ? "text-emerald-700 dark:text-[#4ADE80] bg-emerald-50 dark:bg-[#16321F] border border-emerald-200 dark:border-[#245233]" 
+    : "text-rose-700 dark:text-[#FF6B6B] bg-rose-50 dark:bg-[#381A1A] border border-rose-200 dark:border-[#5E2A2A]";
 
   useEffect(() => {
     setFisik(initialFisik ?? "");
@@ -43,7 +45,7 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100 border border-gray-100">
+      <div className="bg-white dark:bg-[#2A221C] rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all scale-100 border border-gray-100 dark:border-[#45372C]">
         <div className="bg-[#8B5E3C] p-6 flex justify-between items-center">
           <h3 className="text-white font-extrabold text-lg">Verifikasi Item</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white transition p-1 rounded-xl hover:bg-white/10">
@@ -54,30 +56,30 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
         <div className="p-6 md:p-8 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">No</label>
-              <div className="font-bold text-gray-800 text-base">{no}</div>
+              <label className="text-xs font-bold text-gray-400 dark:text-[#A89B8C] uppercase tracking-wider">No</label>
+              <div className="font-bold text-gray-800 dark:text-[#FAF5ED] text-base">{no}</div>
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Nama Item</label>
-              <div className="font-bold text-gray-800 text-base">{item.nama}</div>
+              <label className="text-xs font-bold text-gray-400 dark:text-[#A89B8C] uppercase tracking-wider">Nama Item</label>
+              <div className="font-bold text-gray-800 dark:text-[#FAF5ED] text-base">{item.nama}</div>
             </div>
           </div>
 
-          <hr className="border-gray-100" />
+          <hr className="border-gray-100 dark:border-[#3D3127]" />
 
           <div className="grid grid-cols-3 gap-4 items-center">
-            <div className="bg-gray-50 p-3.5 rounded-2xl border border-gray-100 text-center">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Stok Sistem</label>
-              <span className="text-xl font-black text-gray-800">{stokSistem}</span>
+            <div className="bg-gray-50 dark:bg-[#231C17] p-3.5 rounded-2xl border border-gray-100 dark:border-[#3D3127] text-center">
+              <label className="text-[10px] font-bold text-gray-400 dark:text-[#A89B8C] uppercase tracking-wider block mb-1">Stok Sistem</label>
+              <span className="text-xl font-black text-gray-800 dark:text-[#FAF5ED]">{stokSistem}</span>
             </div>
             <div className="col-span-2">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1.5 ml-1">Stok Fisik (Input)</label>
+              <label className="text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider block mb-1.5 ml-1">Stok Fisik (Input)</label>
               <input
                 type="number"
                 value={fisik}
                 onChange={(e) => setFisik(e.target.value)}
                 onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none"
+                className="w-full bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-2xl px-4 py-3 text-sm font-bold text-gray-800 dark:text-[#FAF5ED] focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none"
                 placeholder="0"
                 autoFocus
               />
@@ -86,13 +88,13 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1.5 ml-1">Selisih</label>
-              <div className={`px-4 py-3 rounded-2xl font-black text-sm border ${selisih === 0 ? 'bg-gray-50 text-gray-700 border-gray-200' : 'bg-rose-50 text-rose-600 border-rose-200'}`}>
+              <label className="text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider block mb-1.5 ml-1">Selisih</label>
+              <div className={`px-4 py-3 rounded-2xl font-black text-sm border ${selisih === 0 ? 'bg-gray-50 dark:bg-[#231C17] text-gray-700 dark:text-[#FAF5ED] border-gray-200 dark:border-[#45372C]' : 'bg-rose-50 dark:bg-[#381A1A] text-rose-600 dark:text-[#FF6B6B] border-rose-200 dark:border-[#5E2A2A]'}`}>
                 {selisih > 0 ? `+${selisih}` : selisih}
               </div>
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1.5 ml-1">Status</label>
+              <label className="text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider block mb-1.5 ml-1">Status</label>
               <div className={`px-4 py-3 rounded-2xl font-bold text-sm text-center ${statusColor}`}>
                 {statusText}
               </div>
@@ -100,19 +102,19 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
           </div>
 
           <div>
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-1.5 ml-1">Catatan Supervisor</label>
+            <label className="text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider block mb-1.5 ml-1">Catatan Supervisor</label>
             <textarea
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}
-              className="w-full border border-gray-200 bg-gray-50 rounded-2xl px-4 py-3 text-sm font-medium focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C] outline-none transition"
+              className="w-full border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-2xl px-4 py-3 text-sm font-medium focus:border-[#8B5E3C] focus:ring-2 focus:ring-[#8B5E3C] outline-none transition"
               rows={3}
               placeholder="Mencatat bahan mentah yang tidak layak pakai..."
             ></textarea>
           </div>
         </div>
 
-        <div className="bg-gray-50 p-6 flex justify-end gap-3 border-t border-gray-100">
-          <button onClick={onClose} className="px-6 py-2.5 rounded-2xl font-bold text-gray-600 bg-gray-200 hover:bg-gray-300 transition text-sm">
+        <div className="bg-gray-50 dark:bg-[#231C17] p-6 flex justify-end gap-3 border-t border-gray-100 dark:border-[#3D3127]">
+          <button onClick={onClose} className="px-6 py-2.5 rounded-2xl font-bold text-gray-600 dark:text-[#C8BCAE] bg-gray-200 dark:bg-[#382D25] hover:bg-gray-300 dark:hover:bg-[#483B32] transition text-sm">
             Batal
           </button>
           <button onClick={handleSave} className="px-6 py-2.5 rounded-2xl font-bold text-white bg-[#8B5E3C] hover:bg-[#6F4E37] transition text-sm flex items-center gap-2 shadow-md">
@@ -239,11 +241,11 @@ export default function VerifikasiStok() {
 
           {/* Header Controls */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div className="w-full md:w-auto flex bg-gray-100 rounded-full p-1 border border-gray-200/60">
+            <div className="w-full md:w-auto flex bg-gray-100 dark:bg-[#231C17] rounded-full p-1 border border-gray-200/60 dark:border-[#3D3127]">
               <button 
                 onClick={() => handleTabSwitch("bar")} 
                 className={`flex-1 md:flex-none px-6 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  tab === "bar" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"
+                  tab === "bar" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800 dark:text-[#A89B8C] dark:hover:text-[#FAF5ED]"
                 }`}
               >
                 Bar
@@ -251,7 +253,7 @@ export default function VerifikasiStok() {
               <button 
                 onClick={() => handleTabSwitch("dapur")} 
                 className={`flex-1 md:flex-none px-6 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  tab === "dapur" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800"
+                  tab === "dapur" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800 dark:text-[#A89B8C] dark:hover:text-[#FAF5ED]"
                 }`}
               >
                 Dapur
@@ -264,7 +266,8 @@ export default function VerifikasiStok() {
                   type="date"
                   value={tanggal_picker}
                   onChange={handleDateChange}
-                  className="w-full md:w-auto bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm text-[#8B5E3C] font-bold shadow-2xs outline-none"
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full md:w-auto bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-full px-4 py-2 text-sm text-[#8B5E3C] dark:text-amber-300 font-bold shadow-2xs outline-none"
                 />
               </div>
               <div className="relative w-full md:w-auto">
@@ -273,9 +276,9 @@ export default function VerifikasiStok() {
                   placeholder="Cari item..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full md:w-64 bg-gray-50 border border-gray-200 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  className="w-full md:w-64 bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-full pl-10 pr-4 py-2 text-sm text-gray-800 dark:text-[#FAF5ED] placeholder-gray-400 dark:placeholder-[#8E8072] focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
                 />
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400 dark:text-[#8E8072]" />
               </div>
             </div>
           </div>
@@ -285,18 +288,18 @@ export default function VerifikasiStok() {
             {filteredItems.map((item, i) => {
               const fisik = physicalStocks[item.id] ?? item.stok_sistem;
               return (
-                <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-xs">
+                <div key={item.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-2xl p-4 shadow-xs">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
                       <div className="bg-[#D9A978]/15 text-[#8B5E3C] p-2.5 rounded-xl shadow-inner">
                         <Package className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-gray-800 text-sm">{item.nama}</h4>
-                        <span className="text-xs text-gray-400 font-medium">Satuan: {item.satuan}</span>
+                        <h4 className="font-bold text-gray-800 dark:text-[#FAF5ED] text-sm">{item.nama}</h4>
+                        <span className="text-xs text-gray-400 dark:text-[#8E8072] font-medium">Satuan: {item.satuan}</span>
                       </div>
                     </div>
-                    <button onClick={() => handleEditClick(item, i+1)} className="px-3 py-1.5 bg-amber-50 text-amber-700 font-bold text-xs rounded-xl hover:bg-amber-100 transition shadow-xs">
+                    <button onClick={() => handleEditClick(item, i+1)} className="px-3 py-1.5 bg-amber-50 dark:bg-[#382713] text-amber-700 dark:text-[#FBBF24] border border-transparent dark:border-[#5E411E] font-bold text-xs rounded-xl hover:bg-amber-100 dark:hover:bg-[#4A341A] transition shadow-xs">
                       Verifikasi
                     </button>
                   </div>
@@ -306,10 +309,10 @@ export default function VerifikasiStok() {
           </div>
 
           {/* Desktop View (Table) */}
-          <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-xs overflow-hidden flex-1 mb-6">
+          <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-xs overflow-hidden flex-1 mb-6">
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#B5A898] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
                   <tr>
                     <th className="px-6 py-4 text-center w-16">No</th>
                     <th className="px-6 py-4">Nama Item</th>
@@ -320,7 +323,7 @@ export default function VerifikasiStok() {
                     <th className="px-6 py-4 text-center w-32">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-[#332820]">
                   {filteredItems.length > 0 ? (
                     filteredItems.map((item, i) => {
                       const fisik = physicalStocks[item.id] ?? item.stok_sistem;
@@ -328,36 +331,40 @@ export default function VerifikasiStok() {
                       const isMatch = selisih === 0;
 
                       return (
-                        <tr key={item.id} className="hover:bg-[#FDF3E4]/50 transition-colors duration-150">
-                          <td className="px-6 py-4 text-center text-gray-400 font-medium">{i + 1}</td>
-                          <td className="px-6 py-4 font-bold text-gray-800">
-                            {item.nama} <span className="text-xs text-gray-400 font-normal">({item.satuan})</span>
+                        <tr key={item.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2D241E] transition-colors duration-150">
+                          <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">{i + 1}</td>
+                          <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">
+                            {item.nama} <span className="text-xs text-gray-400 dark:text-[#8E8072] font-normal">({item.satuan})</span>
                           </td>
-                          <td className="px-6 py-4 text-center font-bold text-blue-600 bg-blue-50/20">{item.stok_sistem}</td>
-                          <td className="px-6 py-4 text-center bg-amber-50/20">
+                          <td className="px-6 py-4 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-900/10">{item.stok_sistem}</td>
+                          <td className="px-6 py-4 text-center bg-amber-50/20 dark:bg-amber-950/10">
                             <input
                               type="number"
                               value={physicalStocks[item.id] ?? ''}
                               placeholder={String(item.stok_sistem)}
                               onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                              className="w-24 text-center border border-gray-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none bg-white font-bold text-gray-800 text-sm shadow-2xs"
+                              className="w-24 text-center border border-gray-200 dark:border-[#45372C] rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none bg-white dark:bg-[#2A221C] font-bold text-gray-800 dark:text-[#FAF5ED] text-sm shadow-2xs"
                               onChange={(e) => handlePhysicalChange(item.id, e.target.value)}
                             />
                           </td>
-                          <td className={`px-6 py-4 text-center font-black ${selisih < 0 ? 'text-rose-600' : selisih > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                          <td className={`px-6 py-4 text-center font-black ${selisih < 0 ? 'text-rose-600 dark:text-rose-400' : selisih > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-[#8E8072]'}`}>
                             {selisih > 0 ? `+${selisih}` : selisih}
                           </td>
                           <td className="px-6 py-4 text-center">
                             {isMatch ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-2xs"><CheckCircle className="w-3.5 h-3.5" /> Cocok</span>
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-[#16321F] text-emerald-700 dark:text-[#4ADE80] border border-emerald-100 dark:border-[#245233] shadow-2xs">
+                                <CheckCircle className="w-3.5 h-3.5" /> Cocok
+                              </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-100 shadow-2xs"><AlertCircle className="w-3.5 h-3.5" /> Selisih</span>
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 dark:bg-[#381A1A] text-rose-700 dark:text-[#FF6B6B] border border-rose-100 dark:border-[#5E2A2A] shadow-2xs">
+                                <AlertCircle className="w-3.5 h-3.5" /> Selisih
+                              </span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-center">
                             <button
                               onClick={() => handleEditClick(item, i + 1)}
-                              className="px-3.5 py-1.5 bg-amber-50 text-amber-700 font-bold text-xs rounded-xl hover:bg-amber-100 transition shadow-xs inline-flex items-center gap-1"
+                              className="px-3.5 py-1.5 bg-amber-50 dark:bg-[#382713] text-amber-700 dark:text-[#FBBF24] border border-transparent dark:border-[#5E411E] font-bold text-xs rounded-xl hover:bg-amber-100 dark:hover:bg-[#4A341A] transition shadow-xs inline-flex items-center gap-1"
                             >
                               <Pencil className="w-3.5 h-3.5" /> Catatan
                             </button>
@@ -367,7 +374,7 @@ export default function VerifikasiStok() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
+                      <td colSpan={7} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
                         Tidak ada data ditemukan.
                       </td>
                     </tr>

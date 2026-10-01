@@ -11,6 +11,20 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+        <script>
+            (function() {
+                try {
+                    var appearance = localStorage.getItem('appearance');
+                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (appearance === 'dark' || ((!appearance || appearance === 'system') && prefersDark)) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                } catch (e) {}
+            })();
+        </script>
+
         @routes
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx'])

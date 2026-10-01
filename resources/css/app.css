@@ -35,3 +35,281 @@
     @apply gap-2 sm:gap-3 md:gap-4;
   }
 }
+
+/* ==========================================================================
+   DARK MODE THEME SYSTEM (Warm Espresso / Cafe Dark Roast Palette)
+   StockHub / Warung Cangkruk signature harmonious theme
+   ========================================================================== */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark,
+html.dark body {
+  background-color: #1E1915;
+  color: #EDE5DA;
+}
+
+/* Background layout overrides */
+html.dark .bg-\[\#FAF7F2\] {
+  background-color: #1E1915 !important;
+}
+
+/* Primary containers (Dashboard, Staff, Verifikasi, Master Data, Laporan) */
+html.dark .bg-\[\#F2ECE4\],
+html.dark .bg-\[\#F9F6F3\] {
+  background-color: #2A221C !important;
+  border-color: #45372C !important;
+}
+
+/* Cards & Panels */
+html.dark .bg-white {
+  background-color: #322923 !important;
+  border-color: #4A3C32 !important;
+}
+
+/* Inner sub-cards inside .bg-[#F2ECE4] and .bg-[#F9F6F3] (e.g. Permintaan Izin Revisi items, Executive stats) */
+html.dark .bg-\[\#F2ECE4\] .bg-white,
+html.dark .bg-\[\#F9F6F3\] .bg-white {
+  background-color: #231C17 !important;
+  border-color: #3D3127 !important;
+}
+
+html.dark .bg-\[\#F2ECE4\] .bg-white:hover,
+html.dark .bg-\[\#F9F6F3\] .bg-white:hover {
+  background-color: #2B221B !important;
+  border-color: #5C4737 !important;
+}
+
+/* Headings and icons inside containers */
+html.dark .bg-\[\#F2ECE4\] h3,
+html.dark .bg-\[\#F2ECE4\] h4,
+html.dark .bg-\[\#F9F6F3\] h3,
+html.dark .bg-\[\#F9F6F3\] h4 {
+  color: #FAF5ED !important;
+}
+
+html.dark .bg-\[\#F2ECE4\] p,
+html.dark .bg-\[\#F9F6F3\] p {
+  color: #BDB0A0 !important;
+}
+
+html.dark thead.bg-\[\#F9F6F3\],
+html.dark .bg-\[\#F9F6F3\] thead {
+  background-color: #231C17 !important;
+  border-color: #3D3127 !important;
+}
+
+/* Sub-backgrounds */
+html.dark .bg-\[\#FAF7F2\]\/60,
+html.dark .bg-\[\#FAF7F2\]\/40 {
+  background-color: #241D18 !important;
+}
+
+html.dark .bg-\[\#FDFDFC\],
+html.dark .bg-\[\#FFFCF8\] {
+  background-color: #27201A !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #251E19 !important;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #2D241E !important;
+}
+
+html.dark .bg-gray-200 {
+  background-color: #3B3028 !important;
+}
+
+/* Borders & Dividers */
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-amber-100,
+html.dark .border-amber-100\/60,
+html.dark .border-amber-100\/80,
+html.dark .border-amber-200,
+html.dark .border-amber-200\/60,
+html.dark .border-\[\#F6E1C6\] {
+  border-color: #45372C !important;
+}
+
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #45372C !important;
+}
+
+/* Typography in Dark Mode */
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #FAF5ED !important;
+}
+
+html.dark .text-gray-700 {
+  color: #E4DACD !important;
+}
+
+html.dark .text-gray-600 {
+  color: #C8BCAE !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
+  color: #A89B8C !important;
+}
+
+html.dark .bg-\[\#F0EBE5\] {
+  background-color: #382E26 !important;
+}
+
+html.dark .border-blue-100 {
+  border-color: #26384F !important;
+}
+
+html.dark .border-purple-100 {
+  border-color: #45264F !important;
+}
+
+html.dark .border-orange-100 {
+  border-color: #4F3526 !important;
+}
+
+/* Status Cards inside Status Stok Harian */
+html.dark .bg-red-50 {
+  background-color: #381A1A !important;
+  border-color: #5E2A2A !important;
+}
+
+html.dark .bg-red-50 span.text-gray-700,
+html.dark .bg-red-50 span.font-medium {
+  color: #FFEAEA !important;
+}
+
+html.dark .bg-red-50 p.text-gray-500 {
+  color: #F8B4B4 !important;
+}
+
+html.dark .bg-red-50 span.text-red-600 {
+  color: #FF5A5A !important;
+}
+
+html.dark .bg-amber-50 {
+  background-color: #382713 !important;
+  border-color: #5E411E !important;
+}
+
+html.dark .bg-amber-50 span.text-gray-700,
+html.dark .bg-amber-50 span.font-medium {
+  color: #FFF3E0 !important;
+}
+
+html.dark .bg-amber-50 p.text-gray-500 {
+  color: #F6CCA0 !important;
+}
+
+html.dark .bg-amber-50 span.text-amber-600 {
+  color: #FBBF24 !important;
+}
+
+html.dark .bg-green-50,
+html.dark .bg-emerald-50 {
+  background-color: #16321F !important;
+  border-color: #245233 !important;
+}
+
+html.dark .bg-green-50 span.text-gray-700,
+html.dark .bg-green-50 span.font-medium,
+html.dark .bg-emerald-50 span.text-gray-700 {
+  color: #E6F8EC !important;
+}
+
+html.dark .bg-green-50 p.text-gray-500,
+html.dark .bg-emerald-50 p.text-gray-500 {
+  color: #A9E2B9 !important;
+}
+
+html.dark .bg-green-50 span.text-green-600,
+html.dark .bg-emerald-50 span.text-emerald-600 {
+  color: #4ADE80 !important;
+}
+
+/* Category & Item badges */
+html.dark .bg-\[\#F7EFE6\] {
+  background-color: #3E3024 !important;
+  color: #E8B682 !important;
+}
+
+html.dark .bg-\[\#D9A978\]\/15 {
+  background-color: #3E3024 !important;
+  color: #E8B682 !important;
+}
+
+html.dark .bg-blue-50 {
+  background-color: #1C2B3F !important;
+  color: #93C5FD !important;
+}
+
+/* Form Inputs, Selects, and Textareas */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]),
+html.dark select,
+html.dark textarea {
+  background-color: #231C17 !important;
+  color: #FAF5ED !important;
+  border-color: #45372C !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #8E8072 !important;
+}
+
+/* Table styles */
+html.dark table thead {
+  background-color: #231C17 !important;
+  color: #D5C8B8 !important;
+  border-color: #3E3228 !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: #382D24 !important;
+}
+
+/* Charts / Recharts in Dark Mode */
+html.dark .recharts-cartesian-grid line {
+  stroke: #45372C !important;
+}
+
+html.dark .recharts-text,
+html.dark .recharts-cartesian-axis-tick text {
+  fill: #A89B8C !important;
+}
+
+html.dark .recharts-default-tooltip {
+  background-color: #2D241E !important;
+  border-color: #45372C !important;
+  color: #FAF5ED !important;
+}
+
+/* Sleek Warm Dark Scrollbars */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #1E1915;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #45372C;
+  border-radius: 9999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5C4A3C;
+}
+
+

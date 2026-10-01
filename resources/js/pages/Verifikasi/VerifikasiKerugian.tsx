@@ -142,22 +142,22 @@ export default function VerifikasiKerugian({ laporan, filters }: Props) {
                                     <button
                                         type="button"
                                         onClick={() => setShowCalendar((v) => !v)}
-                                        className="inline-flex justify-between sm:justify-center items-center gap-2 rounded-full bg-white border border-gray-200 px-4 py-2.5 text-xs font-bold text-gray-700 shadow-2xs hover:bg-gray-50 transition-all w-full sm:w-auto"
+                                        className="inline-flex justify-between sm:justify-center items-center gap-2 rounded-full bg-white dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-[#FAF5ED] shadow-2xs hover:bg-gray-50 dark:hover:bg-[#2C231D] transition-all w-full sm:w-auto"
                                     >
                                         <div className="flex items-center gap-2">
-                                            <Calendar className="h-4 w-4 text-[#8B5E3C]" />
+                                            <Calendar className="h-4 w-4 text-[#8B5E3C] dark:text-amber-400" />
                                             <span>{displayFilterDate}</span>
                                         </div>
                                     </button>
 
                                     {showCalendar && (
-                                        <div className="absolute right-0 mt-2 rounded-3xl bg-white p-4 shadow-2xl z-20 w-full sm:w-64 border border-gray-100 animate-in fade-in zoom-in-95">
+                                        <div className="absolute right-0 mt-2 rounded-3xl bg-white dark:bg-[#2A221C] p-4 shadow-2xl z-20 w-full sm:w-64 border border-gray-100 dark:border-[#45372C] animate-in fade-in zoom-in-95">
                                             <div className="flex items-center justify-between mb-3">
-                                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Filter Tanggal</span>
+                                                <span className="text-xs font-bold text-gray-700 dark:text-[#FAF5ED] uppercase tracking-wider">Filter Tanggal</span>
                                                 {tanggal && (
                                                     <button 
                                                         onClick={() => { setTanggal(''); setShowCalendar(false); }}
-                                                        className="text-xs text-[#8B5E3C] hover:underline font-bold"
+                                                        className="text-xs text-[#8B5E3C] dark:text-amber-400 hover:underline font-bold"
                                                     >
                                                         Reset
                                                     </button>
@@ -170,7 +170,8 @@ export default function VerifikasiKerugian({ laporan, filters }: Props) {
                                                     setTanggal(e.target.value);
                                                     setShowCalendar(false);
                                                 }}
-                                                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none"
+                                                style={{ colorScheme: 'dark' }}
+                                                className="w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none"
                                             />
                                         </div>
                                     )}
@@ -183,18 +184,18 @@ export default function VerifikasiKerugian({ laporan, filters }: Props) {
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         placeholder="Cari bahan/pelapor..."
-                                        className="w-full sm:w-64 rounded-full border border-gray-200 bg-gray-50 pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                                        className="w-full sm:w-64 rounded-full border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] placeholder-gray-400 dark:placeholder-[#8E8072] pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                                     />
-                                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#8E8072] pointer-events-none" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Tabel Data */}
-                        <div className="w-full rounded-2xl border border-gray-100 bg-white shadow-xs overflow-hidden mb-6">
+                        <div className="w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-xs overflow-hidden mb-6">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
-                                    <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                                    <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#B5A898] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
                                         <tr>
                                             <th className="py-4 px-6 text-center w-16">No</th>
                                             <th className="py-4 px-6">Tanggal</th>
@@ -205,14 +206,14 @@ export default function VerifikasiKerugian({ laporan, filters }: Props) {
                                             <th className="py-4 px-6 text-center w-48">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-50">
+                                    <tbody className="divide-y divide-gray-50 dark:divide-[#332820]">
                                         {laporan.data.length > 0 ? laporan.data.map((item, index) => {
                                             const staffName = item.staff?.name || item.staff?.username || 'Staff';
                                             const divisi = (item.staff?.role || 'umum').toLowerCase();
                                             const rowNumber = (laporan.from || 1) + index;
 
                                             return (
-                                                <tr key={item.id} className="hover:bg-[#FDF3E4]/50 transition-colors duration-150">
+                                                <tr key={item.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2D241E] transition-colors duration-150">
                                                     <td className="py-4 px-6 text-center text-gray-400 font-medium">{rowNumber}</td>
                                                     <td className="py-4 px-6 text-gray-800">
                                                         <div className="font-bold text-gray-800">{formatDate(item.created_at)}</div>
