@@ -90,41 +90,41 @@ const CostSummary: React.FC<CostSummaryProps> = ({
   formatRupiah,
   formatInputRupiah,
 }) => (
-  <div className="space-y-4 border-t border-gray-100 pt-5">
-    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500">
-      <Calculator className="h-4 w-4 text-[#8B5E3C]" /> Kalkulasi Harga &amp; Profit
+  <div className="space-y-4 border-t border-gray-100 dark:border-[#3D3127] pt-5">
+    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-[#A89B8C]">
+      <Calculator className="h-4 w-4 text-[#8B5E3C] dark:text-amber-400" /> Kalkulasi Harga &amp; Profit
     </div>
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Target margin (%)
+      <label className="text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider">Target margin (%)
         <input 
           type="number" 
           min="0" 
           step="0.01" 
           value={targetMargin} 
           onChange={(e) => onTargetMarginChange(e.target.value)} 
-          className="mt-1.5 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none" 
+          className="mt-1.5 w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#1E1915] text-gray-800 dark:text-[#FAF5ED] px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none" 
           placeholder="Contoh: 30" 
         />
       </label>
-      <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Harga jual real
+      <label className="text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider">Harga jual real
         <div className="relative mt-1.5">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">Rp</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400 dark:text-[#8E8072]">Rp</span>
           <input 
             type="text" 
             inputMode="numeric" 
             value={formatInputRupiah(hargaJualReal)} 
             onChange={(e) => onHargaJualRealChange(e.target.value.replace(/[^0-9]/g, ""))} 
-            className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-2.5 pl-12 pr-4 text-sm font-bold text-gray-800 focus:ring-2 focus:ring-[#8B5E3C] outline-none" 
+            className="w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#1E1915] py-2.5 pl-12 pr-4 text-sm font-bold text-gray-800 dark:text-[#FAF5ED] focus:ring-2 focus:ring-[#8B5E3C] outline-none" 
             placeholder="0" 
           />
         </div>
       </label>
     </div>
-    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs sm:grid-cols-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-      <div><span className="block text-gray-400 font-bold uppercase text-[10px]">Total HPP</span><strong className="text-sm font-black text-gray-800">{formatRupiah(totalHpp)}</strong></div>
-      <div><span className="block text-gray-400 font-bold uppercase text-[10px]">Harga hitungan</span><strong className="text-sm font-black text-blue-600">{formatRupiah(hargaJualHitungan)}</strong></div>
-      <div><span className="block text-gray-400 font-bold uppercase text-[10px]">Profit real</span><strong className={`text-sm font-black ${profitReal < 0 ? "text-red-500" : "text-emerald-600"}`}>{formatRupiah(profitReal)}</strong></div>
-      <div><span className="block text-gray-400 font-bold uppercase text-[10px]">Margin aktual</span><strong className="text-sm font-black text-gray-800">{totalHpp > 0 && hargaJualReal ? `${((profitReal / totalHpp) * 100).toFixed(1)}%` : "-"}</strong></div>
+    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs sm:grid-cols-4 bg-gray-50 dark:bg-[#231C17] p-4 rounded-2xl border border-gray-100 dark:border-[#3D3127]">
+      <div><span className="block text-gray-400 dark:text-[#8E8072] font-bold uppercase text-[10px]">Total HPP</span><strong className="text-sm font-black text-gray-800 dark:text-[#FAF5ED]">{formatRupiah(totalHpp)}</strong></div>
+      <div><span className="block text-gray-400 dark:text-[#8E8072] font-bold uppercase text-[10px]">Harga hitungan</span><strong className="text-sm font-black text-blue-600 dark:text-blue-400">{formatRupiah(hargaJualHitungan)}</strong></div>
+      <div><span className="block text-gray-400 dark:text-[#8E8072] font-bold uppercase text-[10px]">Profit real</span><strong className={`text-sm font-black ${profitReal < 0 ? "text-red-500 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>{formatRupiah(profitReal)}</strong></div>
+      <div><span className="block text-gray-400 dark:text-[#8E8072] font-bold uppercase text-[10px]">Margin aktual</span><strong className="text-sm font-black text-gray-800 dark:text-[#FAF5ED]">{totalHpp > 0 && hargaJualReal ? `${((profitReal / totalHpp) * 100).toFixed(1)}%` : "-"}</strong></div>
     </div>
   </div>
 );
@@ -445,7 +445,7 @@ const Resep: React.FC = () => {
       </datalist>
 
       <div className="py-6">
-        <div className="bg-[#F2ECE4] p-4 md:p-8 rounded-3xl shadow-sm border border-amber-200/60 min-h-[600px] flex flex-col">
+        <div className="bg-[#F2ECE4] dark:bg-[#2A221C] p-4 md:p-8 rounded-3xl shadow-sm border border-amber-200/60 dark:border-[#45372C] min-h-[600px] flex flex-col">
           {/* HEADER CONTROL */}
           <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {!isStaff ? (
@@ -453,7 +453,7 @@ const Resep: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowDivisionDropdown((prev) => !prev)}
-                  className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-amber-100 shadow-2xs"
+                  className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] dark:bg-[#231C17] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] dark:text-amber-400 border border-amber-100 dark:border-[#45372C] shadow-2xs"
                 >
                   <span className="capitalize">{selectedDivision}</span>
                   <ChevronDown
@@ -463,11 +463,13 @@ const Resep: React.FC = () => {
                   />
                 </button>
                 {showDivisionDropdown && (
-                  <div className="absolute left-0 mt-1 w-full rounded-2xl bg-white py-1.5 text-sm shadow-xl z-20 border border-gray-100">
+                  <div className="absolute left-0 mt-1 w-full rounded-2xl bg-white dark:bg-[#2A221C] py-1.5 text-sm shadow-xl z-20 border border-gray-100 dark:border-[#45372C]">
                     <button
                       onClick={() => changeDivision("bar")}
                       className={`block w-full px-4 py-2 text-left font-semibold transition ${
-                        selectedDivision === "bar" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
+                        selectedDivision === "bar"
+                          ? "bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                          : "text-gray-600 dark:text-[#C8BCAE] hover:bg-gray-50 dark:hover:bg-[#35291F]"
                       }`}
                     >
                       Bar
@@ -475,7 +477,9 @@ const Resep: React.FC = () => {
                     <button
                       onClick={() => changeDivision("dapur")}
                       className={`block w-full px-4 py-2 text-left font-semibold transition ${
-                        selectedDivision === "dapur" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
+                        selectedDivision === "dapur"
+                          ? "bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                          : "text-gray-600 dark:text-[#C8BCAE] hover:bg-gray-50 dark:hover:bg-[#35291F]"
                       }`}
                     >
                       Dapur
@@ -484,7 +488,7 @@ const Resep: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="px-4 py-2.5 rounded-xl bg-[#FDF3E4] text-sm font-bold text-[#8B5E3C] border border-amber-100 capitalize w-fit shadow-2xs">
+              <div className="px-4 py-2.5 rounded-xl bg-[#FDF3E4] dark:bg-[#231C17] text-sm font-bold text-[#8B5E3C] dark:text-amber-400 border border-amber-100 dark:border-[#45372C] capitalize w-fit shadow-2xs">
                 {selectedDivision}
               </div>
             )}
@@ -502,7 +506,7 @@ const Resep: React.FC = () => {
               {!isStaff && (
                 <button
                   onClick={() => setShowModal(true)}
-                  className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] px-5 py-2 text-sm font-bold text-white shadow-md hover:bg-[#c4925e] transition w-full md:w-auto"
+                  className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] dark:bg-[#8B5E3C] px-5 py-2 text-sm font-bold text-white shadow-md hover:bg-[#c4925e] dark:hover:bg-[#6F4E37] transition w-full md:w-auto"
                 >
                   <Plus className="h-4 w-4" />
                   Tambah Resep
@@ -514,9 +518,9 @@ const Resep: React.FC = () => {
                   placeholder="Search..."
                   value={search}
                   onChange={handleSearch}
-                  className="w-full md:w-64 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  className="w-full md:w-64 rounded-full border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-[#8E8072]" />
               </div>
             </div>
           </div>
@@ -524,35 +528,35 @@ const Resep: React.FC = () => {
           {/* --- MOBILE VIEW (CARDS) --- */}
           <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
             {recipes.data.length === 0 ? (
-              <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+              <div className="text-center text-gray-400 dark:text-[#8E8072] py-8 border rounded-xl bg-gray-50 dark:bg-[#231C17] dark:border-[#3D3127]">
                 Belum ada resep.
               </div>
             ) : (
               recipes.data.map((r) => (
-                <div key={r.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-xs">
+                <div key={r.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-2xl p-4 shadow-xs">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="bg-[#D9A978]/15 text-[#8B5E3C] p-2.5 rounded-xl shadow-inner">
+                      <div className="bg-[#D9A978]/15 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 p-2.5 rounded-xl shadow-inner">
                         <BookOpen className="w-5 h-5" />
                       </div>
                       <div>
-                        <div className="font-bold text-gray-800 text-sm">{r.name}</div>
-                        <div className="text-xs text-gray-500 font-medium">{r.total_ingredients} bahan</div>
+                        <div className="font-bold text-gray-800 dark:text-[#FAF5ED] text-sm">{r.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-[#A89B8C] font-medium">{r.total_ingredients} bahan</div>
                         {r.category_name && (
-                          <div className="text-[11px] font-bold text-[#8B5E3C] mt-1 bg-[#FDF3E4] px-2.5 py-0.5 rounded-full w-fit border border-amber-100">
+                          <div className="text-[11px] font-bold text-[#8B5E3C] dark:text-amber-300 mt-1 bg-[#FDF3E4] dark:bg-[#3E3024] px-2.5 py-0.5 rounded-full w-fit border border-amber-100 dark:border-amber-800/40">
                             {r.category_name}
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-400 mb-3 pl-1 font-medium">
+                  <div className="text-xs text-gray-400 dark:text-[#8E8072] mb-3 pl-1 font-medium">
                     Dibuat: {r.created_at || "-"}
                   </div>
-                  <div className="flex gap-2 border-t border-gray-100 pt-3">
+                  <div className="flex gap-2 border-t border-gray-100 dark:border-[#3D3127] pt-3">
                     <button
                       onClick={() => openViewRecipe(r)}
-                      className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-2xs text-center flex items-center justify-center gap-1"
+                      className="flex-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-2xs text-center flex items-center justify-center gap-1"
                     >
                       <Eye className="w-3.5 h-3.5" /> View
                     </button>
@@ -560,13 +564,13 @@ const Resep: React.FC = () => {
                       <>
                         <button
                           onClick={() => openEdit(r)}
-                          className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition shadow-2xs text-center flex items-center justify-center gap-1"
+                          className="flex-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-2xs text-center flex items-center justify-center gap-1"
                         >
                           <Edit className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => openDeleteConfirm(r.id)}
-                          className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition shadow-2xs text-center flex items-center justify-center gap-1"
+                          className="flex-1 bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-2xs text-center flex items-center justify-center gap-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Hapus
                         </button>
@@ -579,10 +583,10 @@ const Resep: React.FC = () => {
           </div>
 
           {/* --- DESKTOP VIEW (TABLE) --- */}
-          <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-xs overflow-hidden flex-1 mb-6">
+          <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-xs overflow-hidden flex-1 mb-6">
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
                   <tr>
                     <th className="px-6 py-4 w-16 text-center">No</th>
                     <th className="px-6 py-4">Menu Jadi</th>
@@ -592,32 +596,32 @@ const Resep: React.FC = () => {
                     <th className="px-6 py-4 text-center w-56">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
                   {recipes.data.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">Belum ada resep.</td>
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">Belum ada resep.</td>
                     </tr>
                   ) : (
                     recipes.data.map((r, i) => (
-                      <tr key={r.id} className="hover:bg-[#FDF3E4]/50 transition-colors duration-150">
-                        <td className="px-6 py-4 text-center text-gray-400 font-medium">
+                      <tr key={r.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2A221C]/60 transition-colors duration-150">
+                        <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">
                           {(recipes.current_page - 1) * recipes.per_page + i + 1}
                         </td>
-                        <td className="px-6 py-4 font-bold text-gray-800">{r.name}</td>
+                        <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">{r.name}</td>
                         <td className="px-6 py-4">
                           {r.category_name ? (
-                            <span className="bg-[#FDF3E4] text-[#8B5E3C] px-3 py-1 rounded-full text-xs font-bold border border-amber-100 shadow-2xs">{r.category_name}</span>
+                            <span className="bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-100 dark:border-amber-800/40 shadow-2xs">{r.category_name}</span>
                           ) : "-"}
                         </td>
-                        <td className="px-6 py-4 text-center font-bold text-gray-600">
+                        <td className="px-6 py-4 text-center font-bold text-gray-600 dark:text-[#C8BCAE]">
                           {r.total_ingredients} bahan
                         </td>
-                        <td className="px-6 py-4 text-gray-500 font-medium">{r.created_at || "-"}</td>
+                        <td className="px-6 py-4 text-gray-500 dark:text-[#A89B8C] font-medium">{r.created_at || "-"}</td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex justify-center gap-2">
                             <button
                               onClick={() => openViewRecipe(r)}
-                              className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
+                              className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs flex items-center gap-1"
                             >
                               <Eye className="w-3.5 h-3.5" /> View
                             </button>
@@ -625,13 +629,13 @@ const Resep: React.FC = () => {
                               <>
                                 <button
                                   onClick={() => openEdit(r)}
-                                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
+                                  className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs flex items-center gap-1"
                                 >
                                   <Edit className="w-3.5 h-3.5" /> Edit
                                 </button>
                                 <button
                                   onClick={() => openDeleteConfirm(r.id)}
-                                  className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs flex items-center gap-1"
+                                  className="px-3.5 py-1.5 rounded-xl bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 font-bold text-xs hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-xs flex items-center gap-1"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" /> Hapus
                                 </button>
@@ -650,7 +654,7 @@ const Resep: React.FC = () => {
           {/* --- PAGINATION --- */}
           {recipes.links && recipes.links.length > 3 && (
             <div className="mt-auto flex justify-center pt-4 pb-2">
-              <div className="flex flex-wrap justify-center gap-1 bg-white p-1 rounded-full border border-gray-100 shadow-xs">
+              <div className="flex flex-wrap justify-center gap-1 bg-white dark:bg-[#231C17] p-1 rounded-full border border-gray-100 dark:border-[#3D3127] shadow-xs">
                 {recipes.links.map((link: any, i: number) => {
                   let label = link.label;
                   if (label.includes('&laquo;')) label = 'Prev';
@@ -666,8 +670,8 @@ const Resep: React.FC = () => {
                       }
                       className={`px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition-all ${
                         link.active
-                          ? "bg-[#D9A978] text-white shadow-xs"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-[#8B5E3C]"
+                          ? "bg-[#D9A978] dark:bg-[#8B5E3C] text-white shadow-xs"
+                          : "text-gray-600 dark:text-[#C8BCAE] hover:bg-gray-50 dark:hover:bg-[#2A221C] hover:text-[#8B5E3C] dark:hover:text-amber-300"
                       } ${!link.url ? "opacity-50 cursor-not-allowed" : ""}`}
                       dangerouslySetInnerHTML={{ __html: label }}
                     />
@@ -683,16 +687,16 @@ const Resep: React.FC = () => {
       {/* --- MODAL TAMBAH RESEP --- */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100">
-            <div className="mb-6 flex items-center justify-between border-b pb-4">
-              <h3 className="text-xl font-extrabold text-gray-800">Tambah Resep Baru</h3>
-              <button type="button" onClick={() => setShowModal(false)} className="rounded-xl p-2 hover:bg-gray-100 text-gray-500 transition" aria-label="Tutup">
+          <div className="bg-white dark:bg-[#2A221C] p-6 md:p-8 rounded-3xl w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100 dark:border-[#45372C]">
+            <div className="mb-6 flex items-center justify-between border-b border-gray-100 dark:border-[#3D3127] pb-4">
+              <h3 className="text-xl font-extrabold text-gray-800 dark:text-[#FAF5ED]">Tambah Resep Baru</h3>
+              <button type="button" onClick={() => setShowModal(false)} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-[#35291F] text-gray-500 dark:text-[#C8BCAE] transition" aria-label="Tutup">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={saveRecipe} className="space-y-5">
               <div>
-                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 block mb-1.5">Pilih Kategori</label>
+                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 dark:text-[#C8BCAE] block mb-1.5">Pilih Kategori</label>
                 <CustomSelect
                   value={categoryId}
                   onChange={(val) => setCategoryId(val)}
@@ -701,34 +705,34 @@ const Resep: React.FC = () => {
                     label: category.name,
                   }))}
                   placeholder="-- Pilih Kategori --"
-                  buttonClassName="bg-gray-50 py-3 rounded-2xl border-gray-200 text-sm"
+                  buttonClassName="bg-gray-50 dark:bg-[#1E1915] py-3 rounded-2xl border-gray-200 dark:border-[#45372C] text-sm"
                 />
               </div>
               <div>
-                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 block mb-1.5">Nama Menu Jadi</label>
+                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 dark:text-[#C8BCAE] block mb-1.5">Nama Menu Jadi</label>
                 <input
                   type="text"
                   list="menu-datalist"
                   value={menuName}
                   onChange={(e) => setMenuName(e.target.value)}
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none"
+                  className="w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#1E1915] text-gray-800 dark:text-[#FAF5ED] px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none"
                   placeholder="Pilih atau ketik nama menu..."
                   required
                 />
               </div>
               <div className="space-y-3">
-                <p className="font-bold text-xs uppercase tracking-wider text-gray-600">Bahan Mentah</p>
+                <p className="font-bold text-xs uppercase tracking-wider text-gray-600 dark:text-[#C8BCAE]">Bahan Mentah</p>
                 {ingredients.map((ing, idx) => {
                   const raw = findRawItemById(ing.item_id);
                   return (
-                    <div key={ing.id} className="bg-gray-50 border border-gray-200/80 p-3.5 rounded-2xl flex flex-wrap gap-2.5 items-center">
-                      <span className="text-xs font-bold text-gray-400 w-4">{idx + 1}.</span>
+                    <div key={ing.id} className="bg-gray-50 dark:bg-[#1E1915] border border-gray-200/80 dark:border-[#3D3127] p-3.5 rounded-2xl flex flex-wrap gap-2.5 items-center">
+                      <span className="text-xs font-bold text-gray-400 dark:text-[#8E8072] w-4">{idx + 1}.</span>
                       <input
                         type="text"
                         list="raw-datalist"
                         value={ing.item_name}
                         onChange={(e) => changeIngredient(ing.id, "item_name", e.target.value)}
-                        className="flex-1 bg-white rounded-xl px-3 py-2 text-xs font-medium border border-gray-200 outline-none min-w-[120px]"
+                        className="flex-1 bg-white dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-3 py-2 text-xs font-medium border border-gray-200 dark:border-[#45372C] outline-none min-w-[120px]"
                         placeholder="Pilih bahan..."
                         required
                       />
@@ -736,7 +740,7 @@ const Resep: React.FC = () => {
                         type="number"
                         value={ing.amount}
                         onChange={(e) => changeIngredient(ing.id, "amount", Number(e.target.value))}
-                        className="w-20 bg-white rounded-xl px-3 py-2 text-center text-xs font-bold border border-gray-200 outline-none"
+                        className="w-20 bg-white dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-3 py-2 text-center text-xs font-bold border border-gray-200 dark:border-[#45372C] outline-none"
                         placeholder="Jml"
                         required
                         step="0.01"
@@ -745,26 +749,26 @@ const Resep: React.FC = () => {
                         type="text"
                         value={ing.unit}
                         onChange={(e) => changeIngredient(ing.id, "unit", e.target.value)}
-                        className="w-20 bg-gray-100 rounded-xl px-2 py-2 text-center text-xs text-gray-500 font-medium border border-gray-200"
+                        className="w-20 bg-gray-100 dark:bg-[#2A221C] text-gray-500 dark:text-[#C8BCAE] rounded-xl px-2 py-2 text-center text-xs font-medium border border-gray-200 dark:border-[#45372C]"
                         readOnly
                       />
-                      <div className="w-full text-right text-[11px] text-gray-500 font-medium md:w-auto">
+                      <div className="w-full text-right text-[11px] text-gray-500 dark:text-[#A89B8C] font-medium md:w-auto">
                         {raw?.harga_dasar != null
                           ? `${formatRupiah(raw.harga_dasar)} × ${ing.amount} = ${formatRupiah((raw.harga_dasar ?? 0) * ing.amount)}`
                           : "Harga dasar belum diisi"}
                       </div>
-                      <button type="button" onClick={() => removeIngredient(ing.id)} className="text-red-400 hover:text-red-600 p-1">
+                      <button type="button" onClick={() => removeIngredient(ing.id)} className="text-red-400 dark:text-rose-400 hover:text-red-600 dark:hover:text-rose-300 p-1">
                         <Trash className="w-4 h-4" />
                       </button>
                     </div>
                   );
                 })}
-                <button type="button" onClick={addIngredient} className="mt-1 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[#8B5E3C] bg-[#8B5E3C]/5 px-4 py-2 text-xs font-bold text-[#8B5E3C] hover:bg-[#8B5E3C]/10 transition">
+                <button type="button" onClick={addIngredient} className="mt-1 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[#8B5E3C] bg-[#8B5E3C]/5 dark:bg-amber-400/10 px-4 py-2 text-xs font-bold text-[#8B5E3C] dark:text-amber-400 hover:bg-[#8B5E3C]/10 dark:hover:bg-amber-400/20 transition">
                   <Plus className="h-4 w-4" /> Tambah Bahan
                 </button>
               </div>
-              <div className="flex justify-end border-b border-gray-100 pb-4 text-sm text-gray-600 font-medium">
-                Total HPP: <strong className="ml-2 text-base text-gray-900 font-black">{formatRupiah(totalHppPreview)}</strong>
+              <div className="flex justify-end border-b border-gray-100 dark:border-[#3D3127] pb-4 text-sm text-gray-600 dark:text-[#C8BCAE] font-medium">
+                Total HPP: <strong className="ml-2 text-base text-gray-900 dark:text-[#FAF5ED] font-black">{formatRupiah(totalHppPreview)}</strong>
               </div>
               <CostSummary
                 totalHpp={totalHppPreview}
@@ -778,7 +782,7 @@ const Resep: React.FC = () => {
                 formatInputRupiah={formatInputRupiah}
               />
               <div className="flex justify-between pt-4 gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 rounded-2xl bg-gray-100 py-3 text-sm font-bold text-gray-700 hover:bg-gray-200 transition">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 rounded-2xl bg-gray-100 dark:bg-[#35291F] py-3 text-sm font-bold text-gray-700 dark:text-[#C8BCAE] hover:bg-gray-200 dark:hover:bg-[#45372C] transition">
                   Batal
                 </button>
                 <button type="submit" className="flex-1 rounded-2xl bg-[#8B5E3C] py-3 text-sm font-bold text-white hover:bg-[#6F4E37] transition shadow-md">
@@ -793,16 +797,16 @@ const Resep: React.FC = () => {
       {/* --- MODAL EDIT RESEP --- */}
       {openEditModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100">
-            <div className="mb-6 flex items-center justify-between border-b pb-4">
-              <h3 className="text-xl font-extrabold text-gray-800">Edit Resep</h3>
-              <button type="button" onClick={() => setOpenEditModal(false)} className="rounded-xl p-2 hover:bg-gray-100 text-gray-500 transition" aria-label="Tutup">
+          <div className="bg-white dark:bg-[#2A221C] p-6 md:p-8 rounded-3xl w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100 dark:border-[#45372C]">
+            <div className="mb-6 flex items-center justify-between border-b border-gray-100 dark:border-[#3D3127] pb-4">
+              <h3 className="text-xl font-extrabold text-gray-800 dark:text-[#FAF5ED]">Edit Resep</h3>
+              <button type="button" onClick={() => setOpenEditModal(false)} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-[#35291F] text-gray-500 dark:text-[#C8BCAE] transition" aria-label="Tutup">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={updateRecipe} className="space-y-5">
               <div>
-                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 block mb-1.5">Pilih Kategori</label>
+                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 dark:text-[#C8BCAE] block mb-1.5">Pilih Kategori</label>
                 <CustomSelect
                   value={editCategoryId}
                   onChange={(val) => setEditCategoryId(val)}
@@ -811,60 +815,60 @@ const Resep: React.FC = () => {
                     label: category.name,
                   }))}
                   placeholder="-- Pilih Kategori --"
-                  buttonClassName="bg-gray-50 py-3 rounded-2xl border-gray-200 text-sm"
+                  buttonClassName="bg-gray-50 dark:bg-[#1E1915] py-3 rounded-2xl border-gray-200 dark:border-[#45372C] text-sm"
                 />
               </div>
               <div>
-                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 block mb-1.5">Nama Menu Jadi</label>
+                <label className="font-bold text-xs uppercase tracking-wider text-gray-600 dark:text-[#C8BCAE] block mb-1.5">Nama Menu Jadi</label>
                 <input
                   type="text"
                   list="menu-datalist"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none"
+                  className="w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#1E1915] text-gray-800 dark:text-[#FAF5ED] px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none"
                   required
                 />
               </div>
               <div className="space-y-3">
-                <p className="font-bold text-xs uppercase tracking-wider text-gray-600">Bahan Mentah</p>
+                <p className="font-bold text-xs uppercase tracking-wider text-gray-600 dark:text-[#C8BCAE]">Bahan Mentah</p>
                 {editIngredients.map((ing, idx) => {
                   const raw = findRawItemById(ing.item_id);
                   return (
-                    <div key={ing.id} className="bg-gray-50 border border-gray-200/80 p-3.5 rounded-2xl flex flex-wrap gap-2.5 items-center">
-                      <span className="text-xs font-bold text-gray-400 w-4">{idx + 1}.</span>
+                    <div key={ing.id} className="bg-gray-50 dark:bg-[#1E1915] border border-gray-200/80 dark:border-[#3D3127] p-3.5 rounded-2xl flex flex-wrap gap-2.5 items-center">
+                      <span className="text-xs font-bold text-gray-400 dark:text-[#8E8072] w-4">{idx + 1}.</span>
                       <input
                         type="text"
                         list="raw-datalist"
                         value={ing.item_name}
                         onChange={(e) => changeEditIngredient(ing.id, "item_name", e.target.value)}
-                        className="flex-1 bg-white rounded-xl px-3 py-2 text-xs font-medium border border-gray-200 outline-none min-w-[120px]"
+                        className="flex-1 bg-white dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-3 py-2 text-xs font-medium border border-gray-200 dark:border-[#45372C] outline-none min-w-[120px]"
                       />
                       <input
                         type="number"
                         value={ing.amount}
                         onChange={(e) => changeEditIngredient(ing.id, "amount", Number(e.target.value))}
-                        className="w-20 bg-white rounded-xl px-3 py-2 text-center text-xs font-bold border border-gray-200 outline-none"
+                        className="w-20 bg-white dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-3 py-2 text-center text-xs font-bold border border-gray-200 dark:border-[#45372C] outline-none"
                         step="0.01"
                       />
                       <input
                         type="text"
                         value={ing.unit}
                         onChange={(e) => changeEditIngredient(ing.id, "unit", e.target.value)}
-                        className="w-20 bg-gray-100 rounded-xl px-2 py-2 text-center text-xs text-gray-500 font-medium border border-gray-200"
+                        className="w-20 bg-gray-100 dark:bg-[#2A221C] text-gray-500 dark:text-[#C8BCAE] rounded-xl px-2 py-2 text-center text-xs font-medium border border-gray-200 dark:border-[#45372C]"
                         readOnly
                       />
-                      <div className="w-full text-right text-[11px] text-gray-500 font-medium md:w-auto">
+                      <div className="w-full text-right text-[11px] text-gray-500 dark:text-[#A89B8C] font-medium md:w-auto">
                         {raw?.harga_dasar != null
                           ? `${formatRupiah(raw.harga_dasar)} × ${ing.amount} = ${formatRupiah((raw.harga_dasar ?? 0) * ing.amount)}`
                           : "Harga dasar belum diisi"}
                       </div>
-                      <button type="button" onClick={() => removeEditIngredient(ing.id)} className="text-red-400 hover:text-red-600 p-1">
+                      <button type="button" onClick={() => removeEditIngredient(ing.id)} className="text-red-400 dark:text-rose-400 hover:text-red-600 dark:hover:text-rose-300 p-1">
                         <Trash className="w-4 h-4" />
                       </button>
                     </div>
                   );
                 })}
-                <button type="button" onClick={addEditIngredient} className="mt-1 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[#8B5E3C] bg-[#8B5E3C]/5 px-4 py-2 text-xs font-bold text-[#8B5E3C] hover:bg-[#8B5E3C]/10 transition">
+                <button type="button" onClick={addEditIngredient} className="mt-1 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-[#8B5E3C] bg-[#8B5E3C]/5 dark:bg-amber-400/10 px-4 py-2 text-xs font-bold text-[#8B5E3C] dark:text-amber-400 hover:bg-[#8B5E3C]/10 dark:hover:bg-amber-400/20 transition">
                   <Plus className="h-4 w-4" /> Tambah Bahan
                 </button>
               </div>
@@ -880,7 +884,7 @@ const Resep: React.FC = () => {
                 formatInputRupiah={formatInputRupiah}
               />
               <div className="flex justify-between pt-4 gap-3">
-                <button type="button" onClick={() => setOpenEditModal(false)} className="flex-1 rounded-2xl bg-gray-100 py-3 text-sm font-bold text-gray-700 hover:bg-gray-200 transition">Batal</button>
+                <button type="button" onClick={() => setOpenEditModal(false)} className="flex-1 rounded-2xl bg-gray-100 dark:bg-[#35291F] py-3 text-sm font-bold text-gray-700 dark:text-[#C8BCAE] hover:bg-gray-200 dark:hover:bg-[#45372C] transition">Batal</button>
                 <button type="submit" className="flex-1 rounded-2xl bg-[#8B5E3C] py-3 text-sm font-bold text-white hover:bg-[#6F4E37] transition shadow-md">Update</button>
               </div>
             </form>
@@ -891,30 +895,30 @@ const Resep: React.FC = () => {
       {/* --- MODAL VIEW RESEP --- */}
       {openViewModal && viewRecipe && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100">
-            <div className="flex justify-between items-center mb-5 border-b pb-3">
-              <h2 className="text-lg font-extrabold text-gray-800">Detail Resep — <span className="text-[#8B5E3C]">{viewRecipe.name}</span></h2>
-              <button onClick={() => setOpenViewModal(false)} className="rounded-xl p-2 hover:bg-gray-100 text-gray-500 transition"><X className="w-5 h-5" /></button>
+          <div className="bg-white dark:bg-[#2A221C] p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100 dark:border-[#45372C]">
+            <div className="flex justify-between items-center mb-5 border-b border-gray-100 dark:border-[#3D3127] pb-3">
+              <h2 className="text-lg font-extrabold text-gray-800 dark:text-[#FAF5ED]">Detail Resep — <span className="text-[#8B5E3C] dark:text-amber-400">{viewRecipe.name}</span></h2>
+              <button onClick={() => setOpenViewModal(false)} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-[#35291F] text-gray-500 dark:text-[#C8BCAE] transition"><X className="w-5 h-5" /></button>
             </div>
-            <div className="space-y-2 text-sm text-gray-700 mb-4 font-medium">
-              <p><span className="text-gray-400 font-bold uppercase text-xs block">Menu Item</span> <strong className="text-gray-800 text-base">{viewRecipe.name}</strong></p>
-              <p><span className="text-gray-400 font-bold uppercase text-xs block mt-2">Kategori</span> <span className="bg-[#FDF3E4] text-[#8B5E3C] px-3 py-1 rounded-full text-xs font-bold border border-amber-100 inline-block mt-1">{viewRecipe.category_name || "-"}</span></p>
+            <div className="space-y-2 text-sm text-gray-700 dark:text-[#C8BCAE] mb-4 font-medium">
+              <p><span className="text-gray-400 dark:text-[#8E8072] font-bold uppercase text-xs block">Menu Item</span> <strong className="text-gray-800 dark:text-[#FAF5ED] text-base">{viewRecipe.name}</strong></p>
+              <p><span className="text-gray-400 dark:text-[#8E8072] font-bold uppercase text-xs block mt-2">Kategori</span> <span className="bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-100 dark:border-amber-800/40 inline-block mt-1">{viewRecipe.category_name || "-"}</span></p>
             </div>
             <div className="mt-4">
-              <p className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-2">Komposisi Bahan (Mentah):</p>
-              <div className="space-y-1.5 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
+              <p className="font-bold text-xs uppercase tracking-wider text-gray-400 dark:text-[#8E8072] mb-2">Komposisi Bahan (Mentah):</p>
+              <div className="space-y-1.5 bg-gray-50 dark:bg-[#231C17] p-3.5 rounded-2xl border border-gray-100 dark:border-[#3D3127]">
                 {viewRecipe.ingredients?.map((ing, i) => {
                   const raw = findRawItemById(ing.item_id);
-                  return <p key={i} className="text-sm font-medium text-gray-700">• {raw ? raw.name : ing.item_name} — <span className="font-bold text-gray-900">{ing.amount} {ing.unit}</span></p>;
+                  return <p key={i} className="text-sm font-medium text-gray-700 dark:text-[#C8BCAE]">• {raw ? raw.name : ing.item_name} — <span className="font-bold text-gray-900 dark:text-[#FAF5ED]">{ing.amount} {ing.unit}</span></p>;
                 })}
               </div>
             </div>
-            <p className="font-bold text-xs text-gray-400 mt-3">Total {viewRecipe.ingredients?.length ?? 0} bahan</p>
-            <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-[#FDF3E4]/50 p-4 text-sm border border-amber-100/60">
-              <div><span className="block text-[10px] text-gray-400 font-bold uppercase">Total HPP</span><strong className="text-gray-800 font-black">{formatRupiah(viewRecipe.total_hpp)}</strong></div>
-              <div><span className="block text-[10px] text-gray-400 font-bold uppercase">Harga Jual</span><strong className="text-gray-800 font-black">{formatRupiah(viewRecipe.harga_jual_real ?? viewRecipe.harga_jual_hitungan)}</strong></div>
-              <div><span className="block text-[10px] text-gray-400 font-bold uppercase">Target Margin</span><strong className="text-gray-800 font-black">{viewRecipe.target_margin ?? 0}%</strong></div>
-              <div><span className="block text-[10px] text-gray-400 font-bold uppercase">Profit Aktual</span><strong className={`font-black ${profitColor(viewRecipe.profit_real)}`}>{formatRupiah(viewRecipe.profit_real)}</strong></div>
+            <p className="font-bold text-xs text-gray-400 dark:text-[#8E8072] mt-3">Total {viewRecipe.ingredients?.length ?? 0} bahan</p>
+            <div className="mt-4 grid grid-cols-2 gap-3 rounded-2xl bg-[#FDF3E4]/50 dark:bg-[#231C17] p-4 text-sm border border-amber-100/60 dark:border-[#3D3127]">
+              <div><span className="block text-[10px] text-gray-400 dark:text-[#8E8072] font-bold uppercase">Total HPP</span><strong className="text-gray-800 dark:text-[#FAF5ED] font-black">{formatRupiah(viewRecipe.total_hpp)}</strong></div>
+              <div><span className="block text-[10px] text-gray-400 dark:text-[#8E8072] font-bold uppercase">Harga Jual</span><strong className="text-gray-800 dark:text-[#FAF5ED] font-black">{formatRupiah(viewRecipe.harga_jual_real ?? viewRecipe.harga_jual_hitungan)}</strong></div>
+              <div><span className="block text-[10px] text-gray-400 dark:text-[#8E8072] font-bold uppercase">Target Margin</span><strong className="text-gray-800 dark:text-[#FAF5ED] font-black">{viewRecipe.target_margin ?? 0}%</strong></div>
+              <div><span className="block text-[10px] text-gray-400 dark:text-[#8E8072] font-bold uppercase">Profit Aktual</span><strong className={`font-black ${profitColor(viewRecipe.profit_real)}`}>{formatRupiah(viewRecipe.profit_real)}</strong></div>
             </div>
             <div className="flex justify-center mt-6">
               <button onClick={() => setOpenViewModal(false)} className="w-full py-3 bg-[#8B5E3C] text-white rounded-2xl font-bold hover:bg-[#6F4E37] transition shadow-md text-sm">Tutup</button>
@@ -926,12 +930,12 @@ const Resep: React.FC = () => {
       {/* --- MODAL HAPUS --- */}
       {openDeleteModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl border border-gray-100">
-            <h2 className="text-xl font-extrabold text-gray-900 mb-2">Hapus Resep? ⚠️</h2>
-            <p className="text-gray-500 text-xs mb-6 leading-relaxed">Menghapus resep ini akan menghapus semua data bahan terkait. Tindakan ini tidak dapat dibatalkan.</p>
+          <div className="bg-white dark:bg-[#2A221C] p-6 md:p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl border border-gray-100 dark:border-[#45372C]">
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-[#FAF5ED] mb-2">Hapus Resep? ⚠️</h2>
+            <p className="text-gray-500 dark:text-[#A89B8C] text-xs mb-6 leading-relaxed">Menghapus resep ini akan menghapus semua data bahan terkait. Tindakan ini tidak dapat dibatalkan.</p>
             <div className="flex justify-between gap-3">
-              <button onClick={() => setOpenDeleteModal(false)} className="flex-1 px-4 py-2.5 bg-gray-100 rounded-2xl text-gray-700 font-bold hover:bg-gray-200 transition text-sm">Batal</button>
-              <button onClick={confirmDelete} className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-2xl font-bold shadow-md hover:bg-red-600 transition text-sm">Hapus</button>
+              <button onClick={() => setOpenDeleteModal(false)} className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-[#35291F] rounded-2xl text-gray-700 dark:text-[#C8BCAE] font-bold hover:bg-gray-200 dark:hover:bg-[#45372C] transition text-sm">Batal</button>
+              <button onClick={confirmDelete} className="flex-1 px-4 py-2.5 bg-red-500 dark:bg-rose-600 text-white rounded-2xl font-bold shadow-md hover:bg-red-600 dark:hover:bg-rose-700 transition text-sm">Hapus</button>
             </div>
           </div>
         </div>

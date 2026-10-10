@@ -214,12 +214,12 @@ export default function KategoriPage() {
       <Head title={`Kategori ${titleDivisionLabel}`} />
 
       <div className="space-y-6">
-        <div className="rounded-3xl bg-[#F2ECE4] p-4 md:p-8 shadow-sm border border-amber-200/60">
-          <div className="rounded-3xl bg-[#FFFFFF] p-4 md:p-6 shadow-xs border border-gray-100 min-h-[500px] flex flex-col">
+        <div className="rounded-3xl bg-[#F2ECE4] dark:bg-[#2A221C] p-4 md:p-8 shadow-sm border border-amber-200/60 dark:border-[#45372C]">
+          <div className="rounded-3xl bg-white dark:bg-[#231C17] p-4 md:p-6 shadow-xs border border-gray-100 dark:border-[#3D3127] min-h-[500px] flex flex-col">
             {/* HEADER */}
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-col gap-3 w-full md:w-auto">
-                <h2 className="text-lg font-bold text-gray-800">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">
                   {`Kategori ${titleDivisionLabel}`}
                 </h2>
 
@@ -228,7 +228,7 @@ export default function KategoriPage() {
                     <button
                       type="button"
                       onClick={() => setShowDivisionDropdown((prev) => !prev)}
-                      className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-amber-100 shadow-2xs"
+                      className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] dark:bg-[#2A221C] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] dark:text-amber-400 border border-amber-100 dark:border-[#45372C] shadow-2xs"
                     >
                       <span className="capitalize">{titleDivisionLabel}</span>
                       <ChevronDown
@@ -239,14 +239,14 @@ export default function KategoriPage() {
                     </button>
 
                     {showDivisionDropdown && (
-                      <div className="absolute left-0 z-20 mt-1 w-full rounded-2xl bg-white py-1.5 text-sm shadow-xl border border-gray-100">
+                      <div className="absolute left-0 z-20 mt-1 w-full rounded-2xl bg-white dark:bg-[#2A221C] py-1.5 text-sm shadow-xl border border-gray-100 dark:border-[#45372C]">
                         <button
                           type="button"
                           onClick={() => changeDivision("bar")}
                           className={`block w-full px-4 py-2 text-left font-semibold transition ${
                             serverDivision === "bar"
-                              ? "bg-[#FDF3E4] text-[#8B5E3C]"
-                              : "text-gray-600 hover:bg-gray-50"
+                              ? "bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                              : "text-gray-600 dark:text-[#C8BCAE] hover:bg-gray-50 dark:hover:bg-[#35291F]"
                           }`}
                         >
                           Bar
@@ -256,8 +256,8 @@ export default function KategoriPage() {
                           onClick={() => changeDivision("dapur")}
                           className={`block w-full px-4 py-2 text-left font-semibold transition ${
                             serverDivision === "dapur"
-                              ? "bg-[#FDF3E4] text-[#8B5E3C]"
-                              : "text-gray-600 hover:bg-gray-50"
+                              ? "bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                              : "text-gray-600 dark:text-[#C8BCAE] hover:bg-gray-50 dark:hover:bg-[#35291F]"
                           }`}
                         >
                           Dapur
@@ -273,7 +273,7 @@ export default function KategoriPage() {
                   <button
                     type="button"
                     onClick={openAddModal}
-                    className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] px-5 py-2 text-sm font-bold text-white shadow-md hover:bg-[#c4925e] transition w-full md:w-auto"
+                    className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] dark:bg-[#8B5E3C] px-5 py-2 text-sm font-bold text-white shadow-md hover:bg-[#c4925e] dark:hover:bg-[#6F4E37] transition w-full md:w-auto"
                   >
                     <Plus className="h-4 w-4" />
                     Tambah Kategori
@@ -285,9 +285,9 @@ export default function KategoriPage() {
                     placeholder="Search...."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full md:w-56 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                    className="w-full md:w-56 rounded-full border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#8E8072]">
                     <Search className="h-4 w-4" />
                   </span>
                 </div>
@@ -297,28 +297,28 @@ export default function KategoriPage() {
             {/* MOBILE VIEW */}
             <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
               {filteredCategories.length === 0 ? (
-                <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                <div className="text-center text-gray-400 dark:text-[#8E8072] py-8 border rounded-xl bg-gray-50 dark:bg-[#231C17] dark:border-[#3D3127]">
                   Belum ada kategori untuk divisi ini.
                 </div>
               ) : (
                 filteredCategories.map((cat) => (
-                  <div key={cat.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                  <div key={cat.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-xl p-4 shadow-sm">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="bg-orange-50 p-2 rounded-lg text-[#DABA93]">
+                        <div className="bg-orange-50 dark:bg-amber-950/60 p-2 rounded-lg text-[#DABA93] dark:text-amber-400">
                           <Layers className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="font-bold text-gray-800">{translateCategoryName(cat.name)}</div>
-                          <div className="text-xs text-gray-500">Total Item: {cat.total_items}</div>
+                          <div className="font-bold text-gray-800 dark:text-[#FAF5ED]">{translateCategoryName(cat.name)}</div>
+                          <div className="text-xs text-gray-500 dark:text-[#A89B8C]">Total Item: {cat.total_items}</div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 border-t pt-3 mt-2">
+                    <div className="flex gap-2 border-t border-gray-100 dark:border-[#3D3127] pt-3 mt-2">
                       <button
                         onClick={() => openViewModal(cat)}
-                        className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition"
+                        className="flex-1 flex items-center justify-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition"
                       >
                         <Eye className="w-3.5 h-3.5" /> View
                       </button>
@@ -326,13 +326,13 @@ export default function KategoriPage() {
                         <>
                           <button
                             onClick={() => openEditModal(cat)}
-                            className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition"
+                            className="flex-1 flex items-center justify-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition"
                           >
                             <Edit className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => openDeleteModal(cat)}
-                            className="flex-1 flex items-center justify-center gap-1 bg-red-50 text-red-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition"
+                            className="flex-1 flex items-center justify-center gap-1 bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 px-3 py-2 rounded-xl text-xs font-bold hover:bg-red-100 dark:hover:bg-rose-900/60 transition"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Hapus
                           </button>
@@ -345,10 +345,10 @@ export default function KategoriPage() {
             </div>
 
             {/* DESKTOP VIEW */}
-            <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden flex-1 mb-6">
+            <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-sm overflow-hidden flex-1 mb-6">
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                  <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
                     <tr>
                       <th className="px-6 py-4 w-16 text-center">No</th>
                       <th className="px-6 py-4">Nama Kategori</th>
@@ -356,12 +356,12 @@ export default function KategoriPage() {
                       <th className="px-6 py-4 text-center w-56">Aksi</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
                     {filteredCategories.length === 0 ? (
                       <tr>
                         <td
                           colSpan={4}
-                          className="px-6 py-12 text-center text-gray-400 italic"
+                          className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic"
                         >
                           Belum ada kategori untuk divisi ini.
                         </td>
@@ -370,13 +370,13 @@ export default function KategoriPage() {
                       filteredCategories.map((cat) => (
                         <tr
                           key={cat.id}
-                          className="hover:bg-[#FDF3E4]/50 transition-colors duration-150"
+                          className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2A221C] transition-colors duration-150"
                         >
-                          <td className="px-6 py-4 text-center text-gray-400 font-medium">{cat.no}</td>
-                          <td className="px-6 py-4 font-bold text-gray-800">
+                          <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">{cat.no}</td>
+                          <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">
                             {translateCategoryName(cat.name)}
                           </td>
-                          <td className="px-6 py-4 text-gray-600 font-medium">
+                          <td className="px-6 py-4 text-gray-600 dark:text-[#C8BCAE] font-medium">
                             {cat.total_items} Bahan
                           </td>
                           <td className="px-6 py-4 text-center">
@@ -384,7 +384,7 @@ export default function KategoriPage() {
                               <button
                                 type="button"
                                 onClick={() => openViewModal(cat)}
-                                className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
+                                className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs flex items-center gap-1"
                               >
                                 <Eye className="w-3.5 h-3.5" /> View
                               </button>
@@ -394,14 +394,14 @@ export default function KategoriPage() {
                                   <button
                                     type="button"
                                     onClick={() => openEditModal(cat)}
-                                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
+                                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs flex items-center gap-1"
                                   >
                                     <Edit className="w-3.5 h-3.5" /> Edit
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => openDeleteModal(cat)}
-                                    className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs flex items-center gap-1"
+                                    className="px-3.5 py-1.5 rounded-xl bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 font-bold text-xs hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-xs flex items-center gap-1"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" /> Hapus
                                   </button>
@@ -425,14 +425,14 @@ export default function KategoriPage() {
         <Modal onClose={() => setAddModalOpen(false)}>
           <form
             onSubmit={handleAddCategory}
-            className="w-full max-w-sm md:max-w-md rounded-3xl bg-white p-6 md:p-8 shadow-2xl border border-gray-100"
+            className="w-full max-w-sm md:max-w-md rounded-3xl bg-white dark:bg-[#2A221C] p-6 md:p-8 shadow-2xl border border-gray-100 dark:border-[#45372C]"
           >
-            <h3 className="mb-6 text-center text-xl font-extrabold text-gray-800">
+            <h3 className="mb-6 text-center text-xl font-extrabold text-gray-800 dark:text-[#FAF5ED]">
               Tambah Kategori Baru
             </h3>
 
             <div className="mb-6">
-              <label className="mb-2 block text-xs font-bold text-gray-600 uppercase tracking-wider">
+              <label className="mb-2 block text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider">
                 Nama Kategori
               </label>
               <input
@@ -441,7 +441,7 @@ export default function KategoriPage() {
                 placeholder="Contoh: Menu/Mentah"
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
-                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
+                className="w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
               />
             </div>
 
@@ -449,7 +449,7 @@ export default function KategoriPage() {
               <button
                 type="button"
                 onClick={() => setAddModalOpen(false)}
-                className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-200 transition"
+                className="flex-1 rounded-2xl bg-gray-100 dark:bg-[#35291F] py-2.5 text-sm font-bold text-gray-700 dark:text-[#C8BCAE] hover:bg-gray-200 dark:hover:bg-[#45372C] transition"
               >
                 Batal
               </button>
@@ -469,14 +469,14 @@ export default function KategoriPage() {
         <Modal onClose={() => setEditModalOpen(false)}>
           <form
             onSubmit={handleUpdateCategory}
-            className="w-full max-w-sm md:max-w-md rounded-3xl bg-white p-6 md:p-8 shadow-2xl border border-gray-100"
+            className="w-full max-w-sm md:max-w-md rounded-3xl bg-white dark:bg-[#2A221C] p-6 md:p-8 shadow-2xl border border-gray-100 dark:border-[#45372C]"
           >
-            <h3 className="mb-6 text-center text-xl font-extrabold text-gray-800">
+            <h3 className="mb-6 text-center text-xl font-extrabold text-gray-800 dark:text-[#FAF5ED]">
               Edit Kategori
             </h3>
 
             <div className="mb-6">
-              <label className="mb-2 block text-xs font-bold text-gray-600 uppercase tracking-wider">
+              <label className="mb-2 block text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider">
                 Nama Kategori
               </label>
               <input
@@ -484,7 +484,7 @@ export default function KategoriPage() {
                 autoFocus
                 value={editCategoryName}
                 onChange={(e) => setEditCategoryName(e.target.value)}
-                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
+                className="w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
               />
             </div>
 
@@ -492,7 +492,7 @@ export default function KategoriPage() {
               <button
                 type="button"
                 onClick={() => setEditModalOpen(false)}
-                className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-200 transition"
+                className="flex-1 rounded-2xl bg-gray-100 dark:bg-[#35291F] py-2.5 text-sm font-bold text-gray-700 dark:text-[#C8BCAE] hover:bg-gray-200 dark:hover:bg-[#45372C] transition"
               >
                 Batal
               </button>
@@ -510,35 +510,35 @@ export default function KategoriPage() {
       {/* MODAL: VIEW */}
       {viewModalOpen && selectedCategory && (
         <Modal onClose={() => setViewModalOpen(false)}>
-          <div className="w-full max-w-sm md:max-w-lg rounded-3xl bg-white p-6 md:p-8 shadow-2xl border border-gray-100 max-h-[80vh] overflow-y-auto flex flex-col">
-            <div className="mb-5 flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-gray-800">
+          <div className="w-full max-w-sm md:max-w-lg rounded-3xl bg-white dark:bg-[#2A221C] p-6 md:p-8 shadow-2xl border border-gray-100 dark:border-[#45372C] max-h-[80vh] overflow-y-auto flex flex-col">
+            <div className="mb-5 flex items-center justify-between border-b border-gray-100 dark:border-[#3D3127] pb-3">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">
                 Detail Kategori:{" "}
-                <span className="text-[#8B5E3C]">{translateCategoryName(selectedCategory.name)}</span>
+                <span className="text-[#8B5E3C] dark:text-amber-400">{translateCategoryName(selectedCategory.name)}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setViewModalOpen(false)}
-                className="rounded-xl p-2 hover:bg-gray-100 text-gray-500 transition"
+                className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-[#35291F] text-gray-500 dark:text-[#C8BCAE] transition"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-gray-100 shadow-2xs flex-1">
+            <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-[#3D3127] shadow-2xs flex-1">
               <table className="min-w-full table-auto text-sm">
-                <thead className="bg-[#FAF7F2] text-xs font-bold uppercase text-gray-600">
+                <thead className="bg-[#FAF7F2] dark:bg-[#1E1915] text-xs font-bold uppercase text-gray-600 dark:text-[#A89B8C]">
                   <tr>
                     <th className="w-16 px-4 py-3 text-center">No</th>
                     <th className="px-4 py-3">Nama Item</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
                   {selectedCategory.items.length === 0 ? (
                     <tr>
                       <td
                         colSpan={2}
-                        className="px-4 py-8 text-center text-gray-400 italic"
+                        className="px-4 py-8 text-center text-gray-400 dark:text-[#8E8072] italic"
                       >
                         Belum ada item di kategori ini.
                       </td>
@@ -547,10 +547,10 @@ export default function KategoriPage() {
                     selectedCategory.items.map((item, idx) => (
                       <tr
                         key={item.id}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-gray-50 dark:hover:bg-[#231C17] transition-colors"
                       >
-                        <td className="px-4 py-3 text-center text-gray-400">{idx + 1}</td>
-                        <td className="px-4 py-3 font-medium text-gray-800">{item.nama}</td>
+                        <td className="px-4 py-3 text-center text-gray-400 dark:text-[#8E8072]">{idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-gray-800 dark:text-[#FAF5ED]">{item.nama}</td>
                       </tr>
                     ))
                   )}
@@ -564,17 +564,17 @@ export default function KategoriPage() {
       {/* MODAL: HAPUS */}
       {deleteModalOpen && selectedCategory && (
         <Modal onClose={() => setDeleteModalOpen(false)}>
-          <div className="w-full max-w-sm md:max-w-md rounded-3xl bg-white p-6 md:p-8 shadow-2xl border border-gray-100 text-center">
-            <h3 className="mb-2 text-xl font-extrabold text-gray-900">
+          <div className="w-full max-w-sm md:max-w-md rounded-3xl bg-white dark:bg-[#2A221C] p-6 md:p-8 shadow-2xl border border-gray-100 dark:border-[#45372C] text-center">
+            <h3 className="mb-2 text-xl font-extrabold text-gray-900 dark:text-[#FAF5ED]">
               Hapus Kategori? ⚠️
             </h3>
 
-            <p className="mb-4 text-xs text-gray-500 leading-relaxed">
+            <p className="mb-4 text-xs text-gray-500 dark:text-[#A89B8C] leading-relaxed">
               Menghapus kategori ini juga dapat berdampak pada item yang terhubung di dalamnya.
             </p>
-            <p className="mb-6 text-sm font-semibold text-gray-800">
+            <p className="mb-6 text-sm font-semibold text-gray-800 dark:text-[#FAF5ED]">
               Yakin ingin menghapus kategori{" "}
-              <span className="text-[#8B5E3C]">
+              <span className="text-[#8B5E3C] dark:text-amber-400">
                 "{translateCategoryName(selectedCategory.name)}"
               </span>
               ?
@@ -584,14 +584,14 @@ export default function KategoriPage() {
               <button
                 type="button"
                 onClick={() => setDeleteModalOpen(false)}
-                className="flex-1 rounded-2xl bg-gray-100 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-200 transition"
+                className="flex-1 rounded-2xl bg-gray-100 dark:bg-[#35291F] py-2.5 text-sm font-bold text-gray-700 dark:text-[#C8BCAE] hover:bg-gray-200 dark:hover:bg-[#45372C] transition"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleDeleteCategory}
-                className="flex-1 rounded-2xl bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-600 transition shadow-md"
+                className="flex-1 rounded-2xl bg-red-500 dark:bg-rose-600 py-2.5 text-sm font-bold text-white hover:bg-red-600 dark:hover:bg-rose-700 transition shadow-md"
               >
                 Hapus
               </button>

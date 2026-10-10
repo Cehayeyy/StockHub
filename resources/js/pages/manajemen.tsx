@@ -285,11 +285,11 @@ export default function Manajemen() {
     // Helper badge role
     const getRoleBadgeClass = (role: string) => {
         switch (role.toLowerCase()) {
-            case 'bar': return 'bg-purple-50 text-purple-700 border-purple-100';
-            case 'dapur': return 'bg-orange-50 text-orange-700 border-orange-100';
-            case 'supervisor': return 'bg-blue-50 text-blue-700 border-blue-100';
-            case 'owner': return 'bg-green-50 text-green-700 border-green-100';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'bar': return 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800/50';
+            case 'dapur': return 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/70 dark:text-orange-300 dark:border-orange-800/50';
+            case 'supervisor': return 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800/50';
+            case 'owner': return 'bg-green-50 text-green-700 border-green-100 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800/50';
+            default: return 'bg-gray-100 text-gray-800 dark:bg-[#2D241E] dark:text-[#FAF5ED] dark:border-[#45372C]';
         }
     };
 
@@ -313,20 +313,20 @@ export default function Manajemen() {
             <Head title="Manajemen Akun" />
 
             <div className="py-6">
-                <div className={`bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 min-h-[600px] flex flex-col ${
+                <div className={`bg-white dark:bg-[#2A221C] p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-[#45372C] min-h-[600px] flex flex-col ${
                         showModal || confirmDelete || showEditModal || showSelfUpdateModal ? 'blur-sm pointer-events-none' : ''
                     }`}
                 >
                     {/* --- HEADER --- */}
                     <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                        <h3 className="text-lg font-bold text-gray-800">Daftar Pengguna</h3>
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">Daftar Pengguna</h3>
 
                         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                             {/* Button Update Akun Owner */}
                             {currentUserRole === 'owner' && (
                                 <button
                                     onClick={openSelfUpdateModal}
-                                    className="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-green-700 transition w-full sm:w-auto justify-center"
+                                    className="flex items-center gap-2 bg-green-600 dark:bg-emerald-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-green-700 dark:hover:bg-emerald-700 transition w-full sm:w-auto justify-center"
                                 >
                                     <Settings className="w-4 h-4" />
                                     Update Akun Saya
@@ -335,7 +335,7 @@ export default function Manajemen() {
 
                             <button
                                 onClick={openModal}
-                                className="flex items-center gap-2 bg-[#D9A978] text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-[#c4925e] transition w-full sm:w-auto justify-center"
+                                className="flex items-center gap-2 bg-[#D9A978] dark:bg-[#8B5E3C] text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-[#c4925e] dark:hover:bg-[#6F4E37] transition w-full sm:w-auto justify-center"
                             >
                                 <Plus className="w-4 h-4" />
                                 Tambah Akun
@@ -347,46 +347,46 @@ export default function Manajemen() {
                     {/* Tampil di layar kecil (< md) */}
                     <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
                         {userList.length === 0 ? (
-                             <div className="text-center text-gray-400 py-8 border rounded-xl bg-gray-50">
+                             <div className="text-center text-gray-400 dark:text-[#8E8072] py-8 border rounded-xl bg-gray-50 dark:bg-[#231C17] dark:border-[#3D3127]">
                                 Belum ada pengguna.
                             </div>
                         ) : (
                             userList.map((u: any) => (
-                                <div key={u.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                                <div key={u.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-xl p-4 shadow-sm">
                                     <div className="flex justify-between items-start mb-3">
                                         <div>
-                                            <div className="font-bold text-gray-800">{u.username || '-'}</div>
-                                            <div className="text-sm text-gray-500">{u.name || '-'}</div>
+                                            <div className="font-bold text-gray-800 dark:text-[#FAF5ED]">{u.username || '-'}</div>
+                                            <div className="text-sm text-gray-500 dark:text-[#A89B8C]">{u.name || '-'}</div>
                                         </div>
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
                                             {u.role}
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center text-xs text-gray-400 mb-4 gap-1">
+                                    <div className="flex items-center text-xs text-gray-400 dark:text-[#8E8072] mb-4 gap-1">
                                         <Calendar className="w-3 h-3" />
                                         Dibuat: {new Date(u.created_at).toLocaleDateString('id-ID')}
                                     </div>
 
-                                    <div className="flex gap-2 border-t pt-3">
+                                    <div className="flex gap-2 border-t border-gray-100 dark:border-[#3D3127] pt-3">
                                         {canManageUser(u) && (
                                             <>
                                                 <button
                                                     onClick={() => openEditModal(u)}
-                                                    className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] transition"
+                                                    className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] dark:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] dark:hover:bg-blue-700 transition"
                                                 >
                                                     <Edit className="w-3 h-3" /> Edit
                                                 </button>
                                                 <button
                                                     onClick={() => openDeleteModal(u.id)}
-                                                    className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] transition"
+                                                    className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] dark:bg-rose-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] dark:hover:bg-rose-700 transition"
                                                 >
                                                     <Trash2 className="w-3 h-3" /> Hapus
                                                 </button>
                                             </>
                                         )}
                                         {!canManageUser(u) && (
-                                            <span className="flex-1 text-center text-xs text-gray-400 py-2">Tidak dapat dikelola</span>
+                                            <span className="flex-1 text-center text-xs text-gray-400 dark:text-[#8E8072] py-2">Tidak dapat dikelola</span>
                                         )}
                                     </div>
                                 </div>
@@ -396,10 +396,10 @@ export default function Manajemen() {
 
                     {/* --- DESKTOP VIEW (TABLE) --- */}
                     {/* Tampil di layar sedang ke atas (md:block) */}
-                    <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden flex-1 mb-6">
+                    <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-sm overflow-hidden flex-1 mb-6">
                         <div className="w-full overflow-x-auto">
                             <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
+                                <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
                                     <tr>
                                         <th className="px-6 py-4 w-16 text-center">No</th>
                                         <th className="px-6 py-4">Username</th>
@@ -409,10 +409,10 @@ export default function Manajemen() {
                                         <th className="px-6 py-4 text-center w-40">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
+                                <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
                                     {userList.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">
+                                            <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
                                                 Belum ada pengguna.
                                             </td>
                                         </tr>
@@ -420,23 +420,23 @@ export default function Manajemen() {
                                         userList.map((u: any, index: number) => {
                                             const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
                                             return (
-                                                <tr key={u.id} className="hover:bg-[#FDF3E4]/50 transition-colors duration-150">
-                                                    <td className="px-6 py-4 text-center text-gray-400 font-medium">
+                                                <tr key={u.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2A221C] transition-colors duration-150">
+                                                    <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">
                                                         {users.current_page
                                                             ? (users.current_page - 1) * users.per_page + index + 1
                                                             : index + 1}
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-9 h-9 rounded-xl bg-[#D9A978]/20 text-[#8B5E3C] font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-inner">
+                                                            <div className="w-9 h-9 rounded-xl bg-[#D9A978]/20 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-inner">
                                                                 {initial}
                                                             </div>
-                                                            <span className="font-bold text-gray-800">
+                                                            <span className="font-bold text-gray-800 dark:text-[#FAF5ED]">
                                                                 {u.name || '-'}
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-600 font-mono text-xs">
+                                                    <td className="px-6 py-4 text-gray-600 dark:text-[#C8BCAE]">
                                                         {u.username || '-'}
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
@@ -444,7 +444,7 @@ export default function Manajemen() {
                                                             {u.role}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-center text-gray-500 text-xs font-medium">
+                                                    <td className="px-6 py-4 text-center text-gray-500 dark:text-[#A89B8C] text-xs font-medium">
                                                         {new Date(u.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
@@ -452,19 +452,19 @@ export default function Manajemen() {
                                                             <div className="flex justify-center gap-2">
                                                                 <button
                                                                     onClick={() => openEditModal(u)}
-                                                                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition shadow-xs flex items-center gap-1"
+                                                                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs flex items-center gap-1"
                                                                 >
                                                                     <Edit className="w-3.5 h-3.5" /> Edit
                                                                 </button>
                                                                 <button
                                                                     onClick={() => openDeleteModal(u.id)}
-                                                                    className="px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition shadow-xs flex items-center gap-1"
+                                                                    className="px-3.5 py-1.5 rounded-xl bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 font-bold text-xs hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-xs flex items-center gap-1"
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" /> Hapus
                                                                 </button>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-xs text-gray-400 italic font-medium">Sistem Utama</span>
+                                                            <span className="text-xs text-gray-400 dark:text-[#8E8072] italic font-medium">Sistem Utama</span>
                                                         )}
                                                     </td>
                                                 </tr>
@@ -479,7 +479,7 @@ export default function Manajemen() {
                     {/* --- PAGINATION (Responsive) --- */}
                     {links.length > 3 && (
                         <div className="mt-auto flex justify-center md:justify-end pt-4">
-                            <div className="flex flex-wrap justify-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-200">
+                            <div className="flex flex-wrap justify-center gap-1 bg-gray-50 dark:bg-[#231C17] p-1 rounded-full border border-gray-200 dark:border-[#3D3127]">
                                 {links.map((link: any, i: number) => {
                                     let label = link.label;
                                     if (label.includes('&laquo;')) label = 'Prev';
@@ -498,8 +498,8 @@ export default function Manajemen() {
                                                 relative inline-flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all rounded-full
                                                 ${
                                                     link.active
-                                                        ? 'bg-[#D9A978] text-white shadow-md'
-                                                        : 'text-gray-600 hover:bg-white hover:text-[#D9A978]'
+                                                        ? 'bg-[#D9A978] dark:bg-[#8B5E3C] text-white shadow-md'
+                                                        : 'text-gray-600 dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#2A221C] hover:text-[#D9A978] dark:hover:text-amber-300'
                                                 }
                                                 ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}
                                             `}
@@ -516,25 +516,25 @@ export default function Manajemen() {
 
             {/* ===================== MODAL TAMBAH ===================== */}
             {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 p-4 transition-all">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 border border-gray-100 transform transition-all">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4 transition-all">
+                    <div className="bg-white dark:bg-[#2A221C] rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 border border-gray-100 dark:border-[#45372C] transform transition-all">
                         
                         {/* Header Modal dengan Aksen Ikon */}
                         <div className="flex flex-col items-center text-center mb-6">
-                            <div className="w-12 h-12 rounded-2xl bg-[#D9A978]/15 text-[#8B5E3C] flex items-center justify-center mb-3 shadow-inner">
+                            <div className="w-12 h-12 rounded-2xl bg-[#D9A978]/15 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 flex items-center justify-center mb-3 shadow-inner">
                                 <User className="w-6 h-6" />
                             </div>
-                            <h2 className="text-xl font-extrabold text-gray-800">
+                            <h2 className="text-xl font-extrabold text-gray-800 dark:text-[#FAF5ED]">
                                 Tambah Akun Baru
                             </h2>
-                            <p className="text-xs text-gray-400 mt-1">
+                            <p className="text-xs text-gray-400 dark:text-[#A89B8C] mt-1">
                                 Pilih bagian dan buat kredensial login untuk staf baru
                             </p>
                         </div>
 
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider mb-1.5">
                                     Bagian / Role
                                 </label>
                                 <CustomSelect
@@ -551,16 +551,16 @@ export default function Manajemen() {
                                     ]}
                                     placeholder="-- Pilih Bagian --"
                                     error={validationErrors.role}
-                                    buttonClassName="bg-gray-50 py-2.5 rounded-xl border-gray-200"
+                                    buttonClassName="bg-gray-50 dark:bg-[#231C17] py-2.5 rounded-xl border-gray-200 dark:border-[#45372C]"
                                 />
                                 {validationErrors.role && (
                                     <p className="text-red-500 text-xs mt-1">{validationErrors.role}</p>
                                 )}
                             </div>
 
-                            <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-amber-100 flex items-center justify-between">
-                              <div>
-                                <span className="block text-[10px] font-bold text-[#8B5E3C] uppercase tracking-wider">
+                            <div className="bg-[#FAF7F2] dark:bg-[#231C17] p-3.5 rounded-2xl border border-amber-100 dark:border-[#45372C] flex items-center justify-between">
+                              <div className="w-full">
+                                <span className="block text-xs font-bold text-[#8B5E3C] dark:text-amber-400 uppercase tracking-wider mb-1">
                                     Kode Username (Otomatis)
                                 </span>
                                 <input
@@ -568,13 +568,13 @@ export default function Manajemen() {
                                     value={username}
                                     readOnly
                                     placeholder="Pilih bagian dulu..."
-                                    className="w-full bg-transparent font-mono text-base font-bold text-gray-800 outline-none placeholder:text-gray-400 placeholder:font-normal placeholder:text-xs"
+                                    className="w-full bg-transparent font-mono text-lg font-bold text-gray-800 dark:text-[#FAF5ED] outline-none placeholder:text-gray-400 dark:placeholder:text-[#8E8072] placeholder:font-normal placeholder:text-sm"
                                 />
                               </div>
                           </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider mb-1.5">
                                     Username / Nama Akun
                                 </label>
                                 <input
@@ -582,7 +582,7 @@ export default function Manajemen() {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="Contoh: Budi Santoso"
-                                    className={`w-full bg-gray-50 rounded-2xl px-4 py-2.5 text-sm border focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none transition ${validationErrors.name ? 'border-red-500' : 'border-gray-200'}`}
+                                    className={`w-full bg-gray-50 dark:bg-[#231C17] rounded-2xl px-4 py-2.5 text-sm border text-gray-800 dark:text-[#FAF5ED] focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none transition ${validationErrors.name ? 'border-red-500' : 'border-gray-200 dark:border-[#45372C]'}`}
                                     required
                                 />
                                 {validationErrors.name && (
@@ -591,7 +591,7 @@ export default function Manajemen() {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider mb-1.5">
                                     Password
                                 </label>
                                 <input
@@ -599,7 +599,7 @@ export default function Manajemen() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Minimal 5 karakter"
-                                    className={`w-full bg-gray-50 rounded-2xl px-4 py-2.5 text-sm border focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none transition ${validationErrors.password ? 'border-red-500' : 'border-gray-200'}`}
+                                    className={`w-full bg-gray-50 dark:bg-[#231C17] rounded-2xl px-4 py-2.5 text-sm border text-gray-800 dark:text-[#FAF5ED] focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none transition ${validationErrors.password ? 'border-red-500' : 'border-gray-200 dark:border-[#45372C]'}`}
                                     required
                                 />
                                 {validationErrors.password && (
@@ -611,7 +611,7 @@ export default function Manajemen() {
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
-                                    className="flex-1 px-4 py-2.5 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition active:scale-95"
+                                    className="flex-1 px-4 py-2.5 rounded-2xl bg-gray-100 dark:bg-[#382D25] text-gray-700 dark:text-[#C8BCAE] font-bold text-sm hover:bg-gray-200 dark:hover:bg-[#483B32] transition active:scale-95"
                                 >
                                     Batal
                                 </button>
@@ -630,15 +630,15 @@ export default function Manajemen() {
 
             {/* ===================== MODAL EDIT USER ===================== */}
             {showEditModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 p-4">
-                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 sm:p-8 animate-fadeIn">
-                        <h2 className="text-xl font-bold text-center mb-6 text-gray-800">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+                    <div className="bg-white dark:bg-[#2A221C] rounded-3xl shadow-xl w-full max-w-sm p-6 sm:p-8 border border-gray-100 dark:border-[#45372C] animate-fadeIn">
+                        <h2 className="text-xl font-bold text-center mb-6 text-gray-800 dark:text-[#FAF5ED]">
                             Edit Akun
                         </h2>
 
                         <form onSubmit={handleUpdate} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                <label className="block text-sm font-bold text-gray-700 dark:text-[#C8BCAE] mb-1">
                                     Bagian
                                 </label>
                                 <CustomSelect
@@ -650,19 +650,19 @@ export default function Manajemen() {
                                         ...(allowedRoles?.includes('supervisor') ? [{ value: 'supervisor', label: 'Supervisor' }] : []),
                                     ]}
                                     placeholder="-- Pilih Bagian --"
-                                    buttonClassName="bg-gray-50 py-2.5"
+                                    buttonClassName="bg-gray-50 dark:bg-[#231C17] py-2.5 border-gray-200 dark:border-[#45372C]"
                                 />
                             </div>
 
-                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">
+                            <div className="bg-gray-50 dark:bg-[#231C17] p-3 rounded-xl border border-gray-100 dark:border-[#45372C]">
+                                <label className="block text-xs font-bold text-gray-500 dark:text-[#A89B8C] mb-1 uppercase">
                                     Kode Username
                                 </label>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className={`w-full bg-transparent font-mono text-lg font-bold text-gray-800 outline-none ${validationErrors.username ? 'text-red-500' : ''}`}
+                                    className={`w-full bg-transparent font-mono text-lg font-bold text-gray-800 dark:text-[#FAF5ED] outline-none ${validationErrors.username ? 'text-red-500' : ''}`}
                                     required
                                 />
                                 {validationErrors.username && (
@@ -671,27 +671,27 @@ export default function Manajemen() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                <label className="block text-sm font-bold text-gray-700 dark:text-[#C8BCAE] mb-1">
                                     Nama Lengkap
                                 </label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className="w-full bg-gray-50 rounded-xl px-4 py-2 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none"
+                                    className="w-full bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-4 py-2 border border-gray-200 dark:border-[#45372C] focus:ring-2 focus:ring-[#D9A978] outline-none"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                <label className="block text-sm font-bold text-gray-700 dark:text-[#C8BCAE] mb-1">
                                     Password (Opsional)
                                 </label>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className={`w-full bg-gray-50 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-[#D9A978] outline-none ${validationErrors.password ? 'border-red-500' : 'border-gray-200'}`}
+                                    className={`w-full bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-4 py-2 border focus:ring-2 focus:ring-[#D9A978] outline-none ${validationErrors.password ? 'border-red-500' : 'border-gray-200 dark:border-[#45372C]'}`}
                                     placeholder="Isi jika ingin mengubah"
                                 />
                                 {validationErrors.password && (
@@ -703,13 +703,13 @@ export default function Manajemen() {
                                 <button
                                     type="button"
                                     onClick={() => setShowEditModal(false)}
-                                    className="flex-1 px-4 py-2 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
+                                    className="flex-1 px-4 py-2 rounded-xl bg-gray-200 dark:bg-[#382D25] text-gray-700 dark:text-[#C8BCAE] font-semibold hover:bg-gray-300 dark:hover:bg-[#483B32] transition"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 rounded-xl bg-[#1D8CFF] text-white font-bold hover:bg-[#166ac4] transition"
+                                    className="flex-1 px-4 py-2 rounded-xl bg-[#1D8CFF] dark:bg-blue-600 text-white font-bold hover:bg-[#166ac4] dark:hover:bg-blue-700 transition"
                                 >
                                     Update
                                 </button>
@@ -721,17 +721,17 @@ export default function Manajemen() {
 
             {/* ===================== MODAL DELETE ===================== */}
             {confirmDelete && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 p-4">
-                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-8 text-center animate-fadeIn">
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Hapus Akun?</h2>
-                        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+                    <div className="bg-white dark:bg-[#2A221C] rounded-3xl shadow-xl w-full max-w-sm p-8 text-center border border-gray-100 dark:border-[#45372C] animate-fadeIn">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-[#FAF5ED] mb-2">Hapus Akun?</h2>
+                        <p className="text-gray-500 dark:text-[#A89B8C] text-sm mb-8 leading-relaxed">
                             Anda yakin ingin menghapus user ini? Tindakan ini tidak dapat dibatalkan.
                         </p>
 
                         <div className="flex justify-center gap-4">
                             <button
                                 onClick={() => setConfirmDelete(false)}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition"
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-[#382D25] text-gray-700 dark:text-[#C8BCAE] font-semibold hover:bg-gray-200 dark:hover:bg-[#483B32] transition"
                             >
                                 Batal
                             </button>
@@ -749,30 +749,30 @@ export default function Manajemen() {
 
             {/* ===================== MODAL SELF UPDATE (OWNER) ===================== */}
             {showSelfUpdateModal && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 p-4">
-                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 sm:p-8 animate-fadeIn">
+                <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+                    <div className="bg-white dark:bg-[#2A221C] rounded-3xl shadow-xl w-full max-w-sm p-6 sm:p-8 border border-gray-100 dark:border-[#45372C] animate-fadeIn">
                         <div className="flex items-center justify-center mb-4">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                                <Settings className="w-8 h-8 text-green-600" />
+                            <div className="w-16 h-16 bg-green-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center">
+                                <Settings className="w-8 h-8 text-green-600 dark:text-emerald-400" />
                             </div>
                         </div>
-                        <h2 className="text-xl font-bold text-center mb-2 text-gray-800">
+                        <h2 className="text-xl font-bold text-center mb-2 text-gray-800 dark:text-[#FAF5ED]">
                             Update Akun Owner
                         </h2>
-                        <p className="text-center text-gray-500 text-sm mb-6">
+                        <p className="text-center text-gray-500 dark:text-[#A89B8C] text-sm mb-6">
                             Ubah username dan password akun Anda
                         </p>
 
                         <form onSubmit={handleSelfUpdate} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                <label className="block text-sm font-bold text-gray-700 dark:text-[#C8BCAE] mb-1">
                                     Username Baru
                                 </label>
                                 <input
                                     type="text"
                                     value={selfUsername}
                                     onChange={(e) => setSelfUsername(e.target.value)}
-                                    className={`w-full bg-gray-50 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-green-500 outline-none ${validationErrors.selfUsername || validationErrors.username ? 'border-red-500' : 'border-gray-200'}`}
+                                    className={`w-full bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-4 py-2 border focus:ring-2 focus:ring-green-500 outline-none ${validationErrors.selfUsername || validationErrors.username ? 'border-red-500' : 'border-gray-200 dark:border-[#45372C]'}`}
                                     required
                                 />
                                 {(validationErrors.selfUsername || validationErrors.username) && (
@@ -781,14 +781,14 @@ export default function Manajemen() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                <label className="block text-sm font-bold text-gray-700 dark:text-[#C8BCAE] mb-1">
                                     Password Baru (Opsional)
                                 </label>
                                 <input
                                     type="password"
                                     value={selfPassword}
                                     onChange={(e) => setSelfPassword(e.target.value)}
-                                    className={`w-full bg-gray-50 rounded-xl px-4 py-2 border focus:ring-2 focus:ring-green-500 outline-none ${validationErrors.selfPassword || validationErrors.password ? 'border-red-500' : 'border-gray-200'}`}
+                                    className={`w-full bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] rounded-xl px-4 py-2 border focus:ring-2 focus:ring-green-500 outline-none ${validationErrors.selfPassword || validationErrors.password ? 'border-red-500' : 'border-gray-200 dark:border-[#45372C]'}`}
                                     placeholder="Kosongkan jika tidak ingin mengubah"
                                 />
                                 {(validationErrors.selfPassword || validationErrors.password) && (
@@ -800,13 +800,13 @@ export default function Manajemen() {
                                 <button
                                     type="button"
                                     onClick={() => setShowSelfUpdateModal(false)}
-                                    className="flex-1 px-4 py-2 rounded-xl bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
+                                    className="flex-1 px-4 py-2 rounded-xl bg-gray-200 dark:bg-[#382D25] text-gray-700 dark:text-[#C8BCAE] font-semibold hover:bg-gray-300 dark:hover:bg-[#483B32] transition"
                                 >
                                     Batal
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition"
+                                    className="flex-1 px-4 py-2 rounded-xl bg-green-600 dark:bg-emerald-600 text-white font-bold hover:bg-green-700 dark:hover:bg-emerald-700 transition"
                                 >
                                     Simpan
                                 </button>

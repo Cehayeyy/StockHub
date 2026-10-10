@@ -178,17 +178,35 @@ html.dark .border-orange-100 {
 }
 
 /* Status Cards inside Status Stok Harian */
-html.dark .bg-red-50 {
+html.dark .bg-red-50,
+html.dark .bg-rose-50,
+html.dark .bg-rose-50\/70 {
   background-color: #381A1A !important;
   border-color: #5E2A2A !important;
 }
 
+html.dark .border-rose-100,
+html.dark .border-rose-200 {
+  border-color: #5E2A2A !important;
+}
+
+html.dark .text-rose-800 {
+  color: #FFA5A5 !important;
+}
+
+html.dark .text-rose-600 {
+  color: #FF6B6B !important;
+}
+
 html.dark .bg-red-50 span.text-gray-700,
-html.dark .bg-red-50 span.font-medium {
+html.dark .bg-red-50 span.font-medium,
+html.dark .bg-rose-50 span.text-gray-700,
+html.dark .bg-rose-50 span.font-medium {
   color: #FFEAEA !important;
 }
 
-html.dark .bg-red-50 p.text-gray-500 {
+html.dark .bg-red-50 p.text-gray-500,
+html.dark .bg-rose-50 p.text-gray-500 {
   color: #F8B4B4 !important;
 }
 
@@ -215,9 +233,19 @@ html.dark .bg-amber-50 span.text-amber-600 {
 }
 
 html.dark .bg-green-50,
-html.dark .bg-emerald-50 {
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-50\/70 {
   background-color: #16321F !important;
   border-color: #245233 !important;
+}
+
+html.dark .border-emerald-100,
+html.dark .border-emerald-200 {
+  border-color: #245233 !important;
+}
+
+html.dark .text-emerald-800 {
+  color: #A9E2B9 !important;
 }
 
 html.dark .bg-green-50 span.text-gray-700,
@@ -235,6 +263,7 @@ html.dark .bg-green-50 span.text-green-600,
 html.dark .bg-emerald-50 span.text-emerald-600 {
   color: #4ADE80 !important;
 }
+
 
 /* Category & Item badges */
 html.dark .bg-\[\#F7EFE6\] {

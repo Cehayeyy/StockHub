@@ -17,20 +17,20 @@ const mediaQuery = typeof window !== 'undefined' ? window.matchMedia('(prefers-c
 
 const handleSystemThemeChange = () => {
     if (typeof localStorage === 'undefined') return;
-    const currentAppearance = (localStorage.getItem('appearance') as Appearance) || 'system';
+    const currentAppearance = (localStorage.getItem('appearance') as Appearance) || 'light';
     applyTheme(currentAppearance);
 };
 
 export function initializeTheme() {
     if (typeof window === 'undefined') return;
-    const savedAppearance = (localStorage.getItem('appearance') as Appearance) || 'system';
+    const savedAppearance = (localStorage.getItem('appearance') as Appearance) || 'light';
     applyTheme(savedAppearance);
 
     mediaQuery?.addEventListener('change', handleSystemThemeChange);
 }
 
 export function useAppearance() {
-    const [appearance, setAppearance] = useState<Appearance>('system');
+    const [appearance, setAppearance] = useState<Appearance>('light');
     const [isDark, setIsDark] = useState<boolean>(() => {
         if (typeof document !== 'undefined') {
             return document.documentElement.classList.contains('dark');
@@ -57,14 +57,14 @@ export function useAppearance() {
     };
 
     useEffect(() => {
-        const savedAppearance = (localStorage.getItem('appearance') as Appearance | null) || 'system';
+        const savedAppearance = (localStorage.getItem('appearance') as Appearance | null) || 'light';
         setAppearance(savedAppearance);
         const resolvedIsDark = savedAppearance === 'dark' || (savedAppearance === 'system' && prefersDark());
         setIsDark(resolvedIsDark);
         applyTheme(savedAppearance);
 
         const onChange = () => {
-            const current = (localStorage.getItem('appearance') as Appearance) || 'system';
+            const current = (localStorage.getItem('appearance') as Appearance) || 'light';
             if (current === 'system') {
                 const dark = prefersDark();
                 setIsDark(dark);
@@ -78,4 +78,3 @@ export function useAppearance() {
 
     return { appearance, updateAppearance, isDark, toggleTheme };
 }
-

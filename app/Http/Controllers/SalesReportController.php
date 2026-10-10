@@ -146,10 +146,36 @@ class SalesReportController extends Controller
 
         try {
             DB::transaction(function () use ($request, $tanggal, $userId, $currentUser) {
+                $nomorNotaDiinput = [];
+
+                // Periksa nomor nota terlebih dahulu supaya pengguna tidak menerima
+                // pesan teknis dari database saat ada nomor yang sama.
+                foreach ($request->notas as $notaData) {
+                    $nomorNota = trim($notaData['nomor_nota']);
+                    $partnerNota = $notaData['partner_mitra'] ?? 'Internal / Umum';
+                    $kunciNota = mb_strtolower($partnerNota).'|'.mb_strtolower($nomorNota);
+
+                    if (isset($nomorNotaDiinput[$kunciNota])) {
+                        throw new \RuntimeException("Nomor nota '{$nomorNota}' diisi lebih dari satu kali. Silakan bedakan atau ganti nomor nota.");
+                    }
+
+                    $nomorNotaDiinput[$kunciNota] = true;
+
+                    $nomorSudahAda = \App\Models\SalesReport::query()
+                        ->where('user_id', $userId)
+                        ->whereDate('tanggal_transaksi', $tanggal)
+                        ->where('partner_nota', $partnerNota)
+                        ->where('nomor_nota', $nomorNota)
+                        ->exists();
+
+                    if ($nomorSudahAda) {
+                        throw new \RuntimeException("Nomor nota '{$nomorNota}' sudah digunakan. Silakan bedakan atau ganti nomor nota.");
+                    }
+                }
                 
                 // Looping setiap nota yang di-submit secara batch
                 foreach ($request->notas as $notaData) {
-                    $nomorNota = $notaData['nomor_nota'];
+                    $nomorNota = trim($notaData['nomor_nota']);
                     $partnerNota = $notaData['partner_mitra'] ?? 'Internal / Umum';
 
                     $subtotalMenu = 0;
@@ -277,6 +303,10 @@ class SalesReportController extends Controller
             return back()->with('success', 'Semua nota berhasil disimpan dan stok terpotong otomatis!');
 
         } catch (\Exception $e) {
+            if (str_starts_with($e->getMessage(), 'Nomor nota ')) {
+                return back()->withErrors(['error' => $e->getMessage()]);
+            }
+
             return back()->withErrors(['error' => 'Gagal menyimpan nota: '.$e->getMessage()]);
         }
     }

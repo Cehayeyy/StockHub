@@ -500,7 +500,7 @@ export default function AppLayout({ header, children }: LayoutProps) {
 
       <div className="flex-1 flex flex-col min-h-screen min-w-0 bg-[#FAF7F2] dark:bg-[#1E1915] relative lg:h-screen transition-colors duration-300">
         <header className="bg-[#FAF7F2] dark:bg-[#1E1915] p-3 sm:p-4 md:p-6 flex-shrink-0 z-10 w-full transition-colors duration-300">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               {!isSidebarOpen && (
                 <button
@@ -531,23 +531,23 @@ export default function AppLayout({ header, children }: LayoutProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex w-full min-w-0 items-center justify-between gap-2 sm:w-auto sm:justify-end sm:gap-3">
               {/* Tombol Dark Mode Toggle selalu ada di bagian kiri profile */}
               <ThemeToggle />
 
               {/* Header Profil User */}
-              <div className="flex items-center gap-3 bg-white dark:bg-[#2A221C] px-3 sm:px-4 py-2 rounded-2xl border border-amber-100/80 dark:border-[#3E3228] shadow-xs transition-colors">
+              <div className="flex min-w-0 flex-1 items-center gap-3 bg-white dark:bg-[#2A221C] px-3 sm:flex-none sm:px-4 py-2 rounded-2xl border border-amber-100/80 dark:border-[#3E3228] shadow-xs transition-colors">
                 <div className="w-9 h-9 rounded-xl bg-[#8B5E3C]/10 text-[#8B5E3C] dark:bg-amber-400/20 dark:text-amber-300 flex items-center justify-center font-bold text-xs flex-shrink-0 transition-colors">
                   {(auth?.user?.name || auth?.user?.username || 'U').charAt(0).toUpperCase()}
                 </div>
-                <div className="text-right flex flex-col">
-                  <div className="font-bold text-gray-800 dark:text-[#FAF5ED] text-xs sm:text-sm truncate max-w-[140px] sm:max-w-none transition-colors">
+                <div className="min-w-0 flex flex-1 flex-col text-left sm:flex-none sm:text-right">
+                  <div className="font-bold text-gray-800 dark:text-[#FAF5ED] text-xs sm:text-sm truncate transition-colors">
                     {auth.user.name || auth.user.username}
                     <span className="text-gray-400 dark:text-[#B5A898] font-medium">
                       {auth.user.username ? ` (@${auth.user.username})` : ''}
                     </span>
                   </div>
-                  <div className="flex items-center justify-end gap-1.5 text-[10px] sm:text-xs text-gray-400 dark:text-[#B5A898] font-medium mt-0.5">
+                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] sm:justify-end sm:text-xs text-gray-400 dark:text-[#B5A898] font-medium mt-0.5">
                     <span className="flex items-center gap-1">
                       <Calendar size={10} className="text-[#8B5E3C] dark:text-amber-400" />
                       {formattedDate}

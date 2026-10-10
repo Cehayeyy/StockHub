@@ -364,17 +364,17 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#8B5E3C]/10 flex items-center justify-center text-[#8B5E3C]">
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-[#FAF5ED] flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#8B5E3C]/10 dark:bg-amber-400/10 flex items-center justify-center text-[#8B5E3C] dark:text-amber-400">
                   <ClipboardCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <span className="hidden sm:inline">Status Input Harian Staff</span>
                 <span className="sm:hidden">Status Input Staff</span>
               </h3>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">Monitoring kehadiran & input stok harian staff</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-[#A89B8C] mt-1">Monitoring kehadiran & input stok harian staff</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 text-xs sm:text-sm font-bold rounded-xl border border-emerald-100 shadow-2xs">
+              <span className="px-3.5 py-1.5 bg-emerald-50 dark:bg-[#16321F] text-emerald-700 dark:text-[#4ADE80] text-xs sm:text-sm font-bold rounded-xl border border-emerald-100 dark:border-[#245233] shadow-2xs">
                 ✨ {staffSudahInput?.length || 0} / {totalStaff || 0} Sudah Input
               </span>
             </div>
@@ -382,11 +382,11 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Staff Sudah Input */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
-              <div className="px-4 py-3 bg-emerald-50/70 border-b border-emerald-100 flex items-center gap-2.5">
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                <span className="font-bold text-emerald-800 text-sm">Sudah Input</span>
-                <span className="ml-auto px-2.5 py-0.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-2xs">
+            <div className="bg-white dark:bg-[#231C17] rounded-2xl border border-gray-100 dark:border-[#3D3127] shadow-xs overflow-hidden flex flex-col">
+              <div className="px-4 py-3 bg-emerald-50/70 dark:bg-[#16321F]/80 border-b border-emerald-100 dark:border-[#245233] flex items-center gap-2.5">
+                <UserCheck className="w-4 h-4 text-emerald-600 dark:text-[#4ADE80]" />
+                <span className="font-bold text-emerald-800 dark:text-[#A9E2B9] text-sm">Sudah Input</span>
+                <span className="ml-auto px-2.5 py-0.5 bg-emerald-600 dark:bg-emerald-500 text-white text-xs font-bold rounded-full shadow-2xs">
                   {staffSudahInput?.length || 0}
                 </span>
               </div>
@@ -394,49 +394,49 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                 {staffSudahInput && staffSudahInput.length > 0 ? (
                   <div className="space-y-1.5">
                     {staffSudahInput.map((staff: any) => (
-                      <div key={staff.id} className="px-3 py-2.5 rounded-xl flex items-center gap-3 bg-gray-50/50 hover:bg-emerald-50/30 transition-all">
-                        <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs flex-shrink-0">
+                      <div key={staff.id} className="px-3 py-2.5 rounded-xl flex items-center gap-3 bg-gray-50/50 dark:bg-[#2B221B] hover:bg-emerald-50/30 dark:hover:bg-[#16321F]/60 border border-transparent dark:border-[#3D3127]/60 transition-all">
+                        <div className="w-9 h-9 bg-emerald-600 dark:bg-emerald-500 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs flex-shrink-0">
                           {staff.name?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-800 text-sm truncate">{staff.name}</p>
+                          <p className="font-bold text-gray-800 dark:text-[#FAF5ED] text-sm truncate">{staff.name}</p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wide ${
                               staff.role === 'bar'
-                                ? 'bg-purple-100 text-purple-700'
-                                : 'bg-orange-100 text-orange-700'
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 dark:border dark:border-purple-800/50'
+                                : 'bg-orange-100 text-orange-700 dark:bg-orange-950/70 dark:text-orange-300 dark:border dark:border-orange-800/50'
                             }`}>
                               {staff.role === 'bar' ? 'Bar' : 'Dapur'}
                             </span>
                             {staff.input_time && (
-                              <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+                              <span className="text-[11px] text-gray-400 dark:text-[#A89B8C] font-medium flex items-center gap-1">
                                 <Clock size={10} />
                                 {new Date(staff.input_time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             )}
                           </div>
                         </div>
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-[#4ADE80] flex-shrink-0" />
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="py-10 text-center">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2 text-gray-400">
+                    <div className="w-10 h-10 bg-gray-100 dark:bg-[#2D241E] rounded-full flex items-center justify-center mx-auto mb-2 text-gray-400 dark:text-[#8E8072]">
                       <UserCheck className="w-5 h-5" />
                     </div>
-                    <p className="text-xs text-gray-400 italic">Belum ada staff yang melakukan input</p>
+                    <p className="text-xs text-gray-400 dark:text-[#8E8072] italic">Belum ada staff yang melakukan input</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Staff Belum Input */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden flex flex-col">
-              <div className="px-4 py-3 bg-rose-50/70 border-b border-rose-100 flex items-center gap-2.5">
-                <UserX className="w-4 h-4 text-rose-600" />
-                <span className="font-bold text-rose-800 text-sm">Belum Input</span>
-                <span className="ml-auto px-2.5 py-0.5 bg-rose-600 text-white text-xs font-bold rounded-full shadow-2xs">
+            <div className="bg-white dark:bg-[#231C17] rounded-2xl border border-gray-100 dark:border-[#3D3127] shadow-xs overflow-hidden flex flex-col">
+              <div className="px-4 py-3 bg-rose-50/70 dark:bg-[#381A1A]/80 border-b border-rose-100 dark:border-[#5E2A2A] flex items-center gap-2.5">
+                <UserX className="w-4 h-4 text-rose-600 dark:text-[#FF6B6B]" />
+                <span className="font-bold text-rose-800 dark:text-[#FFA5A5] text-sm">Belum Input</span>
+                <span className="ml-auto px-2.5 py-0.5 bg-rose-600 dark:bg-rose-500 text-white text-xs font-bold rounded-full shadow-2xs">
                   {staffBelumInput?.length || 0}
                 </span>
               </div>
@@ -444,30 +444,30 @@ const [selectedDetailCategory, setSelectedDetailCategory] = useState<'habis' | '
                 {staffBelumInput && staffBelumInput.length > 0 ? (
                   <div className="space-y-1.5">
                     {staffBelumInput.map((staff: any) => (
-                      <div key={staff.id} className="px-3 py-2.5 rounded-xl flex items-center gap-3 bg-gray-50/50 hover:bg-rose-50/30 transition-all">
+                      <div key={staff.id} className="px-3 py-2.5 rounded-xl flex items-center gap-3 bg-gray-50/50 dark:bg-[#2B221B] hover:bg-rose-50/30 dark:hover:bg-[#381A1A]/50 border border-transparent dark:border-[#3D3127]/60 transition-all">
                         <div className="w-9 h-9 bg-rose-500 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-xs flex-shrink-0">
                           {staff.name?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-800 text-sm truncate">{staff.name}</p>
+                          <p className="font-bold text-gray-800 dark:text-[#FAF5ED] text-sm truncate">{staff.name}</p>
                           <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
                             staff.role === 'bar'
-                              ? 'bg-purple-100 text-purple-700'
-                              : 'bg-orange-100 text-orange-700'
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 dark:border dark:border-purple-800/50'
+                              : 'bg-orange-100 text-orange-700 dark:bg-orange-950/70 dark:text-orange-300 dark:border dark:border-orange-800/50'
                           }`}>
                             {staff.role === 'bar' ? 'Bar' : 'Dapur'}
                           </span>
                         </div>
-                        <XCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+                        <XCircle className="w-5 h-5 text-rose-500 dark:text-[#FF6B6B] flex-shrink-0" />
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="py-10 text-center">
-                    <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <div className="w-10 h-10 bg-emerald-50 dark:bg-[#16321F] rounded-full flex items-center justify-center mx-auto mb-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-[#4ADE80]" />
                     </div>
-                    <p className="text-xs font-bold text-emerald-700">Luar biasa! Semua staff sudah input.</p>
+                    <p className="text-xs font-bold text-emerald-700 dark:text-[#4ADE80]">Luar biasa! Semua staff sudah input.</p>
                   </div>
                 )}
               </div>

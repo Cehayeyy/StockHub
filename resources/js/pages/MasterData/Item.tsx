@@ -381,7 +381,7 @@ export default function ItemPage() {
       <Head title="Item" />
 
       <div className="py-6">
-        <div className="bg-white p-5 md:p-8 rounded-3xl shadow-xs border border-gray-100 min-h-[600px] flex flex-col">
+        <div className="bg-white dark:bg-[#2A221C] p-5 md:p-8 rounded-3xl shadow-xs border border-gray-100 dark:border-[#45372C] min-h-[600px] flex flex-col">
 
           {/* --- TOP TOOLBAR --- */}
           <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -394,7 +394,7 @@ export default function ItemPage() {
                   <button
                     type="button"
                     onClick={() => setShowDivisionDropdown((prev) => !prev)}
-                    className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] hover:bg-[#F6EFEB] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] border border-amber-100 shadow-2xs transition"
+                    className="flex w-full items-center justify-between rounded-xl bg-[#FDF3E4] dark:bg-[#231C17] hover:bg-[#F6EFEB] dark:hover:bg-[#2F241C] px-4 py-2.5 text-sm font-bold text-[#8B5E3C] dark:text-amber-400 border border-amber-100 dark:border-[#45372C] shadow-2xs transition"
                   >
                     <span className="capitalize">
                       {division === "bar" ? "Bar" : "Dapur"}
@@ -407,11 +407,13 @@ export default function ItemPage() {
                   </button>
 
                   {showDivisionDropdown && (
-                    <div className="absolute left-0 mt-1 w-full rounded-2xl bg-white py-1.5 text-sm z-30 shadow-xl border border-gray-100">
+                    <div className="absolute left-0 mt-1 w-full rounded-2xl bg-white dark:bg-[#2A221C] py-1.5 text-sm z-30 shadow-xl border border-gray-100 dark:border-[#45372C]">
                       <button
                         onClick={() => changeDivision("bar")}
                         className={`block w-full px-4 py-2 text-left font-semibold transition ${
-                          division === "bar" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
+                          division === "bar"
+                            ? "bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                            : "text-gray-600 dark:text-[#C8BCAE] hover:bg-gray-50 dark:hover:bg-[#35291F]"
                         }`}
                       >
                         Bar
@@ -419,7 +421,9 @@ export default function ItemPage() {
                       <button
                         onClick={() => changeDivision("dapur")}
                         className={`block w-full px-4 py-2 text-left font-semibold transition ${
-                          division === "dapur" ? "bg-[#FDF3E4] text-[#8B5E3C]" : "text-gray-600 hover:bg-gray-50"
+                          division === "dapur"
+                            ? "bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                            : "text-gray-600 dark:text-[#C8BCAE] hover:bg-gray-50 dark:hover:bg-[#35291F]"
                         }`}
                       >
                         Dapur
@@ -428,13 +432,13 @@ export default function ItemPage() {
                   )}
                 </div>
               ) : (
-                <div className="px-4 py-2.5 rounded-xl bg-[#FDF3E4] text-sm font-bold text-[#8B5E3C] border border-amber-100 capitalize w-fit shadow-2xs">
+                <div className="px-4 py-2.5 rounded-xl bg-[#FDF3E4] dark:bg-[#231C17] text-sm font-bold text-[#8B5E3C] dark:text-amber-400 border border-amber-100 dark:border-[#45372C] capitalize w-fit shadow-2xs">
                   {division}
                 </div>
               )}
 
               {/* Category Filter Tabs: Semua, Menu, Mentah */}
-              <div className="flex items-center gap-1.5 bg-[#FAF7F2] p-1 rounded-2xl border border-amber-100">
+              <div className="flex items-center gap-1.5 bg-[#FAF7F2] dark:bg-[#231C17] p-1 rounded-2xl border border-amber-100 dark:border-[#45372C]">
                 {(["semua", "menu", "mentah"] as const).map((tab) => {
                   const isActive = currentCategory === tab;
                   const labels: Record<string, string> = {
@@ -450,7 +454,7 @@ export default function ItemPage() {
                       className={`px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                         isActive
                           ? "bg-[#8B5E3C] text-white shadow-xs"
-                          : "text-gray-600 hover:text-[#8B5E3C] hover:bg-white/60"
+                          : "text-gray-600 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300 hover:bg-white/60 dark:hover:bg-[#2A221C]"
                       }`}
                     >
                       {labels[tab]}
@@ -465,7 +469,7 @@ export default function ItemPage() {
               {!isStaff && (
                 <button
                   onClick={openModalAdd}
-                  className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] hover:bg-[#c4925e] px-5 py-2 text-sm font-bold text-white shadow-md transition active:scale-95 w-full sm:w-auto"
+                  className="flex items-center justify-center gap-2 rounded-full bg-[#D9A978] dark:bg-[#8B5E3C] hover:bg-[#c4925e] dark:hover:bg-[#6F4E37] px-5 py-2 text-sm font-bold text-white shadow-md transition active:scale-95 w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
                   Tambah Item
@@ -478,9 +482,9 @@ export default function ItemPage() {
                   placeholder="Search...."
                   value={search}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  className="w-full rounded-full border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#8E8072]">
                   <Search className="h-4 w-4" />
                 </span>
               </div>
@@ -496,46 +500,46 @@ export default function ItemPage() {
                 );
 
                 return (
-                  <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-xs">
+                  <div key={item.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-2xl p-4 shadow-xs">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-3">
-                        <div className="bg-[#D9A978]/15 text-[#8B5E3C] p-2.5 rounded-xl shadow-inner">
+                        <div className="bg-[#D9A978]/15 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 p-2.5 rounded-xl shadow-inner">
                           <Package className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-800 text-sm">{item.nama}</h4>
+                          <h4 className="font-bold text-gray-800 dark:text-[#FAF5ED] text-sm">{item.nama}</h4>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
                               isMentah
-                                ? "bg-[#F7EFE6] text-[#8B5E3C]"
-                                : "bg-blue-50 text-blue-600"
+                                ? "bg-[#F7EFE6] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                                : "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40"
                             }`}>
                               {item.item_category ? translateCategoryName(item.item_category.name) : (item.kategori_item || "-")}
                             </span>
                             {isMentah && (
-                              <span className="text-xs font-bold text-gray-700">
+                              <span className="text-xs font-bold text-gray-700 dark:text-[#FAF5ED]">
                                 {formatRupiah(item.harga_dasar)}
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1 rounded-xl capitalize">
+                      <span className="text-xs font-bold bg-gray-100 dark:bg-[#2A221C] text-gray-600 dark:text-[#C8BCAE] px-2.5 py-1 rounded-xl capitalize">
                         {item.satuan ?? "porsi"}
                       </span>
                     </div>
 
                     {!isStaff && (
-                      <div className="flex gap-2 border-t border-gray-100 pt-3 mt-3">
+                      <div className="flex gap-2 border-t border-gray-100 dark:border-[#3D3127] pt-3 mt-3">
                         <button
                           onClick={() => handleEdit(item)}
-                          className="flex-1 flex items-center justify-center gap-1 bg-[#2563EB] hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs"
+                          className="flex-1 flex items-center justify-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs"
                         >
                           <Edit className="w-3.5 h-3.5" /> Edit
                         </button>
                         <button
                           onClick={() => openDeleteConfirm(item.id)}
-                          className="flex-1 flex items-center justify-center gap-1 bg-[#E11D48] hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-xs"
+                          className="flex-1 flex items-center justify-center gap-1 bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-xs"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Hapus
                         </button>
@@ -545,17 +549,17 @@ export default function ItemPage() {
                 );
               })
             ) : (
-              <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200">
-                <p className="text-gray-400 text-sm italic">Tidak ada item ditemukan</p>
+              <div className="text-center py-10 bg-white dark:bg-[#231C17] rounded-2xl border border-dashed border-gray-200 dark:border-[#3D3127]">
+                <p className="text-gray-400 dark:text-[#8E8072] text-sm italic">Tidak ada item ditemukan</p>
               </div>
             )}
           </div>
 
           {/* --- DESKTOP VIEW (TABLE) --- */}
-          <div className="hidden md:block w-full rounded-2xl border border-gray-100 bg-white shadow-2xs overflow-hidden mb-6 flex-1">
+          <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-2xs overflow-hidden mb-6 flex-1">
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#FAF7F2]/60 text-gray-700 font-bold text-xs uppercase tracking-wider border-b border-gray-100">
+                <thead className="bg-[#FAF7F2]/60 dark:bg-[#1E1915] text-gray-700 dark:text-[#A89B8C] font-bold text-xs uppercase tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
                   <tr>
                     <th className="px-6 py-4 w-16 text-center">No</th>
                     <th className="px-6 py-4">Nama Item</th>
@@ -566,7 +570,7 @@ export default function ItemPage() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-[#3D3127]">
                   {safeItems.data.length > 0 ? (
                     safeItems.data.map((item, index) => {
                       const isMentah = isCategoryMentah(
@@ -574,26 +578,26 @@ export default function ItemPage() {
                       );
 
                       return (
-                        <tr key={item.id} className="hover:bg-[#FAF7F2]/40 transition-colors">
-                          <td className="px-6 py-4 text-center text-gray-400 font-medium">
+                        <tr key={item.id} className="hover:bg-[#FAF7F2]/40 dark:hover:bg-[#2A221C]/60 transition-colors">
+                          <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">
                             {(safeItems.current_page - 1) * safeItems.per_page + index + 1}
                           </td>
-                          <td className="px-6 py-4 font-bold text-gray-800">{item.nama}</td>
+                          <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">{item.nama}</td>
                           <td className="px-6 py-4">
                             <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold ${
                               isMentah
-                                ? "bg-[#F7EFE6] text-[#8B5E3C]"
-                                : "bg-blue-50 text-blue-600"
+                                ? "bg-[#F7EFE6] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300"
+                                : "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40"
                             }`}>
                               {item.item_category
                                 ? translateCategoryName(item.item_category.name)
                                 : (item.kategori_item || "-")}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-gray-600 font-medium capitalize">
+                          <td className="px-6 py-4 text-gray-600 dark:text-[#C8BCAE] font-medium capitalize">
                             {item.satuan ?? "porsi"}
                           </td>
-                          <td className="px-6 py-4 font-bold text-gray-800">
+                          <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">
                             {isMentah ? formatRupiah(item.harga_dasar) : "-"}
                           </td>
                           <td className="px-6 py-4 text-center">
@@ -603,20 +607,20 @@ export default function ItemPage() {
                                   <button
                                     type="button"
                                     onClick={() => handleEdit(item)}
-                                    className="px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs transition shadow-2xs active:scale-95"
+                                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-2xs active:scale-95"
                                   >
                                     Edit
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => openDeleteConfirm(item.id)}
-                                    className="px-3.5 py-1.5 rounded-lg bg-[#E11D48] hover:bg-rose-700 text-white font-bold text-xs transition shadow-2xs active:scale-95"
+                                    className="px-3.5 py-1.5 rounded-xl bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 font-bold text-xs hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-2xs active:scale-95"
                                   >
                                     Hapus
                                   </button>
                                 </>
                               ) : (
-                                <span className="text-gray-400 text-xs italic">-</span>
+                                <span className="text-gray-400 dark:text-[#8E8072] text-xs italic">-</span>
                               )}
                             </div>
                           </td>
@@ -625,7 +629,7 @@ export default function ItemPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic">
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
                         Tidak ada data item ditemukan.
                       </td>
                     </tr>
@@ -636,7 +640,7 @@ export default function ItemPage() {
           </div>
 
           {/* --- FOOTER: TOTAL INFO & PAGINATION --- */}
-          <div className="mt-auto pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-gray-100 text-xs sm:text-sm text-gray-500">
+          <div className="mt-auto pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-t border-gray-100 dark:border-[#3D3127] text-xs sm:text-sm text-gray-500 dark:text-[#A89B8C]">
             <div>
               {safeItems.total && safeItems.total > 0 ? (
                 <span>
@@ -667,8 +671,8 @@ export default function ItemPage() {
                         preserveScroll
                         className={`px-2 py-1 text-xs font-semibold transition ${
                           !link.url
-                            ? "text-gray-300 pointer-events-none"
-                            : "text-gray-600 hover:text-[#8B5E3C]"
+                            ? "text-gray-300 dark:text-[#5A4B3D] pointer-events-none"
+                            : "text-gray-600 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300"
                         }`}
                       >
                         Prev
@@ -684,8 +688,8 @@ export default function ItemPage() {
                         preserveScroll
                         className={`px-2 py-1 text-xs font-semibold transition ${
                           !link.url
-                            ? "text-gray-300 pointer-events-none"
-                            : "text-gray-600 hover:text-[#8B5E3C]"
+                            ? "text-gray-300 dark:text-[#5A4B3D] pointer-events-none"
+                            : "text-gray-600 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300"
                         }`}
                       >
                         Next
@@ -709,7 +713,7 @@ export default function ItemPage() {
                       key={i}
                       href={link.url || "#"}
                       preserveScroll
-                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-gray-600 hover:text-[#8B5E3C] font-semibold text-xs transition"
+                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-gray-600 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300 font-semibold text-xs transition"
                     >
                       {link.label}
                     </Link>
@@ -725,8 +729,8 @@ export default function ItemPage() {
       {/* --- MODAL ADD/EDIT MULTI INPUT --- */}
       {openModal && !isStaff && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-white w-full max-w-lg md:max-w-3xl rounded-3xl shadow-2xl p-6 md:p-8 transform transition-all max-h-[90vh] overflow-y-auto border border-gray-100">
-            <h2 className="text-xl md:text-2xl font-extrabold text-center mb-6 text-gray-800">
+          <div className="bg-white dark:bg-[#2A221C] w-full max-w-lg md:max-w-3xl rounded-3xl shadow-2xl p-6 md:p-8 transform transition-all max-h-[90vh] overflow-y-auto border border-gray-100 dark:border-[#45372C]">
+            <h2 className="text-xl md:text-2xl font-extrabold text-center mb-6 text-gray-800 dark:text-[#FAF5ED]">
               {editId ? "Edit Item" : "Tambah Item Baru"}
             </h2>
 
@@ -734,12 +738,12 @@ export default function ItemPage() {
 
               {/* Info Divisi */}
               <div>
-                <label className="block mb-1.5 text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">Penempatan Divisi</label>
+                <label className="block mb-1.5 text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider ml-1">Penempatan Divisi</label>
                 <input
                   type="text"
                   readOnly
                   value={division === "bar" ? "Bar" : "Dapur"}
-                  className="w-full bg-gray-50 rounded-2xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed font-medium text-sm"
+                  className="w-full bg-gray-50 dark:bg-[#231C17] rounded-2xl px-4 py-3 border border-gray-200 dark:border-[#45372C] text-gray-500 dark:text-[#A89B8C] cursor-not-allowed font-medium text-sm"
                 />
               </div>
 
@@ -749,35 +753,35 @@ export default function ItemPage() {
                 const isMentah = isCategoryMentah(selectedCat?.name);
 
                 return (
-                <div key={item.uid} className="bg-white border border-gray-200/80 rounded-3xl p-5 space-y-4 relative shadow-xs">
+                <div key={item.uid} className="bg-white dark:bg-[#231C17] border border-gray-200/80 dark:border-[#3D3127] rounded-3xl p-5 space-y-4 relative shadow-xs">
 
                   {/* Tombol Hapus Baris */}
                   {!editId && formItems.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveRow(item.uid)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-sm"
+                      className="absolute -top-2 -right-2 bg-red-500 dark:bg-rose-600 text-white rounded-full p-1.5 hover:bg-red-600 dark:hover:bg-rose-700 transition shadow-sm"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   )}
 
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-extrabold text-[#8B5E3C] uppercase tracking-wider">
+                    <span className="text-xs font-extrabold text-[#8B5E3C] dark:text-amber-400 uppercase tracking-wider">
                       {editId ? "Data Item" : `Item #${index + 1}`}
                     </span>
                   </div>
 
                   <div className={`grid grid-cols-1 ${isMentah ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
                     <div>
-                      <label className="block mb-1.5 text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
+                      <label className="block mb-1.5 text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider ml-1">
                         Nama Item
                       </label>
                       <input
                         type="text"
                         value={item.nama}
                         onChange={(e) => handleFormChange(item.uid, 'nama', e.target.value)}
-                        className="w-full bg-gray-50 rounded-2xl px-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none text-sm font-medium"
+                        className="w-full bg-gray-50 dark:bg-[#1E1915] rounded-2xl px-4 py-3 border border-gray-200 dark:border-[#45372C] text-gray-800 dark:text-[#FAF5ED] focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none text-sm font-medium"
                         placeholder="Contoh: Sambal"
                         required
                         autoFocus={index === formItems.length - 1}
@@ -785,7 +789,7 @@ export default function ItemPage() {
                     </div>
 
                     <div>
-                      <label className="block mb-1.5 text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
+                      <label className="block mb-1.5 text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider ml-1">
                         Kategori Item
                       </label>
                       <CustomSelect
@@ -796,17 +800,17 @@ export default function ItemPage() {
                           label: translateCategoryName(cat.name),
                         }))}
                         placeholder="Pilih Kategori..."
-                        buttonClassName="bg-gray-50 py-3 rounded-2xl border-gray-200 text-sm"
+                        buttonClassName="bg-gray-50 dark:bg-[#1E1915] py-3 rounded-2xl border-gray-200 dark:border-[#45372C] text-sm"
                       />
                     </div>
 
                     {isMentah && (
                       <div>
-                        <label className="block mb-1.5 text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
+                        <label className="block mb-1.5 text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider ml-1">
                           Harga Dasar <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400 dark:text-[#8E8072]">
                             Rp
                           </span>
                           <input
@@ -817,7 +821,7 @@ export default function ItemPage() {
                               const rawVal = cleanNumericInput(e.target.value);
                               handleFormChange(item.uid, 'harga_dasar', rawVal);
                             }}
-                            className="w-full bg-gray-50 rounded-2xl pl-12 pr-4 py-3 border border-gray-200 focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none font-bold text-gray-800 text-sm"
+                            className="w-full bg-gray-50 dark:bg-[#1E1915] rounded-2xl pl-12 pr-4 py-3 border border-gray-200 dark:border-[#45372C] focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none font-bold text-gray-800 dark:text-[#FAF5ED] text-sm"
                             placeholder="0"
                             required
                           />
@@ -827,14 +831,14 @@ export default function ItemPage() {
                   </div>
 
                   <div>
-                    <label className="block mb-1.5 text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
+                    <label className="block mb-1.5 text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider ml-1">
                       Satuan Dasar
                     </label>
                     <input
                       type="text"
                       value="porsi"
                       readOnly
-                      className="w-full bg-gray-100 rounded-2xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed text-sm font-medium"
+                      className="w-full bg-gray-100 dark:bg-[#1E1915]/60 rounded-2xl px-4 py-3 border border-gray-200 dark:border-[#45372C] text-gray-500 dark:text-[#A89B8C] cursor-not-allowed text-sm font-medium"
                     />
                   </div>
                 </div>
@@ -846,7 +850,7 @@ export default function ItemPage() {
                 <button
                   type="button"
                   onClick={handleAddRow}
-                  className="w-full py-3.5 border-2 border-dashed border-[#D9A978] rounded-2xl text-[#8B5E3C] font-bold text-sm hover:bg-[#D9A978]/10 transition flex items-center justify-center gap-2"
+                  className="w-full py-3.5 border-2 border-dashed border-[#D9A978] dark:border-[#8B5E3C] rounded-2xl text-[#8B5E3C] dark:text-amber-400 font-bold text-sm hover:bg-[#D9A978]/10 dark:hover:bg-amber-400/10 transition flex items-center justify-center gap-2"
                 >
                   <Plus className="w-5 h-5" />
                   Tambah Item Lainnya
@@ -857,7 +861,7 @@ export default function ItemPage() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 px-6 py-3 bg-gray-100 rounded-2xl text-gray-700 font-bold hover:bg-gray-200 transition text-sm"
+                  className="flex-1 px-6 py-3 bg-gray-100 dark:bg-[#35291F] rounded-2xl text-gray-700 dark:text-[#C8BCAE] font-bold hover:bg-gray-200 dark:hover:bg-[#45372C] transition text-sm"
                 >
                   Batal
                 </button>
@@ -865,7 +869,7 @@ export default function ItemPage() {
                   type="submit"
                   disabled={isSubmitting}
                   className={`flex-1 px-6 py-3 rounded-2xl font-bold text-white shadow-md text-sm transition ${
-                    isSubmitting ? "bg-[#e0c09e] cursor-not-allowed" : "bg-[#8B5E3C] hover:bg-[#6F4E37]"
+                    isSubmitting ? "bg-[#e0c09e] dark:bg-[#5A4535] cursor-not-allowed" : "bg-[#8B5E3C] hover:bg-[#6F4E37]"
                   }`}
                 >
                   {isSubmitting ? "Menyimpan..." : (editId ? "Simpan Update" : "Simpan Semua")}
@@ -879,25 +883,25 @@ export default function ItemPage() {
       {/* --- MODAL DELETE --- */}
       {openDeleteModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center border border-gray-100">
-            <h2 className="text-xl font-extrabold text-gray-900 mb-2">
+          <div className="bg-white dark:bg-[#2A221C] w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center border border-gray-100 dark:border-[#45372C]">
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-[#FAF5ED] mb-2">
               Hapus Item? ⚠️
             </h2>
 
-            <p className="text-gray-500 text-xs mb-6 leading-relaxed">
+            <p className="text-gray-500 dark:text-[#A89B8C] text-xs mb-6 leading-relaxed">
               Tindakan ini akan menghapus data item secara permanen dari sistem.
             </p>
 
             <div className="flex justify-between gap-3">
               <button
-                className="flex-1 px-4 py-2.5 bg-gray-100 rounded-2xl text-gray-700 font-bold hover:bg-gray-200 transition text-sm"
+                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-[#35291F] rounded-2xl text-gray-700 dark:text-[#C8BCAE] font-bold hover:bg-gray-200 dark:hover:bg-[#45372C] transition text-sm"
                 onClick={() => setOpenDeleteModal(false)}
               >
                 Batal
               </button>
 
               <button
-                className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-2xl font-bold shadow-md hover:bg-red-600 transition text-sm"
+                className="flex-1 px-4 py-2.5 bg-red-500 dark:bg-rose-600 text-white rounded-2xl font-bold shadow-md hover:bg-red-600 dark:hover:bg-rose-700 transition text-sm"
                 onClick={confirmDelete}
               >
                 Hapus

@@ -187,19 +187,19 @@ export default function SalesReport() {
   };
 
   return (
-    <AppLayout header={<h2 className="text-2xl font-bold text-gray-800">Sales Report</h2>}>
+    <AppLayout header={<h2 className="text-2xl font-bold text-gray-800 dark:text-[#FAF5ED]">Sales Report</h2>}>
       <Head title="Sales Report" />
 
       {/* FLASH MESSAGES */}
       <div className="space-y-3 mb-6 max-w-4xl mx-auto">
         {flash?.success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
+          <div className="bg-green-50 border border-green-200 text-green-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
             <span>{flash.success}</span>
           </div>
         )}
         {flash?.error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 text-red-700 dark:bg-red-950/35 dark:border-red-900/70 dark:text-red-300 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
             <span>{flash.error}</span>
           </div>
@@ -207,20 +207,20 @@ export default function SalesReport() {
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
-          <div className="flex items-center gap-3 pb-6 border-b border-gray-100 mb-6">
-            <div className="w-12 h-12 bg-[#FDF3E4] rounded-2xl flex items-center justify-center text-[#8B5E3C]">
+        <div className="bg-white dark:bg-[#2A221C] rounded-3xl shadow-sm border border-gray-100 dark:border-[#45372C] p-6 md:p-8">
+          <div className="flex items-center gap-3 pb-6 border-b border-gray-100 dark:border-[#45372C] mb-6">
+            <div className="w-12 h-12 bg-[#FDF3E4] dark:bg-[#3E3024] rounded-2xl flex items-center justify-center text-[#8B5E3C] dark:text-amber-300">
               <Receipt className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Input Nota Penjualan</h3>
-              <p className="text-xs text-gray-500">Stok harian akan otomatis terpotong secara real-time berdasarkan rincian nota ini[cite: 1, 3].</p>
+              <h3 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">Input Nota Penjualan</h3>
+              <p className="text-xs text-gray-500 dark:text-[#B9AA9A]">Stok harian akan otomatis terpotong secara real-time berdasarkan rincian nota ini.</p>
             </div>
           </div>
 
           {/* LOGIKA PENGUNCIAN FORM */}
           {alreadyInputToday && !izinApproved ? (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-6 rounded-2xl text-center space-y-3">
+            <div className="bg-amber-50 dark:bg-amber-950/25 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 p-6 rounded-2xl text-center space-y-3">
               <AlertTriangle className="w-8 h-8 mx-auto text-amber-600" />
               <h4 className="font-bold text-base">Akses Sales Report Belum Dibuka / Terkunci</h4>
               <p className="text-xs text-amber-700">
@@ -231,16 +231,16 @@ export default function SalesReport() {
             <form onSubmit={handleSubmit} className="space-y-8">
               
               {/* GLOBAL TANGGAL TRANSAKSI */}
-              <div className="bg-[#FAF7F2] p-4 rounded-2xl border border-amber-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="bg-[#FAF7F2] dark:bg-[#231C17] p-4 rounded-2xl border border-amber-100 dark:border-[#45372C] flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                  <span className="text-xs font-bold text-gray-750 uppercase tracking-wider block">Tanggal Transaksi Seluruh Nota</span>
-                  <span className="text-xs text-gray-500">Nota yang diinput di bawah akan tercatat pada tanggal ini.</span>
+                  <span className="text-xs font-bold text-gray-750 dark:text-[#F3E8DA] uppercase tracking-wider block">Tanggal Transaksi Seluruh Nota</span>
+                  <span className="text-xs text-gray-500 dark:text-[#B9AA9A]">Nota yang diinput di bawah akan tercatat pada tanggal ini.</span>
                 </div>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none text-gray-700 font-bold"
+                  className="bg-white dark:bg-[#2A221C] border border-gray-200 dark:border-[#45372C] rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none text-gray-700 dark:text-[#FAF5ED] font-bold"
                 />
               </div>
 
@@ -259,21 +259,21 @@ export default function SalesReport() {
                       key={nota.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-gray-50/70 border-2 border-dashed border-amber-200/80 rounded-3xl p-5 md:p-6 space-y-5 relative shadow-xs"
+                      className="bg-gray-50/70 dark:bg-[#35291F] border-2 border-dashed border-amber-200/80 dark:border-amber-500/45 rounded-3xl p-5 md:p-6 space-y-5 relative shadow-xs"
                     >
                       {/* HEADER SECTION / CARD NOTA */}
-                      <div className="flex justify-between items-center pb-3 border-b border-gray-200/60">
+                      <div className="flex justify-between items-center pb-3 border-b border-gray-200/60 dark:border-[#5A483A]">
                         <div className="flex items-center gap-2">
                           <span className="bg-[#8B5E3C] text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-2xs">
                             Nota #{notaIndex + 1}
                           </span>
-                          <span className="text-xs text-gray-400 font-medium">Lacak urutan doket fisik</span>
+                          <span className="text-xs text-gray-400 dark:text-[#B9AA9A] font-medium">Lacak urutan doket fisik</span>
                         </div>
                         {notas.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeNotaCard(notaIndex)}
-                            className="text-red-500 hover:text-red-700 text-xs font-bold flex items-center gap-1 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-xl transition"
+                            className="text-red-500 dark:text-red-300 hover:text-red-700 dark:hover:text-red-200 text-xs font-bold flex items-center gap-1 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 px-3 py-1 rounded-xl transition"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Hapus Nota Ini
                           </button>
@@ -283,24 +283,24 @@ export default function SalesReport() {
                       {/* INPUT UTAMA NOTA */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Nomor Nota</label>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-[#EDE5DA] mb-1 ml-1">Nomor Nota</label>
                           <input
                             type="text"
                             placeholder="Contoh: INV-001"
                             value={nota.nomorNota}
                             onChange={(e) => handleNotaChange(notaIndex, 'nomorNota', e.target.value)}
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none font-semibold text-gray-800 shadow-2xs"
+                            className="w-full bg-white dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none font-semibold text-gray-800 dark:text-[#FAF5ED] placeholder:text-gray-400 dark:placeholder:text-[#8E8072] shadow-2xs"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1 ml-1">Mitra</label>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-[#EDE5DA] mb-1 ml-1">Mitra</label>
                           {/* 🔥 Diubah dari CustomSelect menjadi Textfield biasa */}
                           <input
                             type="text"
                             placeholder="Contoh: Umum / Kasir"
                             value={nota.partnerMitra}
                             onChange={(e) => handleNotaChange(notaIndex, 'partnerMitra', e.target.value)}
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none font-semibold text-gray-800 shadow-2xs"
+                            className="w-full bg-white dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none font-semibold text-gray-800 dark:text-[#FAF5ED] placeholder:text-gray-400 dark:placeholder:text-[#8E8072] shadow-2xs"
                           />
                         </div>
                       </div>
@@ -308,11 +308,11 @@ export default function SalesReport() {
                       {/* DAFTAR MENU PESANAN DALAM NOTA INI */}
                       <div className="space-y-3 pt-2">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Daftar Menu Pesanan</label>
+                          <label className="text-xs font-bold text-gray-700 dark:text-[#EDE5DA] uppercase tracking-wider">Daftar Menu Pesanan</label>
                           <button
                             type="button"
                             onClick={() => addItemRow(notaIndex)}
-                            className="text-xs font-bold text-[#8B5E3C] hover:underline flex items-center gap-1 bg-white px-3 py-1 rounded-xl border border-amber-200 shadow-2xs"
+                            className="text-xs font-bold text-[#8B5E3C] dark:text-amber-300 hover:underline flex items-center gap-1 bg-white dark:bg-[#2A221C] px-3 py-1 rounded-xl border border-amber-200 dark:border-[#5A483A] shadow-2xs"
                           >
                             <Plus className="w-3.5 h-3.5" /> Tambah Baris Menu
                           </button>
@@ -323,7 +323,7 @@ export default function SalesReport() {
                           const itemTotal = selectedRecipe ? (selectedRecipe.harga_jual * (Number(item.quantity) || 0)) : 0;
 
                           return (
-                            <div key={itemIndex} className="flex flex-col sm:flex-row gap-3 items-center bg-white p-3.5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                            <div key={itemIndex} className="flex flex-col sm:flex-row gap-3 items-center bg-white dark:bg-[#2A221C] p-3.5 rounded-2xl border border-gray-200/80 dark:border-[#45372C] shadow-2xs">
                               <div className="flex-1 w-full">
                                 <CustomSelect
                                   value={item.recipe_id}
@@ -342,20 +342,20 @@ export default function SalesReport() {
                                   min="1"
                                   value={item.quantity}
                                   onChange={(e) => handleItemChange(notaIndex, itemIndex, 'quantity', e.target.value)}
-                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none text-center font-bold text-gray-800"
+                                  className="w-full bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none text-center font-bold text-gray-800 dark:text-[#FAF5ED]"
                                   placeholder="Porsi"
                                 />
                               </div>
 
                               <div className="w-full sm:w-32 text-right sm:pr-2">
-                                <span className="text-xs font-bold text-gray-700">{formatRupiah(itemTotal)}</span>
+                                <span className="text-xs font-bold text-gray-700 dark:text-[#EDE5DA]">{formatRupiah(itemTotal)}</span>
                               </div>
 
                               {nota.items.length > 1 && (
                                 <button
                                   type="button"
                                   onClick={() => removeItemRow(notaIndex, itemIndex)}
-                                  className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition self-end sm:self-center"
+                                  className="p-2 bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-300 rounded-xl hover:bg-red-100 dark:hover:bg-red-950/50 transition self-end sm:self-center"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -366,10 +366,10 @@ export default function SalesReport() {
                       </div>
 
                       {/* DISKON, FEE MITRA & RINGKASAN PER NOTA */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-200/60">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-200/60 dark:border-[#5A483A]">
                         <div className="space-y-3">
                           <div>
-                            <label className="block text-[11px] font-bold text-gray-600 mb-1 ml-1">Diskon Nota %</label>
+                            <label className="block text-[11px] font-bold text-gray-600 dark:text-[#CDBEAE] mb-1 ml-1">Diskon Nota %</label>
                             <input
                               type="number"
                               min="0"
@@ -377,11 +377,11 @@ export default function SalesReport() {
                               placeholder="0"
                               value={nota.diskonPersen}
                               onChange={(e) => handleNotaChange(notaIndex, 'diskonPersen', e.target.value)}
-                              className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none"
+                              className="w-full bg-white dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-xl px-3.5 py-2.5 text-sm text-gray-800 dark:text-[#FAF5ED] focus:ring-2 focus:ring-[#D9A978] focus:outline-none"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-bold text-gray-600 mb-1 ml-1">Fee Mitra %</label>
+                            <label className="block text-[11px] font-bold text-gray-600 dark:text-[#CDBEAE] mb-1 ml-1">Fee Mitra %</label>
                             <input
                               type="number"
                               min="0"
@@ -390,30 +390,30 @@ export default function SalesReport() {
                               placeholder="0"
                               value={nota.feeMitraPersen}
                               onChange={(e) => handleNotaChange(notaIndex, 'feeMitraPersen', e.target.value)}
-                              className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-[#D9A978] focus:outline-none"
+                              className="w-full bg-white dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-xl px-3.5 py-2.5 text-sm text-gray-800 dark:text-[#FAF5ED] focus:ring-2 focus:ring-[#D9A978] focus:outline-none"
                             />
                           </div>
                         </div>
 
                         {/* PREVIEW KECIL RINGKASAN NOTA INI */}
-                        <div className="bg-white p-4 rounded-2xl border border-amber-100 flex flex-col justify-between space-y-1.5 text-xs text-gray-600 shadow-2xs">
-                          <div className="flex items-center gap-1.5 font-bold text-gray-800 pb-1.5 border-b border-gray-100">
+                        <div className="bg-white dark:bg-[#231C17] p-4 rounded-2xl border border-amber-100 dark:border-[#5A483A] flex flex-col justify-between space-y-1.5 text-xs text-gray-600 dark:text-[#CDBEAE] shadow-2xs">
+                          <div className="flex items-center gap-1.5 font-bold text-gray-800 dark:text-[#FAF5ED] pb-1.5 border-b border-gray-100 dark:border-[#45372C]">
                             <Calculator className="w-3.5 h-3.5 text-[#8B5E3C]" />
                             <span>Ringkasan Nota #{notaIndex + 1}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Subtotal:</span>
-                            <span className="font-semibold text-gray-800">{formatRupiah(subtotal)}</span>
+                            <span className="font-semibold text-gray-800 dark:text-[#FAF5ED]">{formatRupiah(subtotal)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Diskon ({discPercent}%):</span>
-                            <span className="font-semibold text-red-600">- {formatRupiah(diskonNominal)}</span>
+                            <span className="font-semibold text-red-600 dark:text-red-300">- {formatRupiah(diskonNominal)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Fee Mitra ({partnerFeePercent}%):</span>
-                            <span className="font-semibold text-amber-700">- {formatRupiah(partnerFee)}</span>
+                            <span className="font-semibold text-amber-700 dark:text-amber-300">- {formatRupiah(partnerFee)}</span>
                           </div>
-                          <div className="flex justify-between pt-1.5 border-t border-gray-100 text-xs font-extrabold text-gray-900">
+                          <div className="flex justify-between pt-1.5 border-t border-gray-100 dark:border-[#45372C] text-xs font-extrabold text-gray-900 dark:text-[#FAF5ED]">
                             <span>Total Bersih:</span>
                             <span className="text-[#8B5E3C]">{formatRupiah(totalBersih)}</span>
                           </div>
@@ -429,13 +429,13 @@ export default function SalesReport() {
               <button
                 type="button"
                 onClick={addNotaCard}
-                className="w-full py-4 border-2 border-dashed border-[#8B5E3C]/50 rounded-2xl text-[#8B5E3C] font-extrabold text-sm hover:bg-[#8B5E3C]/5 transition flex items-center justify-center gap-2 shadow-xs"
+                className="w-full py-4 border-2 border-dashed border-[#8B5E3C]/50 dark:border-amber-500/35 rounded-2xl text-[#8B5E3C] dark:text-amber-300 font-extrabold text-sm hover:bg-[#8B5E3C]/5 dark:hover:bg-amber-400/10 transition flex items-center justify-center gap-2 shadow-xs"
               >
                 <Plus className="w-5 h-5" />  Tambah Nota Lainnya
               </button>
 
               {/* TOMBOL SUBMIT UTAMA DI BAWAH */}
-              <div className="flex justify-end pt-4 border-t border-gray-100">
+              <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-[#45372C]">
                 <button
                   type="submit"
                   disabled={processing}
@@ -465,15 +465,15 @@ export default function SalesReport() {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-red-100"
+              className="bg-white dark:bg-[#2A221C] rounded-3xl p-6 max-w-md w-full shadow-2xl border border-red-100 dark:border-red-900/60"
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600 dark:text-red-300">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-red-700 text-base">Peringatan Input Nota</h4>
+                <h4 className="font-bold text-red-700 dark:text-red-300 text-base">Peringatan Input Nota</h4>
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed">{warningMessage}</p>
+              <p className="text-sm text-gray-600 dark:text-[#CDBEAE] leading-relaxed">{warningMessage}</p>
               <div className="mt-6 flex justify-end">
                 <button
                   type="button"

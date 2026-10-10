@@ -15,8 +15,7 @@
             (function() {
                 try {
                     var appearance = localStorage.getItem('appearance');
-                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    if (appearance === 'dark' || ((!appearance || appearance === 'system') && prefersDark)) {
+                    if (appearance === 'dark') {
                         document.documentElement.classList.add('dark');
                     } else {
                         document.documentElement.classList.remove('dark');
