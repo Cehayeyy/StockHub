@@ -2,81 +2,123 @@
 
 namespace App\Exports;
 
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Enumerable;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class ActivityLogExport
+class ActivityLogExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithEvents
 {
     protected $logs;
+    protected $rowNumber = 0;
 
     public function __construct($logs)
     {
         $this->logs = $logs;
     }
 
-    /**
-     * Generate Excel file dan return path
-     */
-    public function generate()
+    public function collection(): Enumerable 
     {
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+        return new Collection($this->logs);
+    }
 
-        // Set judul kolom
-        $sheet->setCellValue('A1', 'No');
-        $sheet->setCellValue('B1', 'Waktu');
-        $sheet->setCellValue('C1', 'Pengguna');
-        $sheet->setCellValue('D1', 'Aktivitas');
-        $sheet->setCellValue('E1', 'Keterangan');
+    public function map($log): array
+    {
+        $this->rowNumber++;
+        
+        $pengguna = $log->user 
+            ? $log->user->name . ' (@' . $log->user->username . ')' 
+            : '-';
 
-        // Styling header
-        $headerStyle = [
-            'font' => [
-                'bold' => true,
-                'size' => 12,
-                'color' => ['rgb' => 'FFFFFF']
-            ],
-            'fill' => [
-                'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '8B5E3C']
-            ],
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::VERTICAL_CENTER,
-            ],
+        return [
+            $this->rowNumber,
+            $log->created_at->format('d-m-Y H:i:s'),
+            $pengguna,
+            $log->activity,
+            $log->description
         ];
-        $sheet->getStyle('A1:E1')->applyFromArray($headerStyle);
+    }
 
-        // Set lebar kolom
-        $sheet->getColumnDimension('A')->setWidth(8);
-        $sheet->getColumnDimension('B')->setWidth(20);
-        $sheet->getColumnDimension('C')->setWidth(30);
-        $sheet->getColumnDimension('D')->setWidth(25);
-        $sheet->getColumnDimension('E')->setWidth(50);
+    public function headings(): array
+    {
+        return [
+            ['LAPORAN AKTIVITAS PENGGUNA - WARUNG CANGKRUK'],
+            ['Tanggal Cetak: ' . \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM YYYY HH:mm')],
+            [''],
+            [
+                'No',
+                'Waktu',
+                'Pengguna',
+                'Aktivitas',
+                'Keterangan'
+            ]
+        ];
+    }
 
-        // Isi data
-        $row = 2;
-        foreach ($this->logs as $index => $log) {
-            $pengguna = $log->user
-                ? $log->user->name . ' (@' . $log->user->username . ')'
-                : '-';
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $highestRow = $sheet->getHighestRow();
 
-            $sheet->setCellValue('A' . $row, $index + 1);
-            $sheet->setCellValue('B' . $row, $log->created_at->format('d-m-Y H:i:s'));
-            $sheet->setCellValue('C' . $row, $pengguna);
-            $sheet->setCellValue('D' . $row, $log->activity);
-            $sheet->setCellValue('E' . $row, $log->description);
+                // 1. Merge & Ratakan Tengah Judul
+                $sheet->mergeCells('A1:E1');
+                $sheet->mergeCells('A2:E2');
+                $sheet->getStyle('A1:A2')->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    ],
+                ]);
+                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+                $sheet->getStyle('A2')->getFont()->setSize(10);
 
-            $row++;
-        }
+                // 2. Pewarnaan Header Tabel (Cokelat)
+                $sheet->getStyle('A4:E4')->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['argb' => 'FFFFFFFF'], 
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'color' => ['argb' => 'FF8B4513'], 
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
 
-        // Set auto-height untuk semua baris
-        foreach (range(1, $row - 1) as $r) {
-            $sheet->getRowDimension($r)->setRowHeight(-1);
-        }
+                // 3. Garis Tepi (Border) Seluruh Tabel
+                $sheet->getStyle("A4:E{$highestRow}")->applyFromArray([
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['argb' => 'FF000000'],
+                        ],
+                    ],
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_TOP,
+                    ],
+                ]);
 
-        return $spreadsheet;
+                // 4. Wrap text dan Width fix untuk Keterangan
+                $sheet->getColumnDimension('E')->setAutoSize(false);
+                $sheet->getColumnDimension('E')->setWidth(50);
+                $sheet->getStyle("E5:E{$highestRow}")->getAlignment()->setWrapText(true);
+
+                // Ratakan Tengah untuk No, Waktu, dan Aktivitas
+                $sheet->getStyle("A5:B{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("D5:D{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            },
+        ];
     }
 }

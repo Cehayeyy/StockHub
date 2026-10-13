@@ -84,7 +84,7 @@ class LaporanKeuanganController extends Controller
         }
 
         // =========================================================================
-        // 2. HITUNG TOTAL HPP DARI DETAIL ITEM NOTA
+        // 2. HITUNG TOTAL HPP DARI DETAIL ITEM NOTA (DENGAN LOGIKA SNAPSHOT HPP)
         // =========================================================================
         $hppMenuTerjual = 0;
 
@@ -98,15 +98,29 @@ class LaporanKeuanganController extends Controller
                      (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' :
                      (in_array('hpp', $recipeCols) ? 'hpp' : null));
 
+            $hasSnapshotCol = Schema::hasColumn('sales_report_items', 'hpp_saat_transaksi');
+
             if ($hppCol) {
-                // Hubungkan sales_report_items -> items -> recipes berdasarkan nama menu
-                $hppMenuTerjual = (float) DB::table('sales_report_items')
+                $query = DB::table('sales_report_items')
                     ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
                     ->join('items', 'sales_report_items.item_id', '=', 'items.id')
                     ->join('recipes', 'items.nama', '=', 'recipes.name')
                     ->whereYear("sales_reports.{$salesDateCol}", $year)
-                    ->whereMonth("sales_reports.{$salesDateCol}", $month)
-                    ->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
+                    ->whereMonth("sales_reports.{$salesDateCol}", $month);
+
+                if ($hasSnapshotCol) {
+                    // Logika Cerdas: Jika hpp_saat_transaksi > 0 (data baru) pakai snapshot,
+                    // jika 0 (data lama sebelum update), ambil HPP dari master recipes.
+                    $hppMenuTerjual = (float) $query->sum(DB::raw("
+                        sales_report_items.quantity * 
+                        CASE 
+                            WHEN sales_report_items.hpp_saat_transaksi > 0 THEN sales_report_items.hpp_saat_transaksi 
+                            ELSE COALESCE(recipes.{$hppCol}, 0) 
+                        END
+                    "));
+                } else {
+                    $hppMenuTerjual = (float) $query->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
+                }
             }
         }
 

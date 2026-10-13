@@ -222,13 +222,13 @@ export default function VerifikasiStok() {
 
       <div className="py-6 space-y-6">
         {/* Banner Info */}
-        <div className="bg-[#F2ECE4] p-5 md:p-6 rounded-3xl shadow-xs border border-amber-200/60 flex items-start gap-4">
+        <div className="bg-[#F2ECE4] dark:bg-[#2A221C] p-5 md:p-6 rounded-3xl shadow-sm border border-amber-200/60 dark:border-[#45372C] flex items-start gap-4">
           <div className="p-3 bg-[#8B5E3C] rounded-2xl text-white shrink-0 shadow-sm">
             <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-[#8B5E3C] font-extrabold text-base">Verifikasi Stok</h3>
-            <p className="text-gray-600 text-xs sm:text-sm mt-1 leading-relaxed">
+            <h3 className="text-[#8B5E3C] dark:text-amber-400 font-extrabold text-base">Verifikasi Stok</h3>
+            <p className="text-gray-600 dark:text-[#A89B8C] text-xs sm:text-sm mt-1 leading-relaxed">
               Anda memilih tanggal <strong>{new Date(tanggal_picker).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
               <br className="hidden md:block"/>
               <span className="md:ml-0.5">Sistem menampilkan data stok acuan sesuai tanggal yang dipilih secara real-time.</span>
@@ -236,164 +236,179 @@ export default function VerifikasiStok() {
           </div>
         </div>
 
-        {/* Kontainer Utama */}
-        <div className="bg-[#F2ECE4] p-4 md:p-8 rounded-3xl shadow-sm border border-amber-200/60 min-h-[500px] flex flex-col">
+        {/* 🔥 KONTAINER UTAMA: DISEJAJARKAN DENGAN STANDAR ENTERPRISE 🔥 */}
+        <div className="bg-[#F2ECE4] dark:bg-[#2A221C] p-4 md:p-8 rounded-3xl shadow-sm border border-amber-200/60 dark:border-[#45372C]">
+          <div className="rounded-3xl bg-white dark:bg-[#231C17] p-4 md:p-6 shadow-xs border border-gray-100 dark:border-[#3D3127] min-h-[600px] flex flex-col">
 
-          {/* Header Controls */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div className="w-full md:w-auto flex bg-gray-100 dark:bg-[#231C17] rounded-full p-1 border border-gray-200/60 dark:border-[#3D3127]">
-              <button 
-                onClick={() => handleTabSwitch("bar")} 
-                className={`flex-1 md:flex-none px-6 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  tab === "bar" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800 dark:text-[#A89B8C] dark:hover:text-[#FAF5ED]"
-                }`}
-              >
-                Bar
-              </button>
-              <button 
-                onClick={() => handleTabSwitch("dapur")} 
-                className={`flex-1 md:flex-none px-6 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  tab === "dapur" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-500 hover:text-gray-800 dark:text-[#A89B8C] dark:hover:text-[#FAF5ED]"
-                }`}
-              >
-                Dapur
-              </button>
-            </div>
+            {/* Header Controls & Toolbar */}
+            <div className="mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-gray-100 dark:border-[#3D3127] pb-5 xl:border-b-0 xl:pb-0">
+              
+              {/* Kiri: Judul dan Tab Divisi */}
+              <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full xl:w-auto">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED] whitespace-nowrap">
+                  Daftar Verifikasi
+                </h3>
+                <div className="flex w-full md:w-auto bg-[#FAF7F2] dark:bg-[#231C17] rounded-full p-1 border border-amber-100 dark:border-[#45372C]">
+                  <button 
+                    onClick={() => handleTabSwitch("bar")} 
+                    className={`flex-1 md:flex-none px-6 py-2 rounded-full text-xs font-bold transition-all ${
+                      tab === "bar" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-600 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300 hover:bg-white/60 dark:hover:bg-[#2A221C]"
+                    }`}
+                  >
+                    Bar
+                  </button>
+                  <button 
+                    onClick={() => handleTabSwitch("dapur")} 
+                    className={`flex-1 md:flex-none px-6 py-2 rounded-full text-xs font-bold transition-all ${
+                      tab === "dapur" ? "bg-[#8B5E3C] text-white shadow-xs" : "text-gray-600 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300 hover:bg-white/60 dark:hover:bg-[#2A221C]"
+                    }`}
+                  >
+                    Dapur
+                  </button>
+                </div>
+              </div>
 
-            <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-3">
-              <div className="relative w-full md:w-auto">
+              {/* Kanan: Tanggal & Search */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
                 <input
                   type="date"
                   value={tanggal_picker}
                   onChange={handleDateChange}
                   style={{ colorScheme: 'dark' }}
-                  className="w-full md:w-auto bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-full px-4 py-2 text-sm text-[#8B5E3C] dark:text-amber-300 font-bold shadow-2xs outline-none"
+                  className="w-full sm:w-auto bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-full px-4 py-2.5 sm:py-2 text-sm text-[#8B5E3C] dark:text-amber-400 font-bold shadow-2xs outline-none focus:ring-2 focus:ring-[#D9A978]"
                 />
-              </div>
-              <div className="relative w-full md:w-auto">
-                <input
-                  type="text"
-                  placeholder="Cari item..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full md:w-64 bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] rounded-full pl-10 pr-4 py-2 text-sm text-gray-800 dark:text-[#FAF5ED] placeholder-gray-400 dark:placeholder-[#8E8072] focus:outline-none focus:ring-2 focus:ring-[#8B5E3C]"
-                />
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400 dark:text-[#8E8072]" />
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile View (Cards) */}
-          <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
-            {filteredItems.map((item, i) => {
-              const fisik = physicalStocks[item.id] ?? item.stok_sistem;
-              return (
-                <div key={item.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-2xl p-4 shadow-xs">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-[#D9A978]/15 text-[#8B5E3C] p-2.5 rounded-xl shadow-inner">
-                        <Package className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-gray-800 dark:text-[#FAF5ED] text-sm">{item.nama}</h4>
-                        <span className="text-xs text-gray-400 dark:text-[#8E8072] font-medium">Satuan: {item.satuan}</span>
-                      </div>
-                    </div>
-                    <button onClick={() => handleEditClick(item, i+1)} className="px-3 py-1.5 bg-amber-50 dark:bg-[#382713] text-amber-700 dark:text-[#FBBF24] border border-transparent dark:border-[#5E411E] font-bold text-xs rounded-xl hover:bg-amber-100 dark:hover:bg-[#4A341A] transition shadow-xs">
-                      Verifikasi
-                    </button>
-                  </div>
+                <div className="relative w-full sm:w-56">
+                  <input
+                    type="text"
+                    placeholder="Cari item..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full rounded-full border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2.5 sm:py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                  />
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#8E8072]" />
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Desktop View (Table) */}
-          <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-xs overflow-hidden flex-1 mb-6">
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#B5A898] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
-                  <tr>
-                    <th className="px-6 py-4 text-center w-16">No</th>
-                    <th className="px-6 py-4">Nama Item</th>
-                    <th className="px-6 py-4 text-center w-40">Stok Sistem</th>
-                    <th className="px-6 py-4 text-center w-40">Stok Fisik</th>
-                    <th className="px-6 py-4 text-center w-32">Selisih</th>
-                    <th className="px-6 py-4 text-center w-36">Status</th>
-                    <th className="px-6 py-4 text-center w-32">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-[#332820]">
-                  {filteredItems.length > 0 ? (
-                    filteredItems.map((item, i) => {
-                      const fisik = physicalStocks[item.id] ?? item.stok_sistem;
-                      const selisih = fisik - item.stok_sistem;
-                      const isMatch = selisih === 0;
-
-                      return (
-                        <tr key={item.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2D241E] transition-colors duration-150">
-                          <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">{i + 1}</td>
-                          <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">
-                            {item.nama} <span className="text-xs text-gray-400 dark:text-[#8E8072] font-normal">({item.satuan})</span>
-                          </td>
-                          <td className="px-6 py-4 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-900/10">{item.stok_sistem}</td>
-                          <td className="px-6 py-4 text-center bg-amber-50/20 dark:bg-amber-950/10">
-                            <input
-                              type="number"
-                              value={physicalStocks[item.id] ?? ''}
-                              placeholder={String(item.stok_sistem)}
-                              onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                              className="w-24 text-center border border-gray-200 dark:border-[#45372C] rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none bg-white dark:bg-[#2A221C] font-bold text-gray-800 dark:text-[#FAF5ED] text-sm shadow-2xs"
-                              onChange={(e) => handlePhysicalChange(item.id, e.target.value)}
-                            />
-                          </td>
-                          <td className={`px-6 py-4 text-center font-black ${selisih < 0 ? 'text-rose-600 dark:text-rose-400' : selisih > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-[#8E8072]'}`}>
-                            {selisih > 0 ? `+${selisih}` : selisih}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            {isMatch ? (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-[#16321F] text-emerald-700 dark:text-[#4ADE80] border border-emerald-100 dark:border-[#245233] shadow-2xs">
-                                <CheckCircle className="w-3.5 h-3.5" /> Cocok
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 dark:bg-[#381A1A] text-rose-700 dark:text-[#FF6B6B] border border-rose-100 dark:border-[#5E2A2A] shadow-2xs">
-                                <AlertCircle className="w-3.5 h-3.5" /> Selisih
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <button
-                              onClick={() => handleEditClick(item, i + 1)}
-                              className="px-3.5 py-1.5 bg-amber-50 dark:bg-[#382713] text-amber-700 dark:text-[#FBBF24] border border-transparent dark:border-[#5E411E] font-bold text-xs rounded-xl hover:bg-amber-100 dark:hover:bg-[#4A341A] transition shadow-xs inline-flex items-center gap-1"
-                            >
-                              <Pencil className="w-3.5 h-3.5" /> Catatan
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
-                        Tidak ada data ditemukan.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              </div>
             </div>
-          </div>
 
-          <div className="mt-auto flex justify-end pt-2">
-            <button
-              className={`w-full md:w-auto justify-center px-6 py-3 rounded-2xl font-bold shadow-md flex items-center gap-2 transition-all text-sm ${
-                isProcessing ? "bg-gray-300 text-gray-500 cursor-wait shadow-none" : "bg-[#8B5E3C] hover:bg-[#6F4E37] text-white active:scale-95"
-              }`}
-              onClick={handleExportAndSave}
-              disabled={isProcessing}
-            >
-              <Save className="w-4 h-4" /> {isProcessing ? "Memproses..." : "Simpan & Cetak Laporan"}
-            </button>
+            {/* Mobile View (Cards) */}
+            <div className="grid grid-cols-1 gap-4 md:hidden mb-6 flex-1">
+              {filteredItems.map((item, i) => {
+                const fisik = physicalStocks[item.id] ?? item.stok_sistem;
+                return (
+                  <div key={item.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-2xl p-4 shadow-xs">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#D9A978]/15 text-[#8B5E3C] p-2.5 rounded-xl shadow-inner">
+                          <Package className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-800 dark:text-[#FAF5ED] text-sm">{item.nama}</h4>
+                          <span className="text-xs text-gray-400 dark:text-[#8E8072] font-medium">Satuan: {item.satuan}</span>
+                        </div>
+                      </div>
+                      <button onClick={() => handleEditClick(item, i+1)} className="px-3 py-1.5 bg-amber-50 dark:bg-[#382713] text-amber-700 dark:text-[#FBBF24] border border-transparent dark:border-[#5E411E] font-bold text-xs rounded-xl hover:bg-amber-100 dark:hover:bg-[#4A341A] transition shadow-xs flex items-center gap-1">
+                        <Pencil className="w-3.5 h-3.5" /> Catatan
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {filteredItems.length === 0 && (
+                <div className="text-center text-gray-400 dark:text-[#8E8072] py-8 border border-gray-100 rounded-xl bg-gray-50 dark:bg-[#231C17] dark:border-[#3D3127]">
+                  Tidak ada data ditemukan.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop View (Table) */}
+            <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-sm overflow-hidden flex-1 mb-6">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#B5A898] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
+                    <tr>
+                      <th className="px-6 py-4 text-center w-16">No</th>
+                      <th className="px-6 py-4">Nama Item</th>
+                      <th className="px-6 py-4 text-center w-40">Stok Sistem</th>
+                      <th className="px-6 py-4 text-center w-40">Stok Fisik</th>
+                      <th className="px-6 py-4 text-center w-32">Selisih</th>
+                      <th className="px-6 py-4 text-center w-36">Status</th>
+                      <th className="px-6 py-4 text-center w-32">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-[#332820]">
+                    {filteredItems.length > 0 ? (
+                      filteredItems.map((item, i) => {
+                        const fisik = physicalStocks[item.id] ?? item.stok_sistem;
+                        const selisih = fisik - item.stok_sistem;
+                        const isMatch = selisih === 0;
+
+                        return (
+                          <tr key={item.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2D241E] transition-colors duration-150">
+                            <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">{i + 1}</td>
+                            <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">
+                              {item.nama} <span className="text-xs text-gray-400 dark:text-[#8E8072] font-normal">({item.satuan})</span>
+                            </td>
+                            <td className="px-6 py-4 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-900/10">{item.stok_sistem}</td>
+                            <td className="px-6 py-4 text-center bg-amber-50/20 dark:bg-amber-950/10">
+                              <input
+                                type="number"
+                                value={physicalStocks[item.id] ?? ''}
+                                placeholder={String(item.stok_sistem)}
+                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                className="w-24 text-center border border-gray-200 dark:border-[#45372C] rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#8B5E3C] focus:border-transparent outline-none bg-white dark:bg-[#2A221C] font-bold text-gray-800 dark:text-[#FAF5ED] text-sm shadow-2xs"
+                                onChange={(e) => handlePhysicalChange(item.id, e.target.value)}
+                              />
+                            </td>
+                            <td className={`px-6 py-4 text-center font-black ${selisih < 0 ? 'text-rose-600 dark:text-rose-400' : selisih > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-[#8E8072]'}`}>
+                              {selisih > 0 ? `+${selisih}` : selisih}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {isMatch ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-[#16321F] text-emerald-700 dark:text-[#4ADE80] border border-emerald-100 dark:border-[#245233] shadow-2xs uppercase tracking-wide">
+                                  <CheckCircle className="w-3.5 h-3.5" /> Cocok
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-[#381A1A] text-rose-700 dark:text-[#FF6B6B] border border-rose-100 dark:border-[#5E2A2A] shadow-2xs uppercase tracking-wide">
+                                  <AlertCircle className="w-3.5 h-3.5" /> Selisih
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <button
+                                onClick={() => handleEditClick(item, i + 1)}
+                                className="px-3.5 py-1.5 bg-amber-50 dark:bg-[#382713] text-amber-700 dark:text-[#FBBF24] border border-transparent dark:border-[#5E411E] font-bold text-xs rounded-xl hover:bg-amber-100 dark:hover:bg-[#4A341A] transition shadow-xs inline-flex items-center justify-center gap-1 w-full"
+                              >
+                                <Pencil className="w-3.5 h-3.5" /> Catatan
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
+                          Tidak ada data ditemukan.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="mt-auto flex justify-end pt-5 border-t border-gray-100 dark:border-[#3D3127]">
+              <button
+                className={`w-full md:w-auto justify-center px-6 py-2.5 rounded-full font-bold shadow-md flex items-center gap-2 transition-all text-sm ${
+                  isProcessing ? "bg-gray-300 text-gray-500 cursor-wait shadow-none" : "bg-[#8B5E3C] hover:bg-[#6F4E37] text-white active:scale-95"
+                }`}
+                onClick={handleExportAndSave}
+                disabled={isProcessing}
+              >
+                <Save className="w-4 h-4" /> {isProcessing ? "Memproses..." : "Simpan & Cetak Laporan"}
+              </button>
+            </div>
+
           </div>
         </div>
       </div>

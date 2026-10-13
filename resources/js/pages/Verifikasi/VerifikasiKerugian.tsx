@@ -134,7 +134,7 @@ export default function VerifikasiKerugian({ laporan, filters }: Props) {
                                     className="inline-flex justify-center items-center gap-2 rounded-full bg-[#D9A978] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#c4925e] transition-all"
                                 >
                                     <Download className="h-4 w-4" />
-                                    <span>Unduh .xls</span>
+                                    <span>Export Excel</span>
                                 </a>
 
                                 {/* Date Picker Dropdown */}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import AppLayout from "@/layouts/app-layout";
+import { Download, AlertTriangle, CheckCircle2, FileSearch } from 'lucide-react';
 
 interface ItemDuplikat {
     nama: string;
@@ -56,7 +57,7 @@ export default function AuditDataIndex({ item_duplikat, resep_tanpa_bahan, bahan
             <body>
                 <div class="header-title">LAPORAN AUDIT & VALIDASI DATA</div>
                 <div class="header-subtitle">WARUNG CANGKRUK</div>
-                <div class="header-subtitle">Tanggal Tarik: ${dateStr} - ${timeStr} WIB</div>
+                <div class="header-subtitle">Tanggal Tarik: ${dateStr} ${timeStr} WIB</div>
                 <br>
         `;
 
@@ -147,113 +148,190 @@ export default function AuditDataIndex({ item_duplikat, resep_tanpa_bahan, bahan
     return (
         <AppLayout header="Pusat Kontrol Data">
             <Head title="Pusat Kontrol Data" />
-            <div className="py-6">
-                <div className="bg-[#F2ECE4] p-4 md:p-8 rounded-3xl shadow-sm border border-amber-200/60 min-h-[600px] flex flex-col space-y-6">
+            
+            {/* 🔥 STRUKTUR CONTAINER DISEJAJARKAN DENGAN STANDAR ENTERPRISE 🔥 */}
+            <div className="space-y-6 py-6">
+                <div className="rounded-3xl bg-[#F2ECE4] dark:bg-[#2A221C] p-4 md:p-8 shadow-sm border border-amber-200/60 dark:border-[#45372C]">
+                    <div className="rounded-3xl bg-white dark:bg-[#231C17] p-4 md:p-6 shadow-xs border border-gray-100 dark:border-[#3D3127] min-h-[600px] flex flex-col">
 
-                    {/* Header & Tombol Download */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-3xl shadow-xs border border-gray-100 border-l-4 border-amber-500 gap-4">
-                        <div>
-                            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                🔍 Pusat Kontrol & Validasi Data
-                            </h1>
-                            <p className="text-gray-500 text-xs sm:text-sm mt-1">
-                                Periksa potensi kesalahan input atau data yang belum lengkap sebelum masuk ke laporan harian.
-                            </p>
+                        {/* --- HEADER CONTROL & TOOLBAR --- */}
+                        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 dark:border-[#3D3127] pb-5">
+                            <div className="flex items-center gap-3 w-full md:w-auto">
+                                <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-[#D9A978]/15 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 items-center justify-center shadow-inner flex-shrink-0">
+                                    <FileSearch className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">
+                                        Pusat Kontrol & Validasi Data
+                                    </h2>
+                                    <p className="text-sm text-gray-500 dark:text-[#A89B8C] mt-0.5">
+                                        Periksa potensi kesalahan input atau data yang belum lengkap sebelum laporan.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleDownloadExcel}
+                                className="flex items-center justify-center gap-2 rounded-full bg-[#8B5E3C] hover:bg-[#6F4E37] px-5 py-2.5 sm:py-2 text-sm font-bold text-white shadow-md transition active:scale-95 w-full sm:w-auto"
+                            >
+                                <Download className="h-4 w-4" />
+                                Export Excel
+                            </button>
                         </div>
-                        <button
-                            onClick={handleDownloadExcel}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-2xl shadow-sm transition flex items-center gap-2 text-xs sm:text-sm flex-shrink-0 active:scale-95"
-                        >
-                            📥 Download Laporan (.xls)
-                        </button>
+
+                        {/* --- KONTEN TABEL AUDIT --- */}
+                        <div className="space-y-10 flex-1">
+
+                            {/* TABEL 1: ITEM DUPLIKAT */}
+                            <div>
+                                <div className="mb-3 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-800 dark:text-[#FAF5ED] flex items-center gap-2">
+                                            1. Data Item Ganda / Terduplikat
+                                            {item_duplikat.length > 0 && <AlertTriangle className="w-4 h-4 text-rose-500" />}
+                                        </h3>
+                                        <p className="text-xs text-gray-500 dark:text-[#A89B8C] mt-1">
+                                            Item berikut tercatat lebih dari sekali di sistem. Silakan hapus data yang berlebih.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] overflow-hidden">
+                                    <div className="w-full overflow-x-auto">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
+                                                <tr>
+                                                    <th className="px-6 py-4">Nama Item</th>
+                                                    <th className="px-6 py-4 text-center">Divisi</th>
+                                                    <th className="px-6 py-4 text-center">Jumlah Terdaftar</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
+                                                {item_duplikat.length > 0 ? (
+                                                    item_duplikat.map((item, idx) => (
+                                                        <tr key={idx} className="hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors">
+                                                            <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">{item.nama}</td>
+                                                            <td className="px-6 py-4 text-center text-gray-600 dark:text-[#C8BCAE] uppercase font-medium">{item.division}</td>
+                                                            <td className="px-6 py-4 text-center font-bold text-rose-600 dark:text-rose-400">
+                                                                <span className="bg-rose-100 dark:bg-rose-900/40 px-3 py-1 rounded-full text-xs">{item.jumlah} Kali Input</span>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={3} className="px-6 py-8 text-center text-emerald-600 dark:text-emerald-400 font-bold text-sm bg-emerald-50/30 dark:bg-emerald-900/10">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                                Aman! Tidak ada item ganda yang ditemukan.
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* TABEL 2: RESEP KOSONG */}
+                            <div>
+                                <div className="mb-3 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-800 dark:text-[#FAF5ED] flex items-center gap-2">
+                                            2. Menu Tanpa Pengaturan Resep
+                                            {resep_tanpa_bahan.length > 0 && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                                        </h3>
+                                        <p className="text-xs text-gray-500 dark:text-[#A89B8C] mt-1">
+                                            Menu ini belum diatur komposisi bahannya. Stok tidak akan berkurang saat terjual.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] overflow-hidden">
+                                    <div className="w-full overflow-x-auto">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
+                                                <tr>
+                                                    <th className="px-6 py-4">Nama Menu</th>
+                                                    <th className="px-6 py-4 text-center w-48">Divisi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
+                                                {resep_tanpa_bahan.length > 0 ? (
+                                                    resep_tanpa_bahan.map((resep, idx) => (
+                                                        <tr key={idx} className="hover:bg-amber-50/50 dark:hover:bg-amber-900/20 transition-colors">
+                                                            <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">{resep.name}</td>
+                                                            <td className="px-6 py-4 text-center">
+                                                                <span className="bg-gray-100 dark:bg-[#2A221C] text-gray-600 dark:text-[#C8BCAE] uppercase font-medium px-3 py-1 rounded-full text-xs border border-gray-200 dark:border-[#45372C]">{resep.division}</span>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={2} className="px-6 py-8 text-center text-emerald-600 dark:text-emerald-400 font-bold text-sm bg-emerald-50/30 dark:bg-emerald-900/10">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                                Aman! Semua menu sudah memiliki resep bahan.
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* TABEL 3: BAHAN NGANGGUR */}
+                            <div>
+                                <div className="mb-3 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-800 dark:text-[#FAF5ED] flex items-center gap-2">
+                                            3. Bahan Mentah Belum Masuk Resep
+                                            {bahan_nganggur.length > 0 && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                                        </h3>
+                                        <p className="text-xs text-gray-500 dark:text-[#A89B8C] mt-1">
+                                            Bahan terdaftar di sistem, tapi belum pernah dimasukkan ke dalam racikan menu manapun.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] overflow-hidden">
+                                    <div className="w-full overflow-x-auto">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
+                                                <tr>
+                                                    <th className="px-6 py-4">Nama Bahan Mentah</th>
+                                                    <th className="px-6 py-4 text-center">Kategori</th>
+                                                    <th className="px-6 py-4 text-center">Divisi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
+                                                {bahan_nganggur.length > 0 ? (
+                                                    bahan_nganggur.map((bahan, idx) => (
+                                                        <tr key={idx} className="hover:bg-yellow-50/50 dark:hover:bg-yellow-900/20 transition-colors">
+                                                            <td className="px-6 py-4 font-bold text-gray-800 dark:text-[#FAF5ED]">{bahan.nama}</td>
+                                                            <td className="px-6 py-4 text-center">
+                                                                <span className="bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-100 dark:border-amber-800/40 shadow-xs">{bahan.kategori}</span>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-center text-gray-600 dark:text-[#C8BCAE] uppercase font-medium">{bahan.division}</td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={3} className="px-6 py-8 text-center text-emerald-600 dark:text-emerald-400 font-bold text-sm bg-emerald-50/30 dark:bg-emerald-900/10">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <CheckCircle2 className="w-4 h-4" />
+                                                                Aman! Seluruh bahan mentah sudah terpakai di resep.
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
-
-                    {/* TABEL 1: ITEM DUPLIKAT */}
-                    <div className="bg-white rounded-3xl shadow-xs border border-gray-100 overflow-hidden">
-                        <div className="bg-rose-50/70 px-6 py-4 border-b border-rose-100">
-                            <h2 className="text-base font-bold text-rose-800">1. Data Item Ganda / Terduplikat</h2>
-                            <p className="text-xs text-rose-600 mt-0.5">Item berikut tercatat lebih dari sekali di sistem. Silakan hapus data yang tidak perlu lewat menu Data Induk.</p>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-6 py-4">Nama Item</th>
-                                        <th className="px-6 py-4">Divisi</th>
-                                        <th className="px-6 py-4">Jumlah Terdaftar</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {item_duplikat.length > 0 ? item_duplikat.map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-rose-50/30 transition-colors">
-                                            <td className="px-6 py-4 font-bold text-gray-800">{item.nama}</td>
-                                            <td className="px-6 py-4 text-gray-600 uppercase font-medium">{item.division}</td>
-                                            <td className="px-6 py-4 text-rose-600 font-bold">{item.jumlah} Kali</td>
-                                        </tr>
-                                    )) : (
-                                        <tr><td colSpan={3} className="px-6 py-10 text-center text-emerald-600 font-bold text-sm bg-emerald-50/20">✨ Aman! Tidak ada item ganda yang ditemukan.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* TABEL 2: RESEP KOSONG */}
-                    <div className="bg-white rounded-3xl shadow-xs border border-gray-100 overflow-hidden">
-                        <div className="bg-amber-50/70 px-6 py-4 border-b border-amber-100">
-                            <h2 className="text-base font-bold text-amber-900">2. Menu Tanpa Pengaturan Resep</h2>
-                            <p className="text-xs text-amber-700 mt-0.5">Menu ini belum diatur komposisi bahan mentahnya. Jika dibiarkan, stok kasir tidak akan berkurang saat terjual.</p>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-6 py-4">Nama Menu</th>
-                                        <th className="px-6 py-4">Divisi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {resep_tanpa_bahan.length > 0 ? resep_tanpa_bahan.map((resep, idx) => (
-                                        <tr key={idx} className="hover:bg-amber-50/30 transition-colors">
-                                            <td className="px-6 py-4 font-bold text-gray-800">{resep.name}</td>
-                                            <td className="px-6 py-4 text-gray-600 uppercase font-medium">{resep.division}</td>
-                                        </tr>
-                                    )) : (
-                                        <tr><td colSpan={2} className="px-6 py-10 text-center text-emerald-600 font-bold text-sm bg-emerald-50/20">✨ Aman! Semua menu sudah memiliki resep bahan.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* TABEL 3: BAHAN NGANGGUR */}
-                    <div className="bg-white rounded-3xl shadow-xs border border-gray-100 overflow-hidden">
-                        <div className="bg-yellow-50/70 px-6 py-4 border-b border-yellow-100">
-                            <h2 className="text-base font-bold text-yellow-900">3. Bahan Mentah Belum Masuk Resep</h2>
-                            <p className="text-xs text-yellow-700 mt-0.5">Bahan ini sudah terdaftar di sistem, tapi belum pernah dimasukkan ke dalam racikan resep menu manapun.</p>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead className="bg-[#FAF7F2]/80 text-gray-500 font-bold uppercase text-[11px] tracking-wider border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-6 py-4">Nama Bahan Mentah</th>
-                                        <th className="px-6 py-4">Divisi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {bahan_nganggur.length > 0 ? bahan_nganggur.map((bahan, idx) => (
-                                        <tr key={idx} className="hover:bg-yellow-50/30 transition-colors">
-                                            <td className="px-6 py-4 font-bold text-gray-800">{bahan.nama}</td>
-                                            <td className="px-6 py-4 text-gray-600 uppercase font-medium">{bahan.division}</td>
-                                        </tr>
-                                    )) : (
-                                        <tr><td colSpan={2} className="px-6 py-10 text-center text-emerald-600 font-bold text-sm bg-emerald-50/20">✨ Aman! Seluruh bahan mentah sudah terpakai di resep.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </AppLayout>

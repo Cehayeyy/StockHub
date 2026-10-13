@@ -310,11 +310,12 @@ export default function LaporanKerugian({ laporan, bahanMentah, division, filter
                                             <label className="block mb-1 text-xs font-bold text-gray-700 ml-1">Jumlah Kuantitas</label>
                                             <div className="relative">
                                                 <input 
-                                                    type="text" 
-                                                    value="1"
-                                                    readOnly
-                                                    disabled
-                                                    className="w-full bg-gray-100 rounded-xl px-4 py-3 border border-gray-200 text-gray-500 cursor-not-allowed text-sm"
+                                                    type="number" 
+                                                    min="1"
+                                                    value={row.kuantitas}
+                                                    onChange={(e) => handleItemChange(index, 'kuantitas', e.target.value)}
+                                                    className="w-full bg-white rounded-xl pl-4 pr-14 py-3 border border-gray-200 focus:ring-2 focus:ring-[#D9A978] outline-none text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    required
                                                 />
                                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold select-none pointer-events-none">
                                                     porsi

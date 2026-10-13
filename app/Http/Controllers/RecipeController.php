@@ -30,14 +30,13 @@ class RecipeController extends Controller
 
         $categories = ItemCategory::where('division', $division)->get();
 
-        // 🔥 LOGIKA PAGINATION (SERVER SIDE)
         $recipes = Recipe::where('division', $division)
             ->when($request->input('search'), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%");
             })
             ->latest()
-            ->paginate(10) // Batasi 10 item per halaman
-            ->withQueryString() // Jaga filter search saat ganti halaman
+            ->paginate(10)
+            ->withQueryString()
             ->through(fn ($r) => [
                 'id'                   => $r->id,
                 'name'                 => $r->name,
@@ -86,75 +85,9 @@ class RecipeController extends Controller
             $division = $request->input('division', 'bar');
         }
 
-        $recipes = Recipe::where('division', $division)->with('category')->latest()->get();
+        $fileName = 'Laporan_Resep_' . ucfirst($division) . '_' . date('Y-m-d') . '.xlsx';
 
-        $fileName = 'Laporan_Resep_' . ucfirst($division) . '_' . date('Y-m-d') . '.csv';
-
-        $headers = [
-            "Content-type"        => "text/csv; charset=UTF-8",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $callback = function() use ($recipes, $division) {
-            $file = fopen('php://output', 'w');
-            // BOM untuk UTF-8 Excel agar karakter khusus dan mata uang terbaca sempurna
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            // --- HEADER INFORMASI LAPORAN (Dipad dengan kolom kosong agar teks tidak meluber) ---
-            fputcsv($file, ['WARUNG CANGKRUK - REKAP DATA RESEP DIVISI ' . strtoupper($division), '', '', '', '', '', '', '', '', '', ''], ';');
-            fputcsv($file, ['Periode Cetak: ' . date('d F Y'), '', '', '', '', '', '', '', '', '', ''], ';');
-            fputcsv($file, [], ';'); // Baris kosong sebagai pemisah
-
-            // --- HEADER TABEL UTAMA (Total 11 Kolom) ---
-            fputcsv($file, [
-                'No', 
-                'Nama Menu Jadi', 
-                'Kategori', 
-                'Total Bahan', 
-                'Komposisi Bahan & Jumlah', 
-                'Total HPP (Rp)', 
-                'Target Margin (%)', 
-                'Harga Jual Hitungan (Rp)', 
-                'Harga Jual Real (Rp)', 
-                'Profit Real (Rp)', 
-                'Tanggal Dibuat'
-            ], ';');
-
-            // --- ISI DATA TABEL ---
-            foreach ($recipes as $index => $r) {
-                $ingredientsList = '';
-                if (is_array($r->ingredients)) {
-                    $arr = [];
-                    foreach ($r->ingredients as $ing) {
-                        $arr[] = ($ing['item_name'] ?? 'Bahan') . ' (' . $ing['amount'] . ' ' . $ing['unit'] . ')';
-                    }
-                    $ingredientsList = implode(', ', $arr);
-                }
-
-                $tanggalDibuat = $r->created_at ? "\t" . $r->created_at->format('d/m/Y') : '-';
-
-                fputcsv($file, [
-                    $index + 1,
-                    $r->name,
-                    $r->category->name ?? '-',
-                    $r->total_ingredients,
-                    $ingredientsList,
-                    $r->total_hpp ?? 0,
-                    $r->target_margin ?? 0,
-                    $r->harga_jual_hitungan ?? 0,
-                    $r->harga_jual_real ?? 0,
-                    $r->profit_real ?? 0,
-                    $tanggalDibuat
-                ], ';');
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ResepExport($division), $fileName);
     }
 
     public function store(Request $request)
@@ -181,13 +114,17 @@ class RecipeController extends Controller
         $this->validateRecipeReferences($validated);
 
         DB::transaction(function () use ($validated, $user) {
-            // 🔥 HITUNG HPP OTOMATIS
             [$ingredients, $totalHpp] = $this->buildIngredientCostSnapshot($validated['ingredients']);
             $targetMargin   = (float)($validated['target_margin'] ?? 0);
+            
+            // 🔥 RUMUS YANG HILANG SUDAH DIPERBAIKI (Tanda Bintang)
             $hargaJualHitungan = $totalHpp > 0
                 ? round($totalHpp * (1 + $targetMargin / 100), 2)
                 : null;
+                
             $hargaJualReal  = isset($validated['harga_jual_real']) ? (float)$validated['harga_jual_real'] : null;
+            
+            // 🔥 RUMUS YANG HILANG SUDAH DIPERBAIKI (Tanda Kurang)
             $profitReal     = ($hargaJualReal !== null && $totalHpp > 0)
                 ? round($hargaJualReal - $totalHpp, 2)
                 : null;
@@ -275,13 +212,17 @@ class RecipeController extends Controller
         DB::transaction(function () use ($validated, $recipe, $user) {
             $oldName = $recipe->name;
 
-            // 🔥 HITUNG HPP OTOMATIS
             [$ingredients, $totalHpp] = $this->buildIngredientCostSnapshot($validated['ingredients']);
             $targetMargin   = (float)($validated['target_margin'] ?? 0);
+            
+            // 🔥 RUMUS YANG HILANG SUDAH DIPERBAIKI (Tanda Bintang)
             $hargaJualHitungan = $totalHpp > 0
                 ? round($totalHpp * (1 + $targetMargin / 100), 2)
                 : null;
+                
             $hargaJualReal  = isset($validated['harga_jual_real']) ? (float)$validated['harga_jual_real'] : null;
+            
+            // 🔥 RUMUS YANG HILANG SUDAH DIPERBAIKI (Tanda Kurang)
             $profitReal     = ($hargaJualReal !== null && $totalHpp > 0)
                 ? round($hargaJualReal - $totalHpp, 2)
                 : null;
@@ -475,6 +416,8 @@ class RecipeController extends Controller
             $item = $items->get($ingredient['item_id']);
             $amount = (float) $ingredient['amount'];
             $hargaDasar = (float) $item->harga_dasar;
+            
+            // 🔥 RUMUS YANG HILANG SUDAH DIPERBAIKI (Tanda Bintang)
             $subtotal = round($amount * $hargaDasar, 2);
             $totalHpp += $subtotal;
 

@@ -111,7 +111,7 @@ export default function LaporanAktivitas() {
                 className="inline-flex justify-center items-center gap-2 rounded-full bg-[#D9A978] px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-[#c4925e] transition-all w-full sm:w-auto"
               >
                 <Download className="h-4 w-4" />
-                <span>Unduh .xls</span>
+                <span>Export Excel</span>
               </button>
 
               {/* Date Picker */}

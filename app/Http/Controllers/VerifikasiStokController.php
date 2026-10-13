@@ -22,10 +22,8 @@ class VerifikasiStokController extends Controller
         $tab = $request->get('tab', 'bar');
         $rawDate = $request->get('tanggal') ?: Carbon::now()->toDateString();
 
-        // 🔥 UBAH: Gunakan tanggal persis yang dipilih (bukan dipaksa ke hari Senin)
         $targetDate = Carbon::parse($rawDate)->toDateString();
 
-        // Pastikan data stok harian untuk tanggal tersebut sudah ter-generate
         $stokController = new StokHarianController();
         $dapurController = new StokHarianDapurController();
 
@@ -80,6 +78,7 @@ class VerifikasiStokController extends Controller
                 if ($tab === 'bar') {
                     $mentah = StokHarianMentah::find($id);
                     if ($mentah) {
+                        // 🔥 Perbaikan Simbol Kurang (-)
                         $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
                         $selisih = $stokFisik - $stokSistem;
 
@@ -95,7 +94,6 @@ class VerifikasiStokController extends Controller
 
                         $this->syncMenuBar($mentah->item_id, $mentah->tanggal);
 
-                        // Efek Domino Estafet ke hari-hari berikutnya
                         $startDate = Carbon::parse($mentah->tanggal)->addDay();
                         $endDate = Carbon::now();
                         $stokEstafet = $stokFisik;
@@ -109,6 +107,7 @@ class VerifikasiStokController extends Controller
                             );
 
                             $hariIni->stok_awal = $stokEstafet;
+                            // 🔥 Perbaikan Simbol Kurang (-)
                             $hariIni->stok_akhir = ($hariIni->stok_awal + $hariIni->stok_masuk) - $hariIni->stok_keluar;
                             $hariIni->save();
 
@@ -119,6 +118,7 @@ class VerifikasiStokController extends Controller
                 } else {
                     $mentah = StokHarianDapurMentah::find($id);
                     if ($mentah) {
+                        // 🔥 Perbaikan Simbol Kurang (-)
                         $stokSistem = $mentah->stok_awal + $mentah->stok_masuk - $mentah->stok_keluar;
                         $selisih = $stokFisik - $stokSistem;
 
@@ -134,7 +134,6 @@ class VerifikasiStokController extends Controller
 
                         $this->syncMenuDapur($mentah->item_id, $mentah->tanggal);
 
-                        // Efek Domino Estafet Dapur ke hari-hari berikutnya
                         $startDate = Carbon::parse($mentah->tanggal)->addDay();
                         $endDate = Carbon::now();
                         $stokEstafet = $stokFisik;
@@ -148,6 +147,7 @@ class VerifikasiStokController extends Controller
                             );
 
                             $hariIni->stok_awal = $stokEstafet;
+                            // 🔥 Perbaikan Simbol Kurang (-)
                             $hariIni->stok_akhir = ($hariIni->stok_awal + $hariIni->stok_masuk) - $hariIni->stok_keluar;
                             $hariIni->save();
 
@@ -213,6 +213,7 @@ class VerifikasiStokController extends Controller
             if ($minCapSisa === 999999) $minCapSisa = 0;
 
             $menu->stok_awal = $minCapAwal;
+            // 🔥 Perbaikan Simbol Kurang (-)
             $menu->stok_masuk = max(0, $minCapTotal - $minCapAwal);
             $sisaMatematis = ($menu->stok_awal + $menu->stok_masuk) - $menu->stok_keluar;
             $menu->stok_akhir = min($sisaMatematis, $minCapSisa);
@@ -258,6 +259,7 @@ class VerifikasiStokController extends Controller
             if ($minCapSisa === 999999) $minCapSisa = 0;
 
             $menu->stok_awal = $minCapAwal;
+            // 🔥 Perbaikan Simbol Kurang (-)
             $menu->stok_masuk = max(0, $minCapTotal - $minCapAwal);
             $sisaMatematis = ($menu->stok_awal + $menu->stok_masuk) - $menu->stok_keluar;
             $menu->stok_akhir = min($sisaMatematis, $minCapSisa);
@@ -279,71 +281,12 @@ class VerifikasiStokController extends Controller
             : StokHarianDapurMentah::with('item')->whereDate('tanggal', $rawDate)->get();
 
         $divisionName = $tab === 'bar' ? 'Bar' : 'Dapur';
-        $filename = "verifikasi-stok-{$tab}-{$rawDate}.xls";
+        
+        $filename = "verifikasi-stok-{$tab}-{$rawDate}.xlsx";
 
-        $html = $this->generateExcelHTML($items, $rawDate, $divisionName, $fisikData, $catatanData, $sistemData);
-
-        return response($html, 200, [
-            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
-        ]);
-    }
-
-    private function generateExcelHTML($items, $date, $division, $fisikData = [], $catatanData = [], $sistemData = [])
-    {
-        $formattedDate = Carbon::parse($date)->locale('id')->isoFormat('D MMMM YYYY');
-
-        $html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel">';
-        $html .= '<head>';
-        $html .= '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-        $html .= '<xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
-        $html .= '<x:Name>Verifikasi Stok</x:Name>';
-        $html .= '<x:WorksheetOptions><x:Print><x:ValidPrinterInfo/></x:Print></x:WorksheetOptions>';
-        $html .= '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml>';
-        $html .= '<style>';
-        $html .= 'table { border-collapse: collapse; width: 100%; }';
-        $html .= 'th { background-color: #8B5E3C; color: white; font-weight: bold; padding: 10px; text-align: center; border: 1px solid #000; }';
-        $html .= 'td { padding: 8px; border: 1px solid #ddd; }';
-        $html .= '.text-center { text-align: center; }';
-        $html .= '.title { font-size: 16px; font-weight: bold; text-align: center; padding: 10px; }';
-        $html .= '.subtitle { font-size: 12px; text-align: center; padding: 5px; color: #666; }';
-        $html .= '</style></head><body>';
-
-        $html .= '<div class="title">VERIFIKASI STOK - ' . strtoupper($division) . '</div>';
-        $html .= '<div class="subtitle">Tanggal Verifikasi: ' . $formattedDate . '</div><br/>';
-
-        $html .= '<table><thead><tr>';
-        $html .= '<th>No</th><th>Nama Item</th><th>Satuan</th><th>Stok Sistem</th>';
-        $html .= '<th>Stok Fisik</th><th>Selisih</th><th>Status</th><th>Catatan</th>';
-        $html .= '</tr></thead><tbody>';
-
-        foreach ($items as $index => $item) {
-            $namaItem = htmlspecialchars(optional($item->item)->nama ?? '-');
-            $satuan = htmlspecialchars($item->unit ?? optional($item->item)->satuan ?? '-');
-            $stokSistem = isset($sistemData[$item->id]) ? (float) $sistemData[$item->id] : ($item->stok_akhir ?? 0);
-
-            $stokFisik = isset($fisikData[$item->id]) ? $fisikData[$item->id] : $stokSistem;
-            $selisih = $stokFisik - $stokSistem;
-            $status = $selisih == 0 ? 'Sesuai' : ($selisih > 0 ? 'Lebih' : 'Kurang');
-            $selisihDisplay = $selisih > 0 ? '+' . $selisih : (string) $selisih;
-            $catatan = !empty($catatanData[$item->id]) ? htmlspecialchars($catatanData[$item->id]) : '-';
-
-            $html .= '<tr>';
-            $html .= '<td class="text-center">' . ($index + 1) . '</td>';
-            $html .= '<td>' . $namaItem . '</td>';
-            $html .= '<td class="text-center">' . $satuan . '</td>';
-            $html .= '<td class="text-center">' . $stokSistem . '</td>';
-            $html .= '<td class="text-center">' . $stokFisik . '</td>';
-            $html .= '<td class="text-center">' . $selisihDisplay . '</td>';
-            $html .= '<td class="text-center">' . $status . '</td>';
-            $html .= '<td>' . $catatan . '</td>';
-            $html .= '</tr>';
-        }
-        $html .= '</tbody></table></body></html>';
-
-        return $html;
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\VerifikasiStokExport($items, $rawDate, $divisionName, $fisikData, $catatanData, $sistemData), 
+            $filename
+        );
     }
 }

@@ -244,6 +244,10 @@ Route::middleware(['auth'])->group(function () {
         // ===========================
         Route::get('/laporan/frekuensi-pembelian', [LaporanFrekuensiController::class, 'index'])
             ->name('laporan.frekuensi-pembelian');
+            
+        // 🔥 TAMBAHKAN BARIS INI UNTUK EXPORT EXCEL
+        Route::get('/laporan/frekuensi-pembelian/export', [LaporanFrekuensiController::class, 'export'])
+            ->name('laporan.frekuensi-pembelian.export');
     });
 
     // User Management View (Supervisor)

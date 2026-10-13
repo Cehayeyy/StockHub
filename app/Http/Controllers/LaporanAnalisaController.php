@@ -18,8 +18,6 @@ class LaporanAnalisaController extends Controller
         $tanggal = $this->resolveDate($request->input('tanggal'));
         [$startDate, $endDate] = $this->resolvePeriod($tanggal, $periode);
 
-        // Harga satuan/subtotal adalah snapshot saat staff menyimpan nota.
-        // Laporan mencakup transaksi Staff Bar dan Dapur.
         $salesItems = SalesReportItem::query()
             ->with(['item.itemCategory', 'salesReport.user'])
             ->whereHas('salesReport', function ($query) use ($startDate, $endDate) {
@@ -32,7 +30,6 @@ class LaporanAnalisaController extends Controller
             })
             ->get();
 
-        // Data resep lama dapat belum memiliki item_id; gunakan nama sebagai fallback.
         $recipes = Recipe::with('category')->whereIn('division', ['bar', 'dapur'])->get();
         $recipesByItemId = $recipes->filter(fn (Recipe $recipe) => $recipe->item_id !== null)->keyBy('item_id');
         $recipesByDivisionAndName = $recipes->groupBy(fn (Recipe $recipe) => "{$recipe->division}|{$recipe->name}");
@@ -43,10 +40,11 @@ class LaporanAnalisaController extends Controller
                 $recipe = $recipesByItemId->get($itemId)
                     ?? $recipesByDivisionAndName->get("{$item->division}|{$item->nama}")?->first();
                 $terjual = (float) $lines->sum('quantity');
-                // Diskon dan fee berlaku untuk satu nota, sehingga dibagi
-                // proporsional terhadap subtotal masing-masing menu.
+                
                 $omsetBersih = (float) $lines->sum(fn (SalesReportItem $line) => $this->netRevenueForLine($line));
                 $hppSatuan = (float) ($recipe?->total_hpp ?? 0);
+                
+                // 🔥 RUMUS PERKALIAN DIPERBAIKI (*)
                 $totalHpp = round($terjual * $hppSatuan, 2);
                 $hargaJualRiil = $terjual > 0 ? round($omsetBersih / $terjual, 2) : 0;
 
@@ -57,6 +55,7 @@ class LaporanAnalisaController extends Controller
                     'terjual' => $terjual,
                     'total_hpp' => $totalHpp,
                     'harga_jual_riil' => $hargaJualRiil,
+                    // 🔥 RUMUS PENGURANGAN DIPERBAIKI (-)
                     'profit_riil_satuan' => round($hargaJualRiil - $hppSatuan, 2),
                     'total_profit_real' => round($omsetBersih - $totalHpp, 2),
                 ];
@@ -64,12 +63,20 @@ class LaporanAnalisaController extends Controller
             ->sortBy('nama', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
 
+        // Hitung Total Ringkasan
         $totalOmsetReal = round((float) $salesItems->sum(fn (SalesReportItem $line) => $this->netRevenueForLine($line)), 2);
         $totalProfitRealSum = round($groupedItems->sum('total_profit_real'), 2);
+        
+        // 🔥 INI PENAMBAHAN UNTUK TOTAL KESELURUHAN DI FRONTEND
+        $totalTerjualSum = $groupedItems->sum('terjual');
+        $totalHppSum = $groupedItems->sum('total_hpp');
 
+        // 🔥 DATA RINGKASAN DI-UPDATE
         $ringkasan = [
             'totalOmsetReal' => $totalOmsetReal,
             'totalProfitReal' => $totalProfitRealSum,
+            'totalTerjual' => $totalTerjualSum,
+            'totalHpp' => $totalHppSum,
         ];
 
         $perPage = 10;
@@ -124,6 +131,8 @@ class LaporanAnalisaController extends Controller
                 $terjual = (float) $lines->sum('quantity');
                 $omsetBersih = (float) $lines->sum(fn (SalesReportItem $line) => $this->netRevenueForLine($line));
                 $hppSatuan = (float) ($recipe?->total_hpp ?? 0);
+                
+                // 🔥 RUMUS PERKALIAN DIPERBAIKI (*)
                 $totalHpp = round($terjual * $hppSatuan, 2);
                 $hargaJualRiil = $terjual > 0 ? round($omsetBersih / $terjual, 2) : 0;
 
@@ -133,6 +142,7 @@ class LaporanAnalisaController extends Controller
                     'terjual' => $terjual,
                     'total_hpp' => $totalHpp,
                     'harga_jual_riil' => $hargaJualRiil,
+                    // 🔥 RUMUS PENGURANGAN DIPERBAIKI (-)
                     'profit_riil_satuan' => round($hargaJualRiil - $hppSatuan, 2),
                     'total_profit_real' => round($omsetBersih - $totalHpp, 2),
                 ];
@@ -140,83 +150,26 @@ class LaporanAnalisaController extends Controller
             ->sortBy('nama', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
 
-        // Hitung Total Ringkasan
         $totalOmsetReal = round((float) $salesItems->sum(fn (SalesReportItem $line) => $this->netRevenueForLine($line)), 2);
         $totalProfitRealSum = round($groupedItems->sum('total_profit_real'), 2);
         $totalTerjualSum = $groupedItems->sum('terjual');
         $totalHppSum = $groupedItems->sum('total_hpp');
 
-        $filename = 'laporan-analisis-profit-' . strtolower($periode) . '-' . $tanggal->format('Y-m-d') . '.csv';
+        $filename = 'laporan-analisis-profit-' . strtolower($periode) . '-' . $tanggal->format('Y-m-d') . '.xlsx';
 
-        $headers = [
-            "Content-type"        => "text/csv; charset=UTF-8",
-            "Content-Disposition" => "attachment; filename={$filename}",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $callback = function () use ($groupedItems, $periode, $startDate, $endDate, $totalOmsetReal, $totalProfitRealSum, $totalTerjualSum, $totalHppSum) {
-            $file = fopen('php://output', 'w');
-            // Tambahkan BOM agar Excel mendeteksi format UTF-8 dengan benar
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            // 1. KOP LAPORAN PROFESIONAL
-            fputcsv($file, ['WARUNG CANGKRUK - LAPORAN ANALISIS PROFIT PER MENU'], ';');
-            fputcsv($file, ['Periode Laporan:', $periode], ';');
-            fputcsv($file, ['Rentang Tanggal:', $startDate->format('d/m/Y') . ' s/d ' . $endDate->format('d/m/Y')], ';');
-            fputcsv($file, ['Tanggal Cetak:', now()->format('d/m/Y H:i') . ' WIB'], ';');
-            fputcsv($file, [], ';'); // Baris kosong pemisah
-
-            // 2. KARTU RINGKASAN EKsekutif (SUMMARY CARDS)
-            fputcsv($file, ['RINGKASAN EKSEKUTIF'], ';');
-            fputcsv($file, ['Total Omset Real / Net (Setelah Diskon & Fee):', number_format($totalOmsetReal, 0, ',', '.')], ';');
-            fputcsv($file, ['Total Profit Real (Keuntungan Bersih):', number_format($totalProfitRealSum, 0, ',', '.')], ';');
-            fputcsv($file, [], ';'); // Baris kosong pemisah
-
-            // 3. HEADER TABEL UTAMA
-            fputcsv($file, ['RINCIAN ANALISIS PER MENU'], ';');
-            fputcsv($file, [
-                'No', 
-                'Nama Menu', 
-                'Kategori', 
-                'Terjual (Porsi)', 
-                'Total HPP (Rp)', 
-                'Harga Jual Riil / Net (Rp)', 
-                'Profit Riil Satuan (Rp)', 
-                'Total Profit Real (Rp)'
-            ], ';');
-
-            // 4. ISI DATA TABEL
-            foreach ($groupedItems as $index => $row) {
-                fputcsv($file, [
-                    $index + 1,
-                    $row['nama'],
-                    strtoupper($row['kategori']),
-                    $row['terjual'],
-                    $row['total_hpp'],
-                    $row['harga_jual_riil'],
-                    $row['profit_riil_satuan'],
-                    $row['total_profit_real'],
-                ], ';');
-            }
-
-            // 5. FOOTER TOTAL KESELURUHAN
-            fputcsv($file, [
-                'TOTAL KESELURUHAN',
-                '',
-                '',
-                $totalTerjualSum,
-                $totalHppSum,
-                '-',
-                '-',
-                $totalProfitRealSum
-            ], ';');
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\AnalisaProfitExport(
+                $groupedItems, 
+                $periode, 
+                $startDate, 
+                $endDate, 
+                $totalOmsetReal, 
+                $totalProfitRealSum, 
+                $totalTerjualSum, 
+                $totalHppSum
+            ), 
+            $filename
+        );
     }
 
     private function resolveDate(?string $date): Carbon
@@ -235,7 +188,10 @@ class LaporanAnalisaController extends Controller
         $report = $line->salesReport;
         $reportSubtotal = (float) $report->subtotal;
 
-        $totalBersih = $report->total_bersih !== null ? (float) $report->total_bersih : (float) ($report->subtotal - ($report->subtotal * ($report->diskon_persen ?? 0) / 100) - ($report->fee_mitra ?? 0));
+        // 🔥 PERBAIKAN FATAL: LOGIKA HITUNGAN DISKON DAN FEE DIKEMBALIKAN DENGAN BENAR
+        $totalBersih = $report->total_bersih !== null 
+            ? (float) $report->total_bersih 
+            : (float) ($report->subtotal - ($report->subtotal * ($report->diskon_persen ?? 0) / 100) - ($report->fee_mitra ?? 0));
 
         if ($reportSubtotal <= 0) {
             return (float) $line->subtotal;

@@ -207,12 +207,16 @@ class SalesReportController extends Controller
                             throw new \RuntimeException("Menu '{$recipe->name}' belum terhubung ke data Item divisi {$recipe->division}.");
                         }
 
+                        // Ambil HPP resep saat ini (menyesuaikan nama kolom yang Anda pakai di database)
+                        $hppSatuan = (float) ($recipe->total_hpp ?? $recipe->harga_hpp ?? $recipe->hpp ?? 0);
+
                         $processedItems[] = [
                             'recipe_id' => $recipeId,
                             'item_id' => $menuItem->id,
                             'quantity' => $qty,
                             'harga_satuan' => $hargaSatuan,
                             'subtotal' => $lineSubtotal,
+                            'hpp_saat_transaksi' => $hppSatuan, // <-- Snapshot HPP
                         ];
 
                         // Potong Stok Harian (Bar / Dapur)
@@ -286,6 +290,7 @@ class SalesReportController extends Controller
                             'quantity' => $pItem['quantity'],
                             'harga_satuan' => $pItem['harga_satuan'],
                             'subtotal' => $pItem['subtotal'],
+                            'hpp_saat_transaksi' => $pItem['hpp_saat_transaksi'], // <-- Simpan ke database
                         ]);
                     }
 

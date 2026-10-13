@@ -280,7 +280,6 @@ export default function Manajemen() {
         confirmDelete, showModal, showEditModal, showSelfUpdateModal, deleteId,
         role, username, name, password, selfUsername, selfPassword, editId
     ]);
-    // --- 🔥 SELESAI TAMBAHAN 🔥 ---
 
     // Helper badge role
     const getRoleBadgeClass = (role: string) => {
@@ -312,205 +311,206 @@ export default function Manajemen() {
         <AppLayout header="Manajemen Akun">
             <Head title="Manajemen Akun" />
 
-            <div className="py-6">
-                <div className={`bg-white dark:bg-[#2A221C] p-4 md:p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-[#45372C] min-h-[600px] flex flex-col ${
-                        showModal || confirmDelete || showEditModal || showSelfUpdateModal ? 'blur-sm pointer-events-none' : ''
-                    }`}
-                >
-                    {/* --- HEADER --- */}
-                    <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">Daftar Pengguna</h3>
+            {/* 🔥 STRUKTUR CONTAINER DISEJAJARKAN DENGAN KATEGORI.TSX */}
+            <div className="space-y-6 py-6">
+                <div className="rounded-3xl bg-[#F2ECE4] dark:bg-[#2A221C] p-4 md:p-8 shadow-sm border border-amber-200/60 dark:border-[#45372C]">
+                    <div className={`rounded-3xl bg-white dark:bg-[#231C17] p-4 md:p-6 shadow-xs border border-gray-100 dark:border-[#3D3127] min-h-[500px] flex flex-col ${
+                            showModal || confirmDelete || showEditModal || showSelfUpdateModal ? 'blur-sm pointer-events-none' : ''
+                        }`}
+                    >
+                        {/* --- HEADER --- */}
+                        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <h2 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">Daftar Pengguna</h2>
 
-                        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                            {/* Button Update Akun Owner */}
-                            {currentUserRole === 'owner' && (
+                            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                                {/* Button Update Akun Owner */}
+                                {currentUserRole === 'owner' && (
+                                    <button
+                                        onClick={openSelfUpdateModal}
+                                        className="flex items-center gap-2 bg-green-600 dark:bg-emerald-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-green-700 dark:hover:bg-emerald-700 transition w-full sm:w-auto justify-center"
+                                    >
+                                        <Settings className="w-4 h-4" />
+                                        Update Akun Saya
+                                    </button>
+                                )}
+
                                 <button
-                                    onClick={openSelfUpdateModal}
-                                    className="flex items-center gap-2 bg-green-600 dark:bg-emerald-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-green-700 dark:hover:bg-emerald-700 transition w-full sm:w-auto justify-center"
+                                    onClick={openModal}
+                                    className="flex items-center gap-2 bg-[#D9A978] dark:bg-[#8B5E3C] text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-[#c4925e] dark:hover:bg-[#6F4E37] transition w-full sm:w-auto justify-center"
                                 >
-                                    <Settings className="w-4 h-4" />
-                                    Update Akun Saya
+                                    <Plus className="w-4 h-4" />
+                                    Tambah Akun
                                 </button>
-                            )}
-
-                            <button
-                                onClick={openModal}
-                                className="flex items-center gap-2 bg-[#D9A978] dark:bg-[#8B5E3C] text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:bg-[#c4925e] dark:hover:bg-[#6F4E37] transition w-full sm:w-auto justify-center"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Tambah Akun
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* --- MOBILE VIEW (CARDS) --- */}
-                    {/* Tampil di layar kecil (< md) */}
-                    <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
-                        {userList.length === 0 ? (
-                             <div className="text-center text-gray-400 dark:text-[#8E8072] py-8 border rounded-xl bg-gray-50 dark:bg-[#231C17] dark:border-[#3D3127]">
-                                Belum ada pengguna.
                             </div>
-                        ) : (
-                            userList.map((u: any) => (
-                                <div key={u.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-xl p-4 shadow-sm">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <div className="font-bold text-gray-800 dark:text-[#FAF5ED]">{u.username || '-'}</div>
-                                            <div className="text-sm text-gray-500 dark:text-[#A89B8C]">{u.name || '-'}</div>
-                                        </div>
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
-                                            {u.role}
-                                        </span>
-                                    </div>
+                        </div>
 
-                                    <div className="flex items-center text-xs text-gray-400 dark:text-[#8E8072] mb-4 gap-1">
-                                        <Calendar className="w-3 h-3" />
-                                        Dibuat: {new Date(u.created_at).toLocaleDateString('id-ID')}
-                                    </div>
-
-                                    <div className="flex gap-2 border-t border-gray-100 dark:border-[#3D3127] pt-3">
-                                        {canManageUser(u) && (
-                                            <>
-                                                <button
-                                                    onClick={() => openEditModal(u)}
-                                                    className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] dark:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] dark:hover:bg-blue-700 transition"
-                                                >
-                                                    <Edit className="w-3 h-3" /> Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => openDeleteModal(u.id)}
-                                                    className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] dark:bg-rose-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] dark:hover:bg-rose-700 transition"
-                                                >
-                                                    <Trash2 className="w-3 h-3" /> Hapus
-                                                </button>
-                                            </>
-                                        )}
-                                        {!canManageUser(u) && (
-                                            <span className="flex-1 text-center text-xs text-gray-400 dark:text-[#8E8072] py-2">Tidak dapat dikelola</span>
-                                        )}
-                                    </div>
+                        {/* --- MOBILE VIEW (CARDS) --- */}
+                        {/* Tampil di layar kecil (< md) */}
+                        <div className="grid grid-cols-1 gap-4 md:hidden mb-6">
+                            {userList.length === 0 ? (
+                                 <div className="text-center text-gray-400 dark:text-[#8E8072] py-8 border rounded-xl bg-gray-50 dark:bg-[#231C17] dark:border-[#3D3127]">
+                                    Belum ada pengguna.
                                 </div>
-                            ))
+                            ) : (
+                                userList.map((u: any) => (
+                                    <div key={u.id} className="bg-white dark:bg-[#231C17] border border-gray-100 dark:border-[#3D3127] rounded-xl p-4 shadow-sm">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <div className="font-bold text-gray-800 dark:text-[#FAF5ED]">{u.username || '-'}</div>
+                                                <div className="text-sm text-gray-500 dark:text-[#A89B8C]">{u.name || '-'}</div>
+                                            </div>
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
+                                                {u.role}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center text-xs text-gray-400 dark:text-[#8E8072] mb-4 gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            Dibuat: {new Date(u.created_at).toLocaleDateString('id-ID')}
+                                        </div>
+
+                                        <div className="flex gap-2 border-t border-gray-100 dark:border-[#3D3127] pt-3">
+                                            {canManageUser(u) ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => openEditModal(u)}
+                                                        className="flex-1 flex items-center justify-center gap-1 bg-[#1D8CFF] dark:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#166ac4] dark:hover:bg-blue-700 transition"
+                                                    >
+                                                        <Edit className="w-3 h-3" /> Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openDeleteModal(u.id)}
+                                                        className="flex-1 flex items-center justify-center gap-1 bg-[#FF4B4B] dark:bg-rose-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-[#e03535] dark:hover:bg-rose-700 transition"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" /> Hapus
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <span className="flex-1 text-center text-xs text-gray-400 dark:text-[#8E8072] py-2">Tidak dapat dikelola</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* --- DESKTOP VIEW (TABLE) --- */}
+                        {/* Tampil di layar sedang ke atas (md:block) */}
+                        <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-sm overflow-hidden flex-1 mb-6">
+                            <div className="w-full overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
+                                        <tr>
+                                            <th className="px-6 py-4 w-16 text-center">No</th>
+                                            <th className="px-6 py-4">Username</th>
+                                            <th className="px-6 py-4">Kode Username</th>
+                                            <th className="px-6 py-4 text-center">Role</th>
+                                            <th className="px-6 py-4 text-center">Dibuat</th>
+                                            <th className="px-6 py-4 text-center w-40">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
+                                        {userList.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
+                                                    Belum ada pengguna.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            userList.map((u: any, index: number) => {
+                                                const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
+                                                return (
+                                                    <tr key={u.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2A221C] transition-colors duration-150">
+                                                        <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">
+                                                            {users.current_page
+                                                                ? (users.current_page - 1) * users.per_page + index + 1
+                                                                : index + 1}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-xl bg-[#D9A978]/20 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-inner">
+                                                                    {initial}
+                                                                </div>
+                                                                <span className="font-bold text-gray-800 dark:text-[#FAF5ED]">
+                                                                    {u.name || '-'}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-gray-600 dark:text-[#C8BCAE]">
+                                                            {u.username || '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border shadow-xs ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
+                                                                {u.role}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center text-gray-500 dark:text-[#A89B8C] text-xs font-medium">
+                                                            {new Date(u.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            {canManageUser(u) ? (
+                                                                <div className="flex justify-center gap-2">
+                                                                    <button
+                                                                        onClick={() => openEditModal(u)}
+                                                                        className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs flex items-center gap-1"
+                                                                    >
+                                                                        <Edit className="w-3.5 h-3.5" /> Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => openDeleteModal(u.id)}
+                                                                        className="px-3.5 py-1.5 rounded-xl bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 font-bold text-xs hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-xs flex items-center gap-1"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400 dark:text-[#8E8072] italic font-medium">Sistem Utama</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* --- PAGINATION (Responsive) --- */}
+                        {links.length > 3 && (
+                            <div className="mt-auto flex justify-center md:justify-end pt-4">
+                                <div className="flex flex-wrap justify-center gap-1 bg-gray-50 dark:bg-[#231C17] p-1 rounded-full border border-gray-200 dark:border-[#3D3127]">
+                                    {links.map((link: any, i: number) => {
+                                        let label = link.label;
+                                        if (label.includes('&laquo;')) label = 'Prev';
+                                        if (label.includes('&raquo;')) label = 'Next';
+
+                                        return (
+                                            <button
+                                                key={i}
+                                                disabled={!link.url}
+                                                onClick={() => {
+                                                    if (link.url) {
+                                                        router.get(link.url, {}, { preserveState: true });
+                                                    }
+                                                }}
+                                                className={`
+                                                    relative inline-flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all rounded-full
+                                                    ${
+                                                        link.active
+                                                            ? 'bg-[#D9A978] dark:bg-[#8B5E3C] text-white shadow-md'
+                                                            : 'text-gray-600 dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#2A221C] hover:text-[#D9A978] dark:hover:text-amber-300'
+                                                    }
+                                                    ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}
+                                                `}
+                                                dangerouslySetInnerHTML={{ __html: label }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         )}
                     </div>
-
-                    {/* --- DESKTOP VIEW (TABLE) --- */}
-                    {/* Tampil di layar sedang ke atas (md:block) */}
-                    <div className="hidden md:block w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-sm overflow-hidden flex-1 mb-6">
-                        <div className="w-full overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase text-[11px] tracking-wider border-b border-gray-100 dark:border-[#3D3127]">
-                                    <tr>
-                                        <th className="px-6 py-4 w-16 text-center">No</th>
-                                        <th className="px-6 py-4">Username</th>
-                                        <th className="px-6 py-4">Kode Username</th>
-                                        <th className="px-6 py-4 text-center">Role</th>
-                                        <th className="px-6 py-4 text-center">Dibuat</th>
-                                        <th className="px-6 py-4 text-center w-40">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
-                                    {userList.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
-                                                Belum ada pengguna.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        userList.map((u: any, index: number) => {
-                                            const initial = (u.name || u.username || 'U').charAt(0).toUpperCase();
-                                            return (
-                                                <tr key={u.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2A221C] transition-colors duration-150">
-                                                    <td className="px-6 py-4 text-center text-gray-400 dark:text-[#8E8072] font-medium">
-                                                        {users.current_page
-                                                            ? (users.current_page - 1) * users.per_page + index + 1
-                                                            : index + 1}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-9 h-9 rounded-xl bg-[#D9A978]/20 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-inner">
-                                                                {initial}
-                                                            </div>
-                                                            <span className="font-bold text-gray-800 dark:text-[#FAF5ED]">
-                                                                {u.name || '-'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600 dark:text-[#C8BCAE]">
-                                                        {u.username || '-'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border shadow-xs ${getRoleBadgeClass(u.role)} uppercase tracking-wide`}>
-                                                            {u.role}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center text-gray-500 dark:text-[#A89B8C] text-xs font-medium">
-                                                        {new Date(u.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        {canManageUser(u) ? (
-                                                            <div className="flex justify-center gap-2">
-                                                                <button
-                                                                    onClick={() => openEditModal(u)}
-                                                                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-800/40 font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/60 transition shadow-xs flex items-center gap-1"
-                                                                >
-                                                                    <Edit className="w-3.5 h-3.5" /> Edit
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => openDeleteModal(u.id)}
-                                                                    className="px-3.5 py-1.5 rounded-xl bg-red-50 dark:bg-rose-950/60 text-red-600 dark:text-rose-400 border border-transparent dark:border-rose-800/40 font-bold text-xs hover:bg-red-100 dark:hover:bg-rose-900/60 transition shadow-xs flex items-center gap-1"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" /> Hapus
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-xs text-gray-400 dark:text-[#8E8072] italic font-medium">Sistem Utama</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* --- PAGINATION (Responsive) --- */}
-                    {links.length > 3 && (
-                        <div className="mt-auto flex justify-center md:justify-end pt-4">
-                            <div className="flex flex-wrap justify-center gap-1 bg-gray-50 dark:bg-[#231C17] p-1 rounded-full border border-gray-200 dark:border-[#3D3127]">
-                                {links.map((link: any, i: number) => {
-                                    let label = link.label;
-                                    if (label.includes('&laquo;')) label = 'Prev';
-                                    if (label.includes('&raquo;')) label = 'Next';
-
-                                    return (
-                                        <button
-                                            key={i}
-                                            disabled={!link.url}
-                                            onClick={() => {
-                                                if (link.url) {
-                                                    router.get(link.url, {}, { preserveState: true });
-                                                }
-                                            }}
-                                            className={`
-                                                relative inline-flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all rounded-full
-                                                ${
-                                                    link.active
-                                                        ? 'bg-[#D9A978] dark:bg-[#8B5E3C] text-white shadow-md'
-                                                        : 'text-gray-600 dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#2A221C] hover:text-[#D9A978] dark:hover:text-amber-300'
-                                                }
-                                                ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}
-                                            `}
-                                            dangerouslySetInnerHTML={{ __html: label }}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
                 </div>
             </div>
 

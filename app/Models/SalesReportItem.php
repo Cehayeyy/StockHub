@@ -15,6 +15,7 @@ class SalesReportItem extends Model
         'quantity',
         'harga_satuan',
         'subtotal',
+        'hpp_saat_transaksi',
     ];
 
     public function salesReport(): BelongsTo

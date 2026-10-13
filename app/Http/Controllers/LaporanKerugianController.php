@@ -146,71 +146,9 @@ class LaporanKerugianController extends Controller
     // ====================================================================
     public function exportExcel(Request $request)
     {
-        // Ubah bagian ini (hapus 'division' dari dalam select kolom staff)
-        $laporan = LaporanKerugian::with(['item:id,nama,satuan', 'staff:id,name,username,role', 'supervisor:id,name'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $filename = "laporan-kerugian-bahan-baku-" . date('Y-m-d') . ".xlsx";
 
-        $filename = "laporan-kerugian-bahan-baku-" . date('Y-m-d') . ".xls";
-
-        $html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel">';
-        $html .= '<head>';
-        $html .= '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
-        $html .= '<xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
-        $html .= '<x:Name>Laporan Kerugian</x:Name>';
-        $html .= '<x:WorksheetOptions><x:Print><x:ValidPrinterInfo/></x:Print></x:WorksheetOptions>';
-        $html .= '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml>';
-        $html .= '<style>';
-        $html .= 'table { border-collapse: collapse; width: 100%; font-family: sans-serif; font-size: 11pt; }';
-        $html .= 'th { background-color: #8B5E3C; color: white; font-weight: bold; padding: 10px; text-align: center; border: 1px solid #000; }';
-        $html .= 'td { padding: 8px; border: 1px solid #ddd; vertical-align: middle; }';
-        $html .= '.text-center { text-align: center; }';
-        $html .= '.title { font-size: 16px; font-weight: bold; text-align: center; padding: 10px; color: #333; }';
-        $html .= '.subtitle { font-size: 12px; text-align: center; padding: 5px; color: #666; }';
-        $html .= '</style></head><body>';
-
-        $html .= '<div class="title">REKAPITULASI LAPORAN KERUGIAN BAHAN BAKU</div>';
-        $html .= '<div class="subtitle">Warung Cangkruk - Dicetak pada: ' . date('d F Y H:i') . ' WIB</div><br/>';
-
-        $html .= '<table><thead><tr>';
-        $html .= '<th>No</th><th>Tanggal</th><th>Nama Bahan Baku</th><th>Kuantitas</th><th>Alasan Kerugian</th><th>Pelapor (Divisi)</th><th>Status</th><th>Verifikator</th>';
-        $html .= '</tr></thead><tbody>';
-
-        foreach ($laporan as $index => $item) {
-            $tanggal = date('d F Y', strtotime($item->created_at));
-            $namaItem = htmlspecialchars($item->item->nama ?? '-');
-            $kuantitas = Number_format($item->kuantitas, 0) . ' porsi';
-            $alasan = htmlspecialchars($item->alasan);
-            
-            // Format pelapor lengkap dengan divisi (Bar / Dapur)
-            $staffName = $item->staff->name ?? $item->staff->username ?? 'Staff';
-            $divisiStaff = strtolower($item->staff->division ?? $item->staff->role ?? 'umum');
-            $pelapor = htmlspecialchars("{$staffName} ({$divisiStaff})");
-            
-            $status = htmlspecialchars($item->status);
-            $verifikator = htmlspecialchars($item->supervisor->name ?? '-');
-
-            $html .= '<tr>';
-            $html .= '<td class="text-center">' . ($index + 1) . '</td>';
-            $html .= '<td class="text-center">' . $tanggal . '</td>';
-            $html .= '<td>' . $namaItem . '</td>';
-            $html .= '<td class="text-center">' . $kuantitas . '</td>';
-            $html .= '<td>' . $alasan . '</td>';
-            $html .= '<td class="text-center">' . $pelapor . '</td>';
-            $html .= '<td class="text-center">' . $status . '</td>';
-            $html .= '<td class="text-center">' . $verifikator . '</td>';
-            $html .= '</tr>';
-        }
-
-        $html .= '</tbody></table></body></html>';
-
-        return response($html, 200, [
-            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
-        ]);
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\KerugianExport(), $filename);
     }
 
     // ====================================================================
