@@ -127,6 +127,56 @@ const VerificationModal = ({ show, onClose, item, no, initialFisik, initialCatat
   );
 };
 
+const SyncResultModal = ({
+  result,
+  onClose,
+}: {
+  result: { type: "success" | "error"; message: string } | null;
+  onClose: () => void;
+}) => {
+  if (!result) return null;
+
+  const isSuccess = result.type === "success";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-2xl dark:border-[#45372C] dark:bg-[#2A221C]">
+        <div className={`p-6 text-center ${isSuccess ? "bg-[#8B5E3C]" : "bg-rose-600"}`}>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white shadow-inner">
+            {isSuccess ? <CheckCircle className="h-7 w-7" /> : <AlertCircle className="h-7 w-7" />}
+          </div>
+          <h3 className="mt-3 text-lg font-extrabold text-white">
+            {isSuccess ? "Verifikasi Berhasil" : "Verifikasi Gagal"}
+          </h3>
+        </div>
+
+        <div className="p-6 text-center md:p-8">
+          <p className="text-sm font-medium leading-relaxed text-gray-600 dark:text-[#C8BCAE]">
+            {result.message}
+          </p>
+          {isSuccess && (
+            <p className="mt-2 text-xs text-gray-400 dark:text-[#A89B8C]">
+              File laporan telah mulai diunduh ke perangkat Anda.
+            </p>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100 bg-gray-50 p-5 dark:border-[#3D3127] dark:bg-[#231C17]">
+          <button
+            type="button"
+            onClick={onClose}
+            className={`w-full rounded-2xl px-5 py-3 text-sm font-bold text-white transition active:scale-[0.98] ${
+              isSuccess ? "bg-[#8B5E3C] hover:bg-[#6F4E37]" : "bg-rose-600 hover:bg-rose-700"
+            }`}
+          >
+            Mengerti
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function VerifikasiStok() {
   const { items, tab, tanggal_picker, tanggal_data } = usePage<any>().props as PageProps;
 
@@ -138,6 +188,7 @@ export default function VerifikasiStok() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<VerificationItem | null>(null);
   const [selectedNo, setSelectedNo] = useState<number>(0);
+  const [syncResult, setSyncResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     router.get(
@@ -175,11 +226,17 @@ export default function VerifikasiStok() {
             });
             window.location.href = route('verifikasi-stok.export') + '?' + params.toString();
 
-            alert("Stok Berhasil Disinkronkan & Laporan Diunduh!");
+            setSyncResult({
+              type: "success",
+              message: "Stok berhasil disinkronkan dan laporan verifikasi telah dibuat.",
+            });
             setIsProcessing(false);
         },
         onError: () => {
-            alert("Gagal sinkronisasi data.");
+            setSyncResult({
+              type: "error",
+              message: "Data stok belum dapat disinkronkan. Silakan coba lagi.",
+            });
             setIsProcessing(false);
         }
     });
@@ -422,6 +479,8 @@ export default function VerifikasiStok() {
         initialCatatan={selectedItem ? notes[selectedItem.id] : ""}
         onSave={handleModalSave}
       />
+
+      <SyncResultModal result={syncResult} onClose={() => setSyncResult(null)} />
     </AppLayout>
   );
 }

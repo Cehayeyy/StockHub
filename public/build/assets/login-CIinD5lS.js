@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/build/assets/login-CIinD5lS.js
 import{j as e,r,u as c,H as u}from"./app-1sm2m4jH.js";import{A as x}from"./auth-layout-DqGfkfPF.js";function g(){return e.jsxs("div",{className:"fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FDFBF7]",children:[e.jsx("div",{className:"mb-8 animate-bounce",children:e.jsx("img",{src:"/images/stockhub-logo.png",alt:"StockHub Logo",className:"w-24 h-24 object-contain opacity-80"})}),e.jsx("div",{className:"w-48 h-2 bg-gray-200 rounded-full overflow-hidden relative",children:e.jsx("div",{className:"absolute top-0 left-0 h-full bg-[#D4A373] animate-loading-bar rounded-full"})}),e.jsx("style",{children:`
+========
+import{j as e,r,u as c,H as u}from"./app-CqsrI_OJ.js";import{A as x}from"./auth-layout-QhGKnc3t.js";function g(){return e.jsxs("div",{className:"fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FDFBF7]",children:[e.jsx("div",{className:"mb-8 animate-bounce",children:e.jsx("img",{src:"/images/stockhub-logo.png",alt:"StockHub Logo",className:"w-24 h-24 object-contain opacity-80"})}),e.jsx("div",{className:"w-48 h-2 bg-gray-200 rounded-full overflow-hidden relative",children:e.jsx("div",{className:"absolute top-0 left-0 h-full bg-[#D4A373] animate-loading-bar rounded-full"})}),e.jsx("style",{children:`
+>>>>>>>> 5a1a3dc33553ab0cc70642dcecd7fff8be71ca3b:public/build/assets/login-CKVGMVNP.js
         @keyframes loading-bar {
           0% { width: 0%; }
           50% { width: 70%; }

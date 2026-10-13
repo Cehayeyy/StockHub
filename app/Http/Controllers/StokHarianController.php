@@ -495,17 +495,19 @@ class StokHarianController extends Controller
 
     public function updateMentah(Request $request, $id)
     {
-        // 1. Validasi input
+        // Form edit stok mentah hanya mengubah stok masuk. Sebelumnya endpoint
+        // mewajibkan stok_awal, padahal field tersebut tidak dikirim dari UI,
+        // sehingga setiap klik Update selalu gagal pada validasi.
         $request->validate([
-            'stok_awal' => 'required|numeric',
+            'stok_masuk' => 'required|numeric|min:0',
         ]);
 
         $mentah = StokHarianMentah::findOrFail($id);
 
         DB::transaction(function () use ($request, $mentah) {
-            // 2. Ambil nilai baru dari form Edit
-            $awalBaru = (float) $request->stok_awal;
-            $masukBaru = (float) ($request->stok_masuk ?? $mentah->stok_masuk);
+            // Pertahankan stok awal; yang dapat dikoreksi melalui modal adalah stok masuk.
+            $awalBaru = (float) $mentah->stok_awal;
+            $masukBaru = (float) $request->stok_masuk;
 
             // 3. Hitung ulang stok akhir secara matematis
             $stokAkhirBaru = ($awalBaru + $masukBaru) - $mentah->stok_keluar;

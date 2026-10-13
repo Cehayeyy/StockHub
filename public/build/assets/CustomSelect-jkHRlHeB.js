@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/build/assets/CustomSelect-jkHRlHeB.js
 import{r as o,j as t}from"./app-1sm2m4jH.js";import{h as C}from"./app-layout-C8XstmQC.js";import{S as E}from"./search-YRhSUQ3Z.js";import{c as A}from"./createLucideIcon-DhisYLrY.js";/**
+========
+import{r as o,j as t}from"./app-CqsrI_OJ.js";import{h as C}from"./app-layout-C6TC0Zpv.js";import{S as E}from"./search-Cbbm_wnw.js";import{c as A}from"./createLucideIcon-BXeFSmIQ.js";/**
+>>>>>>>> 5a1a3dc33553ab0cc70642dcecd7fff8be71ca3b:public/build/assets/CustomSelect-np53ZbAX.js
  * @license lucide-react v0.475.0 - ISC
  *
  * This source code is licensed under the ISC license.
