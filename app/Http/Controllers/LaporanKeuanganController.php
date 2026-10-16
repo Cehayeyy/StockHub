@@ -7,14 +7,15 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Exports\LaporanKeuanganExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LaporanKeuanganController extends Controller
 {
-    public function keuangan(Request $request)
+    // Fungsi bantuan untuk mengambil data (Digunakan oleh Web & Excel)
+    private function getKeuanganData($monthParam)
     {
         Carbon::setLocale('id');
-
-        $monthParam = $request->input('bulan', Carbon::now()->format('Y-m'));
 
         try {
             $date = Carbon::createFromFormat('Y-m', $monthParam);
@@ -25,204 +26,175 @@ class LaporanKeuanganController extends Controller
 
         $year = $date->year;
         $month = $date->month;
-        $periodeFormatted = $date->translatedFormat('F Y');
 
-        // =========================================================================
-        // 1. REKAP PENDAPATAN DARI INPUT SALES REPORT
-        // =========================================================================
-        $penjualanKotor   = 0;
-        $diskonVoucher    = 0;
-        $potonganMerchant = 0;
-        $jumlahTransaksi  = 0;
-        $transaksiTerakhir = null;
+        $pendapatanBar = 0; $pendapatanDapur = 0; $pendapatanTrekking = 0;
+        $hppBar = 0; $hppDapur = 0; $hppTrekking = 0;
 
-        if (Schema::hasTable('sales_reports')) {
-            $cols = Schema::getColumnListing('sales_reports');
-
-            $dateCol = in_array('tanggal_transaksi', $cols) ? 'tanggal_transaksi' :
-                     (in_array('tanggal', $cols) ? 'tanggal' :
-                     (in_array('created_at', $cols) ? 'created_at' : 'date'));
-
-            $kotorCol = in_array('subtotal', $cols) ? 'subtotal' :
-                       (in_array('total_kotor', $cols) ? 'total_kotor' :
-                       (in_array('gross_total', $cols) ? 'gross_total' : 'total_bayar'));
-
-            $feeCol = in_array('fee_mitra', $cols) ? 'fee_mitra' :
-                     (in_array('fee_merchant', $cols) ? 'fee_merchant' :
-                     (in_array('merchant_fee', $cols) ? 'merchant_fee' : null));
-
-            $diskonExpression = "0";
-            if (in_array('diskon_nominal', $cols)) {
-                $diskonExpression = "COALESCE(SUM(diskon_nominal), 0)";
-            } elseif (in_array('diskon_persen', $cols) && in_array($kotorCol, $cols)) {
-                $diskonExpression = "COALESCE(SUM(({$kotorCol} * diskon_persen) / 100), 0)";
-            } elseif (in_array('diskon', $cols)) {
-                $diskonExpression = "COALESCE(SUM(diskon), 0)";
-            }
-
-            $feeExpression = $feeCol ? "COALESCE(SUM({$feeCol}), 0)" : "0";
-
-            $salesReportData = DB::table('sales_reports')
-                ->whereYear($dateCol, $year)
-                ->whereMonth($dateCol, $month)
-                ->selectRaw("
-                    COALESCE(SUM({$kotorCol}), 0) as kotor,
-                    {$diskonExpression} as diskon,
-                    {$feeExpression} as fee,
-                    COUNT(*) as jumlah_transaksi,
-                    MAX({$dateCol}) as transaksi_terakhir
-                ")
-                ->first();
-
-            if ($salesReportData) {
-                $penjualanKotor   = (float) $salesReportData->kotor;
-                $diskonVoucher    = (float) $salesReportData->diskon;
-                $potonganMerchant = (float) $salesReportData->fee;
-                $jumlahTransaksi  = (int) $salesReportData->jumlah_transaksi;
-                $transaksiTerakhir = $salesReportData->transaksi_terakhir;
-            }
-        }
-
-        // =========================================================================
-        // 2. HITUNG TOTAL HPP DARI DETAIL ITEM NOTA (DENGAN LOGIKA SNAPSHOT HPP)
-        // =========================================================================
-        $hppMenuTerjual = 0;
-
-        if (Schema::hasTable('sales_report_items') && Schema::hasTable('sales_reports') && Schema::hasTable('items') && Schema::hasTable('recipes')) {
+        // 1 & 2. REKAP PENDAPATAN & HPP
+        if (Schema::hasTable('sales_report_items') && Schema::hasTable('sales_reports') && Schema::hasTable('items')) {
             $salesCols = Schema::getColumnListing('sales_reports');
-            $salesDateCol = in_array('tanggal_transaksi', $salesCols) ? 'tanggal_transaksi' :
-                           (in_array('tanggal', $salesCols) ? 'tanggal' : 'created_at');
+            $salesDateCol = in_array('tanggal_transaksi', $salesCols) ? 'tanggal_transaksi' : (in_array('tanggal', $salesCols) ? 'tanggal' : 'created_at');
 
-            $recipeCols = Schema::getColumnListing('recipes');
-            $hppCol = in_array('total_hpp', $recipeCols) ? 'total_hpp' :
-                     (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' :
-                     (in_array('hpp', $recipeCols) ? 'hpp' : null));
+            $recipeCols = Schema::hasTable('recipes') ? Schema::getColumnListing('recipes') : [];
+            $hppCol = in_array('total_hpp', $recipeCols) ? 'total_hpp' : (in_array('harga_hpp', $recipeCols) ? 'harga_hpp' : (in_array('hpp', $recipeCols) ? 'hpp' : null));
 
             $hasSnapshotCol = Schema::hasColumn('sales_report_items', 'hpp_saat_transaksi');
 
-            if ($hppCol) {
-                $query = DB::table('sales_report_items')
-                    ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
-                    ->join('items', 'sales_report_items.item_id', '=', 'items.id')
-                    ->join('recipes', 'items.nama', '=', 'recipes.name')
-                    ->whereYear("sales_reports.{$salesDateCol}", $year)
-                    ->whereMonth("sales_reports.{$salesDateCol}", $month);
+            $query = DB::table('sales_report_items')
+                ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
+                ->join('items', 'sales_report_items.item_id', '=', 'items.id')
+                ->whereYear("sales_reports.{$salesDateCol}", $year)
+                ->whereMonth("sales_reports.{$salesDateCol}", $month);
 
-                if ($hasSnapshotCol) {
-                    // Logika Cerdas: Jika hpp_saat_transaksi > 0 (data baru) pakai snapshot,
-                    // jika 0 (data lama sebelum update), ambil HPP dari master recipes.
-                    $hppMenuTerjual = (float) $query->sum(DB::raw("
-                        sales_report_items.quantity * 
-                        CASE 
-                            WHEN sales_report_items.hpp_saat_transaksi > 0 THEN sales_report_items.hpp_saat_transaksi 
-                            ELSE COALESCE(recipes.{$hppCol}, 0) 
-                        END
-                    "));
-                } else {
-                    $hppMenuTerjual = (float) $query->sum(DB::raw("sales_report_items.quantity * COALESCE(recipes.{$hppCol}, 0)"));
+            if ($hppCol) { $query->leftJoin('recipes', 'items.nama', '=', 'recipes.name'); }
+
+            $hppRaw = $hasSnapshotCol && $hppCol 
+                ? "CASE WHEN sales_report_items.hpp_saat_transaksi > 0 THEN sales_report_items.hpp_saat_transaksi ELSE COALESCE(recipes.{$hppCol}, 0) END"
+                : ($hppCol ? "COALESCE(recipes.{$hppCol}, 0)" : "0");
+
+            $itemsData = $query->select(
+                'items.division',
+                DB::raw('SUM(sales_report_items.subtotal) as total_pendapatan'),
+                DB::raw("SUM(sales_report_items.quantity * {$hppRaw}) as total_hpp")
+            )->groupBy('items.division')->get();
+
+            foreach ($itemsData as $row) {
+                $div = strtolower($row->division ?? '');
+                if ($div === 'bar') {
+                    $pendapatanBar += (float) $row->total_pendapatan; $hppBar += (float) $row->total_hpp;
+                } elseif (in_array($div, ['dapur', 'kitchen'])) {
+                    $pendapatanDapur += (float) $row->total_pendapatan; $hppDapur += (float) $row->total_hpp;
+                } elseif ($div === 'trekking') {
+                    $pendapatanTrekking += (float) $row->total_pendapatan; $hppTrekking += (float) $row->total_hpp;
                 }
             }
         }
 
-        // =========================================================================
-        // 3. AMBIL TOTAL KERUGIAN BAHAN BAKU (WASTE) YANG DIVERIFIKASI
-        // =========================================================================
-        $bebanKerugianBahan = 0;
+        // 3. KERUGIAN BAHAN BAKU
+        $kerugianBahanBaku = 0;
         if (Schema::hasTable('laporan_kerugians') && Schema::hasTable('items')) {
             $lossCols = Schema::getColumnListing('laporan_kerugians');
             $lossDateCol = in_array('tanggal', $lossCols) ? 'tanggal' : 'created_at';
-            $lossCol = in_array('total_loss_amount', $lossCols) ? 'total_loss_amount' :
-                (in_array('total_loss', $lossCols) ? 'total_loss' : null);
+            $lossCol = in_array('total_loss_amount', $lossCols) ? 'total_loss_amount' : (in_array('total_loss', $lossCols) ? 'total_loss' : null);
 
             if ($lossCol) {
-                $bebanKerugianBahan = (float) DB::table('laporan_kerugians')
-                    ->where('status', 'verified')
-                    ->whereYear($lossDateCol, $year)
-                    ->whereMonth($lossDateCol, $month)
-                    ->sum($lossCol);
+                $kerugianBahanBaku = (float) DB::table('laporan_kerugians')->whereIn('status', ['verified', 'Disetujui'])->whereYear($lossDateCol, $year)->whereMonth($lossDateCol, $month)->sum($lossCol);
             } elseif (in_array('kuantitas', $lossCols) && Schema::hasColumn('items', 'harga_dasar')) {
-                $bebanKerugianBahan = (float) DB::table('laporan_kerugians')
-                    ->join('items', 'laporan_kerugians.item_id', '=', 'items.id')
-                    ->where('laporan_kerugians.status', 'Disetujui')
-                    ->whereYear("laporan_kerugians.{$lossDateCol}", $year)
-                    ->whereMonth("laporan_kerugians.{$lossDateCol}", $month)
-                    ->sum(DB::raw('laporan_kerugians.kuantitas * COALESCE(items.harga_dasar, 0)'));
+                $kerugianBahanBaku = (float) DB::table('laporan_kerugians')->join('items', 'laporan_kerugians.item_id', '=', 'items.id')->where('laporan_kerugians.status', 'Disetujui')->whereYear("laporan_kerugians.{$lossDateCol}", $year)->whereMonth("laporan_kerugians.{$lossDateCol}", $month)->sum(DB::raw('laporan_kerugians.kuantitas * COALESCE(items.harga_dasar, 0)'));
             }
         }
 
-        // =========================================================================
-        // 4. BIAYA OPERASIONAL (OPEX) BULANAN
-        // =========================================================================
-        $biayaGaji         = 0;
-        $biayaPerlengkapan = 0;
-        $biayaUtilitas     = 0;
-        $opexUpdatedAt     = null;
-
-        if (Schema::hasTable('operational_expenses')) {
-            $opex = DB::table('operational_expenses')
-                ->where('periode', $monthParam)
-                ->first();
-
-            $biayaGaji         = (float) ($opex->biaya_gaji ?? 0);
-            $biayaPerlengkapan = (float) ($opex->biaya_perlengkapan ?? 0);
-            $biayaUtilitas     = (float) ($opex->biaya_utilitas ?? 0);
-            $opexUpdatedAt     = $opex->updated_at ?? null;
-        }
-
-        // =========================================================================
-        // 5. STRUKTURKAN PAYLOAD DATA UNTUK INERTIA REACT
-        // =========================================================================
-        $dataKeuangan = [
-            'periode'            => $periodeFormatted,
-            'penjualanKotor'     => $penjualanKotor,
-            'diskonVoucher'      => $diskonVoucher,
-            'potonganMerchant'   => $potonganMerchant,
-            'hppMenuTerjual'     => $hppMenuTerjual,
-            'bebanKerugianBahan' => $bebanKerugianBahan,
-            'biayaGaji'          => $biayaGaji,
-            'biayaPerlengkapan'  => $biayaPerlengkapan,
-            'biayaUtilitas'      => $biayaUtilitas,
-            'jumlahTransaksi'    => $jumlahTransaksi,
-            'transaksiTerakhir'  => $transaksiTerakhir
-                ? Carbon::parse($transaksiTerakhir)->translatedFormat('d F Y')
-                : null,
-            'opexUpdatedAt'      => $opexUpdatedAt
-                ? Carbon::parse($opexUpdatedAt)->translatedFormat('d F Y, H:i')
-                : null,
+        // 4. OPEX
+        $opexData = (object) [
+            'biaya_gaji' => 0, 'perlengkapan_warung' => 0, 'admin_bank' => 0, 'operasional_warung' => 0,
+            'biaya_sewa' => 0, 'perbaikan_inventaris' => 0, 'pemeliharaan_warung' => 0, 'biaya_marketing' => 0,
+            'biaya_lain_lain' => 0, 'biaya_pajak' => 0, 'utilitas' => 0, 'beban_lain_lain' => 0, 'pajak_penghasilan' => 0,
         ];
 
+        if (Schema::hasTable('operational_expenses')) {
+            $opex = DB::table('operational_expenses')->where('periode', $monthParam)->first();
+            if ($opex) {
+                $opexData->biaya_gaji = (float) ($opex->biaya_gaji ?? 0);
+                $opexData->perlengkapan_warung = (float) ($opex->perlengkapan_warung ?? $opex->biaya_perlengkapan ?? 0);
+                $opexData->admin_bank = (float) ($opex->admin_bank ?? 0);
+                $opexData->operasional_warung = (float) ($opex->operasional_warung ?? 0);
+                $opexData->biaya_sewa = (float) ($opex->biaya_sewa ?? 0);
+                $opexData->perbaikan_inventaris = (float) ($opex->perbaikan_inventaris ?? 0);
+                $opexData->pemeliharaan_warung = (float) ($opex->pemeliharaan_warung ?? 0);
+                $opexData->biaya_marketing = (float) ($opex->biaya_marketing ?? 0);
+                $opexData->biaya_lain_lain = (float) ($opex->biaya_lain_lain ?? 0);
+                $opexData->biaya_pajak = (float) ($opex->biaya_pajak ?? 0);
+                $opexData->utilitas = (float) ($opex->utilitas ?? $opex->biaya_utilitas ?? 0);
+                $opexData->beban_lain_lain = (float) ($opex->beban_lain_lain ?? 0);
+                $opexData->pajak_penghasilan = (float) ($opex->pajak_penghasilan ?? 0);
+            }
+        }
+
+        return [
+            'periode'            => $date->translatedFormat('F Y'),
+            'pendapatanBar'      => $pendapatanBar, 'pendapatanDapur' => $pendapatanDapur, 'pendapatanTrekking' => $pendapatanTrekking,
+            'hppBar'             => $hppBar, 'hppDapur' => $hppDapur, 'hppTrekking' => $hppTrekking,
+            'biayaGaji'           => $opexData->biaya_gaji,
+            'perlengkapanWarung'  => $opexData->perlengkapan_warung,
+            'kerugianBahanBaku'   => $kerugianBahanBaku,
+            'adminBank'           => $opexData->admin_bank,
+            'operasionalWarung'   => $opexData->operasional_warung,
+            'biayaSewa'           => $opexData->biaya_sewa,
+            'perbaikanInventaris' => $opexData->perbaikan_inventaris,
+            'pemeliharaanWarung'  => $opexData->pemeliharaan_warung,
+            'biayaMarketing'      => $opexData->biaya_marketing,
+            'biayaLainLain'       => $opexData->biaya_lain_lain,
+            'biayaPajak'          => $opexData->biaya_pajak,
+            'utilitas'            => $opexData->utilitas,
+            'bebanLainLain'       => $opexData->beban_lain_lain,
+            'pajakPenghasilan'    => $opexData->pajak_penghasilan,
+        ];
+    }
+
+    public function keuangan(Request $request)
+    {
+        $monthParam = $request->input('bulan', Carbon::now()->format('Y-m'));
         return Inertia::render('Laporan/LaporanKeuangan', [
-            'data'          => $dataKeuangan,
+            'data'          => $this->getKeuanganData($monthParam),
             'selectedMonth' => $monthParam,
         ]);
     }
 
-    /**
-     * Simpan / Update Biaya Operasional (OPEX) ke Database
-     */
+    // Fungsi Baru untuk Download Excel
+    public function exportExcel(Request $request)
+    {
+        $monthParam = $request->input('bulan', Carbon::now()->format('Y-m'));
+        $dataKeuangan = $this->getKeuanganData($monthParam);
+
+        $fileName = 'Laporan_Keuangan_Warung_Cangkruk_' . str_replace(' ', '_', $dataKeuangan['periode']) . '.xlsx';
+
+        return Excel::download(new LaporanKeuanganExport($dataKeuangan), $fileName);
+    }
+
     public function storeOpex(Request $request)
     {
         $request->validate([
-            'periode'            => 'required|date_format:Y-m',
-            'biaya_gaji'         => 'required|numeric|min:0',
-            'biaya_perlengkapan' => 'required|numeric|min:0',
-            'biaya_utilitas'     => 'required|numeric|min:0',
+            'periode'              => 'required|date_format:Y-m',
+            'biaya_gaji'           => 'required|numeric|min:0',
+            'perlengkapan_warung'  => 'required|numeric|min:0',
+            'admin_bank'           => 'required|numeric|min:0',
+            'operasional_warung'   => 'required|numeric|min:0',
+            'biaya_sewa'           => 'required|numeric|min:0',
+            'perbaikan_inventaris' => 'required|numeric|min:0',
+            'pemeliharaan_warung'  => 'required|numeric|min:0',
+            'biaya_marketing'      => 'required|numeric|min:0',
+            'biaya_lain_lain'      => 'required|numeric|min:0',
+            'biaya_pajak'          => 'required|numeric|min:0',
+            'utilitas'             => 'required|numeric|min:0',
+            'beban_lain_lain'      => 'required|numeric|min:0',
+            'pajak_penghasilan'    => 'required|numeric|min:0',
         ]);
 
         if (Schema::hasTable('operational_expenses')) {
-            DB::table('operational_expenses')->updateOrInsert(
-                ['periode' => $request->periode],
-                [
-                    'biaya_gaji'         => $request->biaya_gaji,
-                    'biaya_perlengkapan' => $request->biaya_perlengkapan,
-                    'biaya_utilitas'     => $request->biaya_utilitas,
-                    'user_id'            => auth()->id(),
-                    'updated_at'         => now(),
-                    'created_at'         => now(),
-                ]
-            );
-        }
+            $dataToUpdate = [
+                'biaya_gaji'           => $request->biaya_gaji,
+                'perlengkapan_warung'  => $request->perlengkapan_warung,
+                'admin_bank'           => $request->admin_bank,
+                'operasional_warung'   => $request->operasional_warung,
+                'biaya_sewa'           => $request->biaya_sewa,
+                'perbaikan_inventaris' => $request->perbaikan_inventaris,
+                'pemeliharaan_warung'  => $request->pemeliharaan_warung,
+                'biaya_marketing'      => $request->biaya_marketing,
+                'biaya_lain_lain'      => $request->biaya_lain_lain,
+                'biaya_pajak'          => $request->biaya_pajak,
+                'utilitas'             => $request->utilitas,
+                'beban_lain_lain'      => $request->beban_lain_lain,
+                'pajak_penghasilan'    => $request->pajak_penghasilan,
+                'user_id'              => auth()->id(),
+                'updated_at'           => now(),
+            ];
 
-        return back()->with('success', 'Biaya operasional berhasil disimpan.');
+            $columns = Schema::getColumnListing('operational_expenses');
+            $safeData = array_intersect_key($dataToUpdate, array_flip($columns));
+            if (in_array('created_at', $columns)) { $safeData['created_at'] = now(); }
+
+            DB::table('operational_expenses')->updateOrInsert(['periode' => $request->periode], $safeData);
+        }
+        return back()->with('success', 'Biaya operasional & Laba Rugi berhasil disimpan.');
     }
 }

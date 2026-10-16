@@ -16,6 +16,11 @@ class LaporanAnalisaController extends Controller
         $search = trim((string) $request->input('search', ''));
         $periode = $request->input('periode', 'Harian');
         $tanggal = $this->resolveDate($request->input('tanggal'));
+        
+        // 🔥 PENAMBAHAN FILTER DIVISI
+        $divisi = $request->input('divisi', 'Semua');
+        $divisionsFilter = $divisi === 'Semua' ? ['bar', 'dapur'] : [strtolower($divisi)];
+
         [$startDate, $endDate] = $this->resolvePeriod($tanggal, $periode);
 
         $salesItems = SalesReportItem::query()
@@ -24,13 +29,15 @@ class LaporanAnalisaController extends Controller
                 $query->whereBetween('tanggal_transaksi', [$startDate, $endDate])
                     ->whereHas('user', fn ($userQuery) => $userQuery->whereIn('role', ['bar', 'dapur', 'kitchen', 'staff_kitchen']));
             })
-            ->whereHas('item', function ($query) use ($search) {
-                $query->whereIn('division', ['bar', 'dapur'])
+            ->whereHas('item', function ($query) use ($search, $divisionsFilter) {
+                // 🔥 TERAPKAN FILTER DIVISI DI SINI
+                $query->whereIn('division', $divisionsFilter)
                     ->when($search !== '', fn ($itemQuery) => $itemQuery->where('nama', 'like', "%{$search}%"));
             })
             ->get();
 
-        $recipes = Recipe::with('category')->whereIn('division', ['bar', 'dapur'])->get();
+        // 🔥 TERAPKAN FILTER DIVISI DI RESEP JUGA
+        $recipes = Recipe::with('category')->whereIn('division', $divisionsFilter)->get();
         $recipesByItemId = $recipes->filter(fn (Recipe $recipe) => $recipe->item_id !== null)->keyBy('item_id');
         $recipesByDivisionAndName = $recipes->groupBy(fn (Recipe $recipe) => "{$recipe->division}|{$recipe->name}");
 
@@ -96,6 +103,7 @@ class LaporanAnalisaController extends Controller
                 'search' => $search,
                 'periode' => $periode,
                 'tanggal' => $tanggal->toDateString(),
+                'divisi' => $divisi, // 🔥 PASTIKAN DIVISI DIKIRIM KE FRONTEND
             ],
         ]);
     }
@@ -105,6 +113,11 @@ class LaporanAnalisaController extends Controller
         $search = trim((string) $request->input('search', ''));
         $periode = $request->input('periode', 'Harian');
         $tanggal = $this->resolveDate($request->input('tanggal'));
+
+        // 🔥 PENAMBAHAN FILTER DIVISI UNTUK EXPORT
+        $divisi = $request->input('divisi', 'Semua');
+        $divisionsFilter = $divisi === 'Semua' ? ['bar', 'dapur'] : [strtolower($divisi)];
+
         [$startDate, $endDate] = $this->resolvePeriod($tanggal, $periode);
 
         $salesItems = SalesReportItem::query()
@@ -113,13 +126,15 @@ class LaporanAnalisaController extends Controller
                 $query->whereBetween('tanggal_transaksi', [$startDate, $endDate])
                     ->whereHas('user', fn ($userQuery) => $userQuery->whereIn('role', ['bar', 'dapur', 'kitchen', 'staff_kitchen']));
             })
-            ->whereHas('item', function ($query) use ($search) {
-                $query->whereIn('division', ['bar', 'dapur'])
+            ->whereHas('item', function ($query) use ($search, $divisionsFilter) {
+                // 🔥 TERAPKAN FILTER DIVISI DI SINI
+                $query->whereIn('division', $divisionsFilter)
                     ->when($search !== '', fn ($itemQuery) => $itemQuery->where('nama', 'like', "%{$search}%"));
             })
             ->get();
 
-        $recipes = Recipe::with('category')->whereIn('division', ['bar', 'dapur'])->get();
+        // 🔥 TERAPKAN FILTER DIVISI DI RESEP JUGA
+        $recipes = Recipe::with('category')->whereIn('division', $divisionsFilter)->get();
         $recipesByItemId = $recipes->filter(fn (Recipe $recipe) => $recipe->item_id !== null)->keyBy('item_id');
         $recipesByDivisionAndName = $recipes->groupBy(fn (Recipe $recipe) => "{$recipe->division}|{$recipe->name}");
 
@@ -155,7 +170,9 @@ class LaporanAnalisaController extends Controller
         $totalTerjualSum = $groupedItems->sum('terjual');
         $totalHppSum = $groupedItems->sum('total_hpp');
 
-        $filename = 'laporan-analisis-profit-' . strtolower($periode) . '-' . $tanggal->format('Y-m-d') . '.xlsx';
+        // 🔥 NAMA FILE EXCEL BISA MENGIKUTI DIVISI
+        $namaDivisi = $divisi !== 'Semua' ? '-' . strtolower($divisi) : '';
+        $filename = 'laporan-analisis-profit-' . strtolower($periode) . $namaDivisi . '-' . $tanggal->format('Y-m-d') . '.xlsx';
 
         return \Maatwebsite\Excel\Facades\Excel::download(
             new \App\Exports\AnalisaProfitExport(
@@ -188,7 +205,7 @@ class LaporanAnalisaController extends Controller
         $report = $line->salesReport;
         $reportSubtotal = (float) $report->subtotal;
 
-        // 🔥 PERBAIKAN FATAL: LOGIKA HITUNGAN DISKON DAN FEE DIKEMBALIKAN DENGAN BENAR
+        // 🔥 PERBAIKAN FATAL: LOGIKA HITUNGAN DISKON DAN FEE DIKEMBALIKAN DENGAN BENAR (-) dan (*)
         $totalBersih = $report->total_bersih !== null 
             ? (float) $report->total_bersih 
             : (float) ($report->subtotal - ($report->subtotal * ($report->diskon_persen ?? 0) / 100) - ($report->fee_mitra ?? 0));

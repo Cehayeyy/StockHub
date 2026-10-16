@@ -239,6 +239,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/laporan/keuangan/opex', [LaporanKeuanganController::class, 'storeOpex'])
             ->name('laporan.keuangan.opex');
 
+        // 🔥 TAMBAHKAN BARIS INI UNTUK EXPORT EXCEL LABA RUGI
+        Route::get('/laporan/keuangan/export', [LaporanKeuanganController::class, 'exportExcel'])
+            ->name('laporan.keuangan.export');
+
         // ===========================
         //  2. LAPORAN FREKUENSI PEMBELIAN MENU (Owner & Supervisor Only)
         // ===========================

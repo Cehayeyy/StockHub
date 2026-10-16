@@ -135,188 +135,6 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Pilih Item.
   );
 };
 
-// --- MODAL INPUT DATA (MURNI HANYA NAMA ITEM) ---
-interface FormItem {
-  id: number;
-  target_id: string;
-  selectedItemInfo: any;
-}
-
-const ModalInputData = ({ show, onClose, inputableMenus, tab, tanggal, onSuccess }: any) => {
-  const [items, setItems] = useState<FormItem[]>([
-    {
-      id: Date.now(),
-      target_id: "",
-      selectedItemInfo: null,
-    }
-  ]);
-
-  const [processing, setProcessing] = useState(false);
-  const [warningMessage, setWarningMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (show) {
-      setItems([{ id: Date.now(), target_id: "", selectedItemInfo: null }]);
-      setWarningMessage(null);
-    }
-  }, [show, tanggal]);
-
-  const handleItemChange = (index: number, val: string | number) => {
-    const id = val ? val.toString() : "";
-    const newItems = [...items];
-    newItems[index].target_id = id;
-
-    if (id) {
-      const selected = inputableMenus.find((m: any) =>
-        Number(m.id) === Number(id) || Number(m.recipe_id) === Number(id)
-      );
-      newItems[index].selectedItemInfo = selected || null;
-    } else {
-      newItems[index].selectedItemInfo = null;
-    }
-    setItems(newItems);
-  };
-
-  const addNewItem = () => {
-    setItems([...items, { id: Date.now(), target_id: "", selectedItemInfo: null }]);
-  };
-
-  const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
-  };
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setWarningMessage(null);
-
-    const itemsToSubmit = items
-      .filter(item => Boolean(item.target_id))
-      .map(item => {
-        if (tab === "menu") {
-          return { item_id: item.target_id.toString(), pemakaian: "0" };
-        } else {
-          return { item_id: item.target_id.toString(), stok_awal: "0", stok_masuk: "0" };
-        }
-      });
-
-    if (itemsToSubmit.length === 0) {
-      setWarningMessage("Mohon pilih setidaknya satu item.");
-      return;
-    }
-
-    setProcessing(true);
-    const routeName = tab === "menu" ? "stok-harian-dapur-menu.store" : "stok-harian-dapur-mentah.store";
-
-    router.post(route(routeName), {
-      tanggal: tanggal,
-      items: itemsToSubmit
-    }, {
-      preserveState: true,
-      preserveScroll: true,
-      onSuccess: () => {
-        setProcessing(false);
-        onClose();
-        if (onSuccess) onSuccess();
-      },
-      onError: (errors) => {
-        setProcessing(false);
-        const firstError = Object.values(errors)[0];
-        setWarningMessage(firstError as string || "Gagal menyimpan.");
-      },
-      onFinish: () => setProcessing(false)
-    });
-  };
-
-  const isButtonDisabled = processing || items.some(item => !item.target_id);
-
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-all">
-      <motion.div
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        className="bg-white dark:bg-[#2A221C] rounded-3xl shadow-2xl w-full max-w-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto border border-gray-100 dark:border-[#45372C]"
-      >
-        <div className="flex flex-col items-center text-center mb-6 relative">
-            <button type="button" onClick={onClose} className="absolute right-0 top-0 rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-[#35291F] text-gray-500 transition" aria-label="Tutup">
-                <X className="w-5 h-5" />
-            </button>
-            <div className="w-12 h-12 rounded-2xl bg-[#D9A978]/15 dark:bg-amber-400/10 text-[#8B5E3C] dark:text-amber-400 flex items-center justify-center mb-3 shadow-inner">
-                <ClipboardList className="w-6 h-6" />
-            </div>
-            <h2 className="text-xl font-extrabold text-gray-800 dark:text-[#FAF5ED]">
-                Input Data Item {tab === "menu" ? "Menu" : "Mentah"} Dapur
-            </h2>
-            <p className="text-xs text-gray-400 dark:text-[#A89B8C] mt-1">
-                Pilih item untuk didaftarkan pada laporan stok harian tanggal {new Date(tanggal).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-        </div>
-
-        <form onSubmit={submit} className="space-y-5">
-          {items.map((item, index) => (
-            <div key={item.id} className="bg-white dark:bg-[#231C17] border border-gray-200/80 dark:border-[#3D3127] rounded-3xl p-5 space-y-4 relative shadow-xs">
-              {items.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="absolute -top-2 -right-2 bg-red-500 dark:bg-rose-600 text-white rounded-full p-1.5 hover:bg-red-600 dark:hover:bg-rose-700 transition shadow-sm"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-extrabold text-[#8B5E3C] dark:text-amber-400 uppercase tracking-wider">Item #{index + 1}</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-[#C8BCAE] uppercase tracking-wider mb-1.5 ml-1">Nama Item</label>
-                <SearchableSelect
-                  options={inputableMenus}
-                  value={item.target_id}
-                  onChange={(val: any) => handleItemChange(index, val)}
-                  placeholder="Ketik atau pilih item..."
-                />
-              </div>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addNewItem}
-            className="w-full py-3.5 border-2 border-dashed border-[#D9A978] dark:border-[#8B5E3C] rounded-2xl text-[#8B5E3C] dark:text-amber-400 font-bold text-sm hover:bg-[#D9A978]/10 dark:hover:bg-amber-400/20 transition flex items-center justify-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Tambah Item Lainnya
-          </button>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-6 py-3 bg-gray-100 dark:bg-[#35291F] rounded-2xl font-bold text-sm text-gray-700 dark:text-[#C8BCAE] hover:bg-gray-200 dark:hover:bg-[#45372C] transition"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={isButtonDisabled}
-              className={`flex-1 px-6 py-3 rounded-2xl text-white font-bold text-sm shadow-md transition ${
-                isButtonDisabled ? "bg-[#E0C09E] dark:bg-[#5A4535] cursor-not-allowed" : "bg-[#8B5E3C] hover:bg-[#6F4E37]"
-              }`}
-            >
-              {processing ? "Menyimpan..." : "Simpan Semua Data"}
-            </button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
-  );
-};
-
 // --- MODAL INPUT STOK MASUK (BORONGAN) ---
 interface StokMasukItem {
   id: number;
@@ -474,7 +292,6 @@ export default function Dapur() {
 
   const [search, setSearch] = useState(initialSearch || "");
   const [date, setDate] = useState(tanggal);
-  const [showInputModal, setShowInputModal] = useState(false);
   const [showBoronganModal, setShowBoronganModal] = useState(false);
   const isFirstRender = useRef(true);
 
@@ -498,10 +315,6 @@ export default function Dapur() {
   useEffect(() => {
     setDate(tanggal);
   }, [tanggal]);
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("autoInput") === "1" && !isLocked) setShowInputModal(true);
-  }, [isLocked, tab]);
 
   useEffect(() => {
     setSearch(initialSearch || "");
@@ -619,23 +432,20 @@ export default function Dapur() {
       } else if (showEditModal && e.key === "Escape") {
         e.preventDefault();
         setShowEditModal(false);
-      } else if (showInputModal && e.key === "Escape") {
-        e.preventDefault();
-        setShowInputModal(false);
       } else if (showBoronganModal && e.key === "Escape") {
         e.preventDefault();
         setShowBoronganModal(false);
       }
     };
 
-    if (showDeleteModal || showEditModal || showInputModal || showBoronganModal) {
+    if (showDeleteModal || showEditModal || showBoronganModal) {
       window.addEventListener("keydown", handleKeyDown);
     }
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showDeleteModal, showEditModal, showInputModal, showBoronganModal, formRecordId]);
+  }, [showDeleteModal, showEditModal, showBoronganModal, formRecordId]);
 
   const showInputButton = tab === "mentah";
 
@@ -643,21 +453,6 @@ export default function Dapur() {
     <AppLayout header={`Stok Harian Dapur`}>
       <Head title="Stok Harian Dapur" />
       <AnimatePresence>
-        {showInputModal && (
-          <ModalInputData
-            show={showInputModal}
-            onClose={() => setShowInputModal(false)}
-            inputableMenus={inputableMenus}
-            tab={tab}
-            tanggal={tanggal}
-            onSuccess={() =>
-              router.visit(route("stok-harian.dapur"), {
-                data: { tab, tanggal },
-                preserveScroll: true,
-              })
-            }
-          />
-        )}
         {showBoronganModal && (
           <ModalInputStokMasukBorongan
             show={showBoronganModal}
@@ -762,18 +557,6 @@ export default function Dapur() {
 
                 {/* Kanan: Tombol Input, Filter Tanggal, Search */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
-                    {showInputButton && !isStaff && (
-                      <button
-                        onClick={() => setShowInputModal(true)}
-                        disabled={isLocked}
-                        className={`flex items-center justify-center gap-2 rounded-full px-5 py-2.5 sm:py-2 text-sm font-bold shadow-md transition w-full sm:w-auto ${
-                          isLocked ? 'bg-gray-300 dark:bg-[#3E3024] text-gray-500 dark:text-[#8E8072] cursor-not-allowed opacity-50 shadow-none' : 'bg-[#D9A978] dark:bg-[#8B5E3C] hover:bg-[#c4925e] dark:hover:bg-[#6F4E37] text-white active:scale-95'
-                        }`}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Input Data Item
-                      </button>
-                    )}
                     {showInputButton && (
                       <button
                         onClick={() => setShowBoronganModal(true)}

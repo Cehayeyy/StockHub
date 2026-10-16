@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:public/build/assets/auth-layout-DqGfkfPF.js
-import{j as e}from"./app-1sm2m4jH.js";const l="/images/background-cafe.jpg";function t({children:s}){return e.jsxs("div",{className:"relative w-screen h-screen flex items-center justify-center overflow-hidden",children:[e.jsx("div",{className:"absolute inset-0 w-full h-full bg-cover bg-center filter blur-md scale-105",style:{backgroundImage:`url(${l})`}}),e.jsx("div",{className:"relative z-10 bg-white p-10 rounded-2xl shadow-xl w-full max-w-sm",children:s})]})}export{t as A};
-========
-import{j as e}from"./app-CqsrI_OJ.js";const l="/images/background-cafe.jpg";function t({children:s}){return e.jsxs("div",{className:"relative w-screen h-screen flex items-center justify-center overflow-hidden",children:[e.jsx("div",{className:"absolute inset-0 w-full h-full bg-cover bg-center filter blur-md scale-105",style:{backgroundImage:`url(${l})`}}),e.jsx("div",{className:"relative z-10 bg-white p-10 rounded-2xl shadow-xl w-full max-w-sm",children:s})]})}export{t as A};
->>>>>>>> 5a1a3dc33553ab0cc70642dcecd7fff8be71ca3b:public/build/assets/auth-layout-QhGKnc3t.js

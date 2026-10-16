@@ -34,6 +34,7 @@ interface Props {
         search?: string;
         periode?: string;
         tanggal?: string;
+        divisi?: string;
     };
 }
 
@@ -41,6 +42,7 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
     const [search, setSearch] = useState(filters?.search || '');
     const [periode, setPeriode] = useState(filters?.periode || 'Harian');
     const [tanggal, setTanggal] = useState(filters?.tanggal || new Date().toISOString().split('T')[0]);
+    const [divisi, setDivisi] = useState(filters?.divisi || 'Semua');
     const [showCalendar, setShowCalendar] = useState(false);
 
     // Debounced Filter Handler
@@ -48,20 +50,20 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
         const timer = setTimeout(() => {
             router.get(
                 route('laporan.analisa-profit'),
-                { search, periode, tanggal },
+                { search, periode, tanggal, divisi },
                 { preserveState: true, preserveScroll: true, replace: true }
             );
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search, periode, tanggal]);
+    }, [search, periode, tanggal, divisi]);
 
     const formatRupiah = (angka: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
     };
 
     const handleDownloadExcel = () => {
-        const params = new URLSearchParams({ search, periode, tanggal });
+        const params = new URLSearchParams({ search, periode, tanggal, divisi });
         window.location.href = route('laporan.analisa-profit.export') + '?' + params.toString();
     };
 
@@ -70,7 +72,7 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
 
         router.get(
             route('laporan.analisa-profit'),
-            { search, periode, tanggal, page },
+            { search, periode, tanggal, divisi, page },
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
@@ -83,6 +85,17 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
           })
         : 'Pilih tanggal';
 
+    // DYNAMIC STYLING: Untuk mengubah warna kotak ringkasan sesuai tab yang dipilih
+    // STYLING: Warna seragam (Coklat Khas Warung Cangkruk) untuk semua divisi
+    const getAccentColor = () => {
+        return 'text-[#8B5E3C] dark:text-amber-400';
+    };
+    
+    const getBgIconColor = (isOmset: boolean) => {
+        // Menggunakan warna background krem dan icon coklat untuk semua kotak ringkasan
+        return 'bg-[#FDF3E4] dark:bg-[#35291F] text-[#8B5E3C] dark:text-amber-400 border border-amber-200/60 dark:border-[#4A3A30]';
+    };
+
     return (
         <AppLayout header="Analisis Profit Harian per Menu">
             <Head title="Analisis Profit Harian per Menu" />
@@ -90,13 +103,13 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
             {/* 🔥 STRUKTUR CONTAINER UTAMA: KREM LUAR, PUTIH DALAM 🔥 */}
             <div className="py-6 space-y-6">
                 <div className="rounded-3xl bg-[#F2ECE4] dark:bg-[#2A221C] p-4 md:p-8 shadow-sm border border-amber-200/60 dark:border-[#45372C]">
-                    <div className="rounded-3xl bg-white dark:bg-[#231C17] p-4 md:p-6 shadow-xs border border-gray-100 dark:border-[#3D3127] min-h-[600px] flex flex-col">
+                    <div className="rounded-3xl bg-white dark:bg-[#231C17] p-4 md:p-6 shadow-xs border border-amber-100 dark:border-[#3D3127] min-h-[600px] flex flex-col">
                         
                         {/* 1. HEADER TITLE & ACTION BAR */}
-                        <div className="mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-gray-100 dark:border-[#3D3127] pb-5 xl:border-b-0 xl:pb-0">
+                        <div className="mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-[#F2ECE4] dark:border-[#3D3127] pb-5 xl:border-b-0 xl:pb-0">
                             <div>
-                                <h1 className="text-lg font-bold text-gray-800 dark:text-[#FAF5ED]">Analisis Profit per Menu</h1>
-                                <p className="text-xs text-gray-500 dark:text-[#A89B8C] mt-0.5">
+                                <h1 className="text-xl font-bold text-gray-800 dark:text-[#FAF5ED]">Analisis Profit per Menu</h1>
+                                <p className="text-xs text-gray-500 dark:text-[#A89B8C] mt-1">
                                     Rekapitulasi data aktual transaksi penjualan menu, realisasi HPP, dan margin keuntungan.
                                 </p>
                             </div>
@@ -104,7 +117,7 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto">
                                 
                                 {/* Tab Periode: Harian, Mingguan, Bulanan */}
-                                <div className="flex w-full sm:w-auto bg-[#FAF7F2] dark:bg-[#231C17] rounded-full p-1 border border-amber-100 dark:border-[#45372C]">
+                                <div className="flex w-full sm:w-auto bg-[#FAF7F2] dark:bg-[#1E1915] rounded-full p-1 border border-amber-200/60 dark:border-[#45372C]">
                                     {['Harian', 'Mingguan', 'Bulanan'].map((item) => (
                                         <button
                                             key={item}
@@ -112,8 +125,8 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                                             onClick={() => setPeriode(item)}
                                             className={`flex-1 sm:flex-none px-5 py-2 text-xs font-bold rounded-full transition-all ${
                                                 periode === item 
-                                                  ? 'bg-[#8B5E3C] text-white shadow-xs' 
-                                                  : 'text-gray-600 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300 hover:bg-white/60 dark:hover:bg-[#2A221C]'
+                                                    ? 'bg-[#8B5E3C] text-white shadow-sm' 
+                                                    : 'text-gray-500 dark:text-[#C8BCAE] hover:text-[#8B5E3C] dark:hover:text-amber-300 hover:bg-white/60 dark:hover:bg-[#2A221C]'
                                             }`}
                                         >
                                             {item}
@@ -126,29 +139,47 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                                     <button
                                         type="button"
                                         onClick={() => setShowCalendar((v) => !v)}
-                                        className="w-full sm:w-auto inline-flex items-center justify-between sm:justify-center gap-2 rounded-full bg-gray-50 dark:bg-[#231C17] border border-gray-200 dark:border-[#45372C] px-5 py-2.5 sm:py-2 text-sm font-bold text-[#8B5E3C] dark:text-amber-400 shadow-2xs hover:bg-gray-100 dark:hover:bg-[#35291F] transition-all outline-none focus:ring-2 focus:ring-[#D9A978]"
+                                        className="w-full sm:w-auto inline-flex items-center justify-between sm:justify-center gap-2 rounded-full bg-white dark:bg-[#231C17] border border-amber-200/60 dark:border-[#45372C] px-5 py-2.5 sm:py-2 text-sm font-bold text-[#8B5E3C] dark:text-amber-400 shadow-sm hover:bg-[#FDF3E4]/50 dark:hover:bg-[#35291F] transition-all outline-none focus:ring-2 focus:ring-[#D9A978]"
                                     >
                                         <div className="flex items-center gap-2">
-                                          <Calendar className="h-4 w-4" />
-                                          <span>{displayFilterDate}</span>
+                                            <Calendar className="h-4 w-4" />
+                                            <span>
+                                                {periode === 'Bulanan' && tanggal
+                                                    ? new Date(tanggal).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+                                                    : displayFilterDate
+                                                }
+                                            </span>
                                         </div>
                                     </button>
 
                                     {showCalendar && (
-                                        <div className="absolute right-0 mt-2 rounded-3xl bg-white dark:bg-[#2A221C] p-4 shadow-2xl z-30 w-64 border border-gray-100 dark:border-[#45372C] animate-in fade-in zoom-in-95">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <span className="text-xs font-bold text-gray-700 dark:text-[#FAF5ED] uppercase tracking-wider">Filter Tanggal</span>
-                                            </div>
-                                            <input
-                                                type="date"
-                                                value={tanggal}
-                                                style={{ colorScheme: 'dark' }}
-                                                onChange={(e) => {
-                                                    setTanggal(e.target.value);
-                                                    setShowCalendar(false);
-                                                }}
-                                                className="w-full rounded-2xl border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#1E1915] text-gray-800 dark:text-[#FAF5ED] px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-[#8B5E3C] outline-none cursor-pointer"
-                                            />
+                                        <div className="absolute right-0 mt-2 rounded-3xl bg-white dark:bg-[#2A221C] p-4 shadow-xl z-50 w-64 border border-amber-200/60 dark:border-[#45372C] animate-in fade-in zoom-in-95">
+                                            <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-[#E5D8C9]">
+                                                Pilih {periode === 'Bulanan' ? 'Bulan' : 'Tanggal'}
+                                            </label>
+                                            
+                                            {periode === 'Bulanan' ? (
+                                                <input
+                                                    type="month"
+                                                    value={tanggal ? tanggal.substring(0, 7) : ''} 
+                                                    onChange={(e) => {
+                                                        const newDate = `${e.target.value}-01`;
+                                                        setTanggal(newDate);
+                                                        setShowCalendar(false);
+                                                    }}
+                                                    className="w-full cursor-pointer rounded-2xl border border-amber-200/60 bg-white px-3.5 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#8B5E3C] dark:border-[#4A3A30] dark:bg-[#1E1915] dark:text-[#FAF5ED]"
+                                                />
+                                            ) : (
+                                                <input
+                                                    type="date"
+                                                    value={tanggal}
+                                                    onChange={(e) => {
+                                                        setTanggal(e.target.value);
+                                                        setShowCalendar(false);
+                                                    }}
+                                                    className="w-full cursor-pointer rounded-2xl border border-amber-200/60 bg-white px-3.5 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#8B5E3C] dark:border-[#4A3A30] dark:bg-[#1E1915] dark:text-[#FAF5ED]"
+                                                />
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -165,32 +196,57 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                             </div>
                         </div>
 
-                        {/* 2. SUMMARY CARDS (Dibuat Kontras di dalam Kotak Putih) */}
+                        {/* 🔥 TABULASI DIVISI PUSAT LABA 🔥 */}
+                        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+                            <span className="text-xs font-bold text-[#8B5E3C] dark:text-[#8E8072] uppercase tracking-wider mr-2 whitespace-nowrap">Divisi:</span>
+                            {['Semua', 'Bar', 'Dapur'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    type="button"
+                                    onClick={() => setDivisi(tab)}
+                                    className={`px-5 py-2 text-xs font-bold rounded-full transition-all whitespace-nowrap ${
+                                        divisi === tab
+                                            ? 'bg-[#8B5E3C] border-[#8B5E3C] text-white shadow-md'
+                                            : 'bg-[#FAF7F2] dark:bg-[#2A221C] border border-amber-200/60 dark:border-[#45372C] text-gray-500 dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#35291F] hover:text-[#8B5E3C] dark:hover:text-amber-300'
+                                    }`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* 2. SUMMARY CARDS */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                             {/* Total Omset Real */}
-                            <div className="bg-gray-50 dark:bg-[#1E1915] p-5 rounded-2xl border border-gray-100 dark:border-[#3D3127] flex items-center justify-between shadow-xs">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-400 dark:text-[#8E8072] uppercase tracking-wider">Total Omset Real / Net</p>
-                                    <p className="text-2xl font-black text-gray-800 dark:text-[#FAF5ED] mt-1">
+                            <div className="bg-white dark:bg-[#1E1915] p-5 rounded-2xl border border-amber-200/60 dark:border-[#3D3127] flex items-center justify-between shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-100/40 to-transparent dark:from-emerald-900/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                                <div className="relative z-10">
+                                    <p className="text-xs font-bold text-gray-400 dark:text-[#8E8072] uppercase tracking-wider">
+                                        Total Omset {divisi !== 'Semua' ? divisi : 'Real'} / Net
+                                    </p>
+                                    <p className={`text-2xl font-black mt-1 ${getAccentColor()}`}>
                                         {formatRupiah(ringkasan?.totalOmsetReal || 0)}
                                     </p>
                                     <p className="text-[11px] font-medium text-gray-400 dark:text-[#8E8072] mt-1">Setelah diskon dan fee mitra</p>
                                 </div>
-                                <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center shadow-inner">
+                                <div className={`relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center shadow-xs ${getBgIconColor(true)}`}>
                                     <DollarSign size={28} />
                                 </div>
                             </div>
 
                             {/* Total Profit Real */}
-                            <div className="bg-gray-50 dark:bg-[#1E1915] p-5 rounded-2xl border border-gray-100 dark:border-[#3D3127] flex items-center justify-between shadow-xs">
-                                <div>
-                                    <p className="text-xs font-bold text-gray-400 dark:text-[#8E8072] uppercase tracking-wider">Total Profit Real</p>
-                                    <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                            <div className="bg-white dark:bg-[#1E1915] p-5 rounded-2xl border border-amber-200/60 dark:border-[#3D3127] flex items-center justify-between shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-100/50 to-transparent dark:from-amber-900/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                                <div className="relative z-10">
+                                    <p className="text-xs font-bold text-gray-400 dark:text-[#8E8072] uppercase tracking-wider">
+                                        Total Profit {divisi !== 'Semua' ? divisi : 'Real'}
+                                    </p>
+                                    <p className={`text-2xl font-black mt-1 ${getAccentColor()}`}>
                                         {formatRupiah(ringkasan?.totalProfitReal || 0)}
                                     </p>
                                     <p className="text-[11px] font-medium text-gray-400 dark:text-[#8E8072] mt-1">Keuntungan bersih aktual kasir</p>
                                 </div>
-                                <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center shadow-inner">
+                                <div className={`relative z-10 w-14 h-14 rounded-2xl flex items-center justify-center shadow-xs ${getBgIconColor(false)}`}>
                                     <TrendingUp size={28} />
                                 </div>
                             </div>
@@ -200,7 +256,7 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                             <div className="flex items-center gap-3">
                                 <h2 className="text-base font-bold text-gray-800 dark:text-[#FAF5ED]">Rincian Analisis Profit Menu</h2>
-                                <span className="bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border border-amber-100 dark:border-amber-800/40 shadow-xs">
+                                <span className="bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border border-amber-200/60 dark:border-amber-800/40 shadow-xs">
                                     {itemsAnalisa.total} Terdaftar
                                 </span>
                             </div>
@@ -211,17 +267,17 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Cari menu..."
-                                    className="w-full rounded-full border border-gray-200 dark:border-[#45372C] bg-gray-50 dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2.5 sm:py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
+                                    className="w-full rounded-full border border-amber-200/60 dark:border-[#45372C] bg-white dark:bg-[#231C17] text-gray-800 dark:text-[#FAF5ED] px-4 py-2.5 sm:py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#D9A978]"
                                 />
                                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-[#8E8072] pointer-events-none" />
                             </div>
                         </div>
 
                         {/* 4. TABEL ANALISA */}
-                        <div className="w-full rounded-2xl border border-gray-100 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-sm overflow-hidden flex-1 mb-6">
+                        <div className="w-full rounded-2xl border border-amber-200/60 dark:border-[#3D3127] bg-white dark:bg-[#231C17] shadow-sm overflow-hidden flex-1 mb-6">
                             <div className="w-full overflow-x-auto">
                                 <table className="w-full text-left text-sm whitespace-nowrap">
-                                    <thead className="bg-[#FAF7F2]/80 dark:bg-[#1E1915] text-gray-500 dark:text-[#A89B8C] font-bold uppercase tracking-wider text-[11px] border-b border-gray-100 dark:border-[#3D3127]">
+                                    <thead className="bg-[#FAF7F2] dark:bg-[#1E1915] text-[#8B5E3C] dark:text-[#A89B8C] font-bold uppercase tracking-wider text-[11px] border-b border-amber-200/60 dark:border-[#3D3127]">
                                         <tr>
                                             <th className="py-4 px-6 text-center w-16">No</th>
                                             <th className="py-4 px-6">Nama Menu</th>
@@ -233,14 +289,14 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                                             <th className="py-4 px-6 text-right w-40">Total Profit Real</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-50 dark:divide-[#3D3127]">
+                                    <tbody className="divide-y divide-[#F2ECE4] dark:divide-[#3D3127]">
                                         {itemsAnalisa.data.length > 0 ? (
                                             itemsAnalisa.data.map((item, index) => (
                                                 <tr key={item.id} className="hover:bg-[#FDF3E4]/50 dark:hover:bg-[#2A221C]/60 transition-colors duration-150">
                                                     <td className="py-4 px-6 text-center text-gray-400 dark:text-[#8E8072] font-medium">{(itemsAnalisa.from || 1) + index}</td>
                                                     <td className="py-4 px-6 font-bold text-gray-800 dark:text-[#FAF5ED]">{item.nama}</td>
                                                     <td className="py-4 px-6 text-center">
-                                                        <span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide border border-amber-100 dark:border-amber-800/40 shadow-xs bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300">
+                                                        <span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide border border-amber-200/60 dark:border-amber-800/40 shadow-xs bg-[#FDF3E4] dark:bg-[#3E3024] text-[#8B5E3C] dark:text-amber-300">
                                                             {item.kategori || 'Menu'}
                                                         </span>
                                                     </td>
@@ -254,21 +310,21 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                                         ) : (
                                             <tr>
                                                 <td colSpan={8} className="py-12 text-center text-gray-400 dark:text-[#8E8072] italic">
-                                                    Belum ada data analisis profit pada periode ini.
+                                                    Belum ada data analisis profit pada periode ini atau divisi ini.
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
 
-                                    <tfoot className="bg-[#FAF7F2] dark:bg-[#1E1915] font-extrabold text-gray-800 dark:text-[#FAF5ED] border-t border-gray-200 dark:border-[#3D3127]">
+                                    <tfoot className="bg-[#FAF7F2] dark:bg-[#1E1915] font-extrabold text-[#8B5E3C] dark:text-[#FAF5ED] border-t border-amber-200/60 dark:border-[#3D3127]">
                                         {/* HANYA MUNCUL DI HALAMAN TERAKHIR */}
-                                        {itemsAnalisa.current_page === itemsAnalisa.last_page && (
+                                        {itemsAnalisa.current_page === itemsAnalisa.last_page && itemsAnalisa.total > 0 && (
                                             <tr>
                                                 <td colSpan={3} className="py-4 px-6 text-right uppercase tracking-wider text-[11px]">Total Keseluruhan</td>
-                                                <td className="py-4 px-6 text-center">{ringkasan.totalTerjual || 0} porsi</td>
-                                                <td className="py-4 px-6 text-right">{formatRupiah(ringkasan.totalHpp || 0)}</td>
-                                                <td className="py-4 px-6 text-right">-</td>
-                                                <td className="py-4 px-6 text-right">-</td>
+                                                <td className="py-4 px-6 text-center text-gray-800 dark:text-gray-200">{ringkasan.totalTerjual || 0} porsi</td>
+                                                <td className="py-4 px-6 text-right text-gray-800 dark:text-gray-200">{formatRupiah(ringkasan.totalHpp || 0)}</td>
+                                                <td className="py-4 px-6 text-right text-gray-400 dark:text-gray-500">-</td>
+                                                <td className="py-4 px-6 text-right text-gray-400 dark:text-gray-500">-</td>
                                                 <td className="py-4 px-6 text-right text-emerald-600 dark:text-emerald-400 font-black">{formatRupiah(ringkasan.totalProfitReal || 0)}</td>
                                             </tr>
                                         )}
@@ -277,12 +333,12 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                             </div>
                         </div>
 
-                        {/* 5. PAGINATION (GAYA MODERN PILL) */}
+                        {/* 5. PAGINATION */}
                         <div className="mt-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs sm:text-sm text-gray-500 dark:text-[#A89B8C]">
                             <div>
                                 {itemsAnalisa.total && itemsAnalisa.total > 0 ? (
                                     <span>
-                                        Menampilkan {itemsAnalisa.from ?? 1}–{itemsAnalisa.to ?? itemsAnalisa.data.length} dari {itemsAnalisa.total} menu
+                                        Menampilkan <span className="font-bold text-[#8B5E3C] dark:text-amber-400">{itemsAnalisa.from ?? 1}</span>–<span className="font-bold text-[#8B5E3C] dark:text-amber-400">{itemsAnalisa.to ?? itemsAnalisa.data.length}</span> dari <span className="font-bold text-[#8B5E3C] dark:text-amber-400">{itemsAnalisa.total}</span> menu
                                     </span>
                                 ) : (
                                     <span>Tidak ada menu</span>
@@ -290,13 +346,13 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                             </div>
 
                             {itemsAnalisa.last_page > 1 && (
-                                <div className="flex items-center gap-1.5 self-center sm:self-auto bg-gray-50 dark:bg-[#231C17] p-1 rounded-full border border-gray-200 dark:border-[#3D3127]">
+                                <div className="flex items-center gap-1.5 self-center sm:self-auto bg-[#FAF7F2] dark:bg-[#1E1915] p-1 rounded-full border border-amber-200/60 dark:border-[#3D3127] shadow-sm">
                                     <button
                                         type="button"
                                         onClick={() => goToPage(itemsAnalisa.current_page - 1)}
                                         disabled={itemsAnalisa.current_page === 1}
                                         className={`relative inline-flex items-center px-2 py-2 text-xs font-medium transition-all rounded-full ${
-                                            itemsAnalisa.current_page === 1 ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-[#8E8072]' : 'text-gray-600 dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#2A221C] hover:text-[#8B5E3C] dark:hover:text-amber-300'
+                                            itemsAnalisa.current_page === 1 ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-[#8E8072]' : 'text-[#8B5E3C] dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#2A221C] hover:text-[#6F4E37] dark:hover:text-amber-300'
                                         }`}
                                     >
                                         <ChevronLeft className="w-4 h-4" />
@@ -322,7 +378,7 @@ export default function AnalisaProfit({ ringkasan, itemsAnalisa, filters }: Prop
                                         onClick={() => goToPage(itemsAnalisa.current_page + 1)}
                                         disabled={itemsAnalisa.current_page === itemsAnalisa.last_page}
                                         className={`relative inline-flex items-center px-2 py-2 text-xs font-medium transition-all rounded-full ${
-                                            itemsAnalisa.current_page === itemsAnalisa.last_page ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-[#8E8072]' : 'text-gray-600 dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#2A221C] hover:text-[#8B5E3C] dark:hover:text-amber-300'
+                                            itemsAnalisa.current_page === itemsAnalisa.last_page ? 'opacity-50 cursor-not-allowed text-gray-400 dark:text-[#8E8072]' : 'text-[#8B5E3C] dark:text-[#C8BCAE] hover:bg-white dark:hover:bg-[#2A221C] hover:text-[#6F4E37] dark:hover:text-amber-300'
                                         }`}
                                     >
                                         <ChevronRight className="w-4 h-4" />

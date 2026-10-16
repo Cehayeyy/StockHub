@@ -337,59 +337,6 @@ class StokHarianDapurController extends Controller
         }
     }
 
-    // --- 1. MENDAFTARKAN NAMA ITEM MENTAH BARU ---
-    public function storeMentah(Request $request)
-    {
-        $request->validate([
-            'tanggal' => 'required|date',
-            'items'   => 'required|array',
-            'items.*.item_id' => 'required|exists:items,id',
-        ]);
-
-        try {
-            DB::transaction(function () use ($request) {
-                foreach ($request->items as $row) {
-                    $itemId = $row['item_id'];
-                    $itemInfo = Item::find($itemId);
-
-                    $lastMentah = StokHarianDapurMentah::where('item_id', $itemId)
-                        ->where('tanggal', '<', $request->tanggal)
-                        ->orderBy('tanggal', 'desc')
-                        ->first();
-                    $stokKemarin = $lastMentah ? (float)$lastMentah->stok_akhir : 0;
-
-                    $mentah = StokHarianDapurMentah::firstOrNew([
-                        'item_id' => $itemId,
-                        'tanggal' => $request->tanggal
-                    ]);
-
-                    if (!$mentah->exists) {
-                        $mentah->stok_awal = $stokKemarin;
-                        $mentah->stok_masuk = 0;
-                        $mentah->stok_keluar = 0;
-                        $mentah->unit = $itemInfo->satuan ?? 'unit';
-                    }
-
-                    $mentah->stok_akhir = ($mentah->stok_awal + $mentah->stok_masuk) - $mentah->stok_keluar;
-                    $mentah->save();
-
-                    $this->distributeStockToMenus($itemId, 0, $request->tanggal);
-                }
-
-                ActivityLog::create([
-                    'user_id' => Auth::id(),
-                    'activity' => 'Input Item Mentah Dapur',
-                    'description' => "Mendaftarkan item bahan mentah baru ke stok harian dapur"
-                ]);
-            });
-
-            return back()->with('success', 'Item bahan mentah berhasil ditambahkan.');
-
-        } catch (\Exception $e) {
-            return back()->withErrors(['item_id' => 'Gagal simpan: ' . $e->getMessage()]);
-        }
-    }
-
     public function storeBoronganMentah(Request $request)
     {
         $request->validate([
