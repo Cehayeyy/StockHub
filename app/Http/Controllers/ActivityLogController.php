@@ -73,6 +73,7 @@ class ActivityLogController extends Controller
                 'role'        => $log->user?->role,
                 'activity'    => $log->activity,
                 'description' => $log->description,
+                'details'     => is_string($log->details) ? json_decode($log->details, true) : $log->details,
                 'created_at'  => $log->created_at->toIso8601String(),
             ];
         });
@@ -140,10 +141,47 @@ class ActivityLogController extends Controller
         // Urutkan dari terlama ke terbaru untuk laporan excel
         $logs = $query->orderBy('created_at', 'asc')->get();
 
-        // 🔥 UBAH: Format file diubah menjadi .xlsx
+        // Format file diubah menjadi .xlsx
         $fileName = 'laporan_aktivitas_' . $selectedDate . '.xlsx';
 
-        // 🔥 UBAH: Memanggil library Maatwebsite Excel
+        // Memanggil library Maatwebsite Excel
         return \Maatwebsite\Excel\Facades\Excel::download(new ActivityLogExport($logs), $fileName);
+    }
+
+    /**
+     * 🔥 FUNGSI BARU: Menarik semua aktivitas user di dalam satu sesi (Dari Login sampai Logout)
+     */
+    public function sessionDetails($id)
+    {
+        $loginLog = ActivityLog::findOrFail($id);
+
+        // 1. Cari kapan user ini Logout setelah waktu login ini
+        $logoutLog = ActivityLog::where('user_id', $loginLog->user_id)
+            ->where('activity', 'like', '%Logout%')
+            ->where('created_at', '>', $loginLog->created_at)
+            ->orderBy('created_at', 'asc')
+            ->first();
+
+        // 2. Tentukan batas waktu (Jika belum logout, batasnya adalah waktu saat ini)
+        $endTime = $logoutLog ? $logoutLog->created_at : now();
+
+        // 3. Ambil semua aktivitas di antara rentang waktu Login & Logout tersebut
+        $sessionActivities = ActivityLog::where('user_id', $loginLog->user_id)
+            ->where('id', '!=', $loginLog->id) // Jangan ikutkan log 'Login' itu sendiri
+            ->where('activity', 'not like', '%Logout%') // Jangan ikutkan log 'Logout' di list
+            ->whereBetween('created_at', [$loginLog->created_at, $endTime])
+            ->orderBy('created_at', 'asc') // Urutkan dari yang pertama dilakukan
+            ->get(['id', 'activity', 'description', 'details', 'created_at']); // 🔥 FIX: Tambahkan 'details'
+
+        // 🔥 FIX: Pastikan details dikirim sebagai JSON/Array ke React, bukan String mati
+        $sessionActivities->transform(function ($log) {
+            $log->details = is_string($log->details) ? json_decode($log->details, true) : $log->details;
+            return $log;
+        });
+
+        return response()->json([
+            'logout_time' => $logoutLog ? $logoutLog->created_at->toIso8601String() : null,
+            'activities'  => $sessionActivities
+        ]);
     }
 }

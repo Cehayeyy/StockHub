@@ -45,13 +45,15 @@ interface Props {
     bebanLainLain: number;
     pajakPenghasilan: number;
   };
-  selectedMonth?: string;
+  selectedDate?: string; // 🔥 UBAH 1: Dari selectedMonth menjadi selectedDate
 }
 
-export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: Props) {
-  const [selectedMonth, setSelectedMonth] = useState(
-    initialMonth || new Date().toISOString().slice(0, 7)
+export default function LaporanKeuangan({ data, selectedDate: initialDate }: Props) {
+  // 🔥 UBAH 2: State default menjadi Y-m-d (Harian)
+  const [selectedDate, setSelectedDate] = useState(
+    initialDate || new Date().toISOString().slice(0, 10)
   );
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
 
@@ -69,7 +71,6 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
   };
 
   const formatIDR = (val: number) => {
-    // Tampilkan kurung untuk nilai negatif sesuai format akuntansi
     const isNegative = val < 0;
     const absoluteVal = Math.abs(val);
     const formatted = new Intl.NumberFormat("id-ID", {
@@ -154,12 +155,13 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
   const labaSetelahPajak = labaSebelumPajak - data.pajakPenghasilan;
   const totalPengeluaran = jumlahHpp + totalBebanOperasional + jumlahBebanLain + data.pajakPenghasilan;
 
-  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 🔥 UBAH 3: Fungsi handle pencarian ke parameter "tanggal"
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setSelectedMonth(val);
+    setSelectedDate(val);
     router.get(
       "/laporan/keuangan",
-      { bulan: val },
+      { tanggal: val },
       { preserveState: true, preserveScroll: true }
     );
     setShowCalendar(false);
@@ -168,9 +170,11 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
   const handleSaveOpex = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Kirim data ke backend untuk disimpan
+    // 🔥 UBAH 4: Konversi format tanggal Y-m-d ke format Y-m (Bulan) untuk Simpan Opex
+    const periodeBulan = selectedDate.substring(0, 7); 
+    
     const payload = {
-      periode: selectedMonth,
+      periode: periodeBulan,
       biaya_gaji: parseFormattedNumber(opexInputs.biayaGaji),
       perlengkapan_warung: parseFormattedNumber(opexInputs.perlengkapanWarung),
       admin_bank: parseFormattedNumber(opexInputs.adminBank),
@@ -194,12 +198,11 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
     });
   };
 
+  // 🔥 UBAH 5: Download Excel menggunakan parameter tanggal
   const handleExportExcel = () => {
-    // Arahkan ke URL download, sertakan parameter bulan
-    window.location.href = route('laporan.keuangan.export', { bulan: selectedMonth });
+    window.location.href = route('laporan.keuangan.export', { tanggal: selectedDate });
   };
 
-  // Komponen Helper untuk Baris Tabel agar rapi
   const TableRow = ({ label, value, isBold = false, isHeader = false, isIndent = false, isEmpty = false }: any) => (
     <tr className={`${isHeader ? 'bg-[#FAF7F2] dark:bg-[#1E1915]' : 'bg-white dark:bg-[#231C17]'} ${isBold ? 'font-bold text-gray-800 dark:text-[#FAF5ED]' : 'text-gray-600 dark:text-[#C8BCAE]'} border-b border-[#F2ECE4] dark:border-[#3D3127]`}>
       <td className={`py-3 px-6 ${isIndent ? 'pl-10' : ''} ${isHeader ? 'uppercase tracking-wider text-xs' : 'text-sm'}`}>
@@ -241,7 +244,6 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
 
       <div className="py-6 space-y-6 print-container">
         
-        {/* CONTAINER KREM LUAR, PUTIH DALAM */}
         <div className="rounded-3xl bg-[#F2ECE4] dark:bg-[#2A221C] p-4 md:p-8 shadow-sm border border-amber-200/60 dark:border-[#45372C] print-no-wrapper">
           <div className="rounded-3xl bg-white dark:bg-[#231C17] p-4 md:p-6 shadow-xs border border-amber-100 dark:border-[#3D3127] min-h-[600px] flex flex-col print-no-wrapper">
             
@@ -273,11 +275,12 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
                   </button>
                   {showCalendar && (
                     <div className="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-amber-200/60 bg-white p-4 shadow-xl dark:border-[#45372E] dark:bg-[#2C231D] animate-in fade-in zoom-in-95">
-                      <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-[#E5D8C9]">Pilih periode</label>
+                      <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-[#E5D8C9]">Pilih Tanggal</label>
+                      {/* 🔥 UBAH 6: Kalender menjadi type "date" untuk pilih harian */}
                       <input
-                        type="month"
-                        value={selectedMonth}
-                        onChange={handleMonthChange}
+                        type="date"
+                        value={selectedDate}
+                        onChange={handleDateChange}
                         className="w-full cursor-pointer rounded-2xl border border-amber-200/60 bg-white px-3.5 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-[#8B5E3C] dark:border-[#4A3A30] dark:bg-[#1E1915] dark:text-[#FAF5ED]"
                       />
                     </div>
@@ -417,7 +420,7 @@ export default function LaporanKeuangan({ data, selectedMonth: initialMonth }: P
                     Input Data Beban Operasional
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-[#A89B8C] mt-1">
-                    Sesuaikan nilai untuk Laporan Laba Rugi periode {data.periode}
+                    Sesuaikan nilai Beban/OPEX untuk Bulan <strong>{new Date(selectedDate).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</strong>
                 </p>
             </div>
 

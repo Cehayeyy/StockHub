@@ -13,24 +13,25 @@ use Maatwebsite\Excel\Facades\Excel;
 class LaporanKeuanganController extends Controller
 {
     // Fungsi bantuan untuk mengambil data (Digunakan oleh Web & Excel)
-    private function getKeuanganData($monthParam)
+    private function getKeuanganData($dateParam)
     {
         Carbon::setLocale('id');
 
         try {
-            $date = Carbon::createFromFormat('Y-m', $monthParam);
+            // 🔥 UBAH 1: Format Y-m diubah menjadi Y-m-d (Harian)
+            $date = Carbon::createFromFormat('Y-m-d', $dateParam);
         } catch (\Exception $e) {
             $date = Carbon::now();
-            $monthParam = $date->format('Y-m');
+            $dateParam = $date->format('Y-m-d');
         }
 
-        $year = $date->year;
-        $month = $date->month;
+        // Variabel untuk mengambil Beban Operasional (OPEX) yang sifatnya tetap bulanan
+        $monthParam = $date->format('Y-m'); 
 
         $pendapatanBar = 0; $pendapatanDapur = 0; $pendapatanTrekking = 0;
         $hppBar = 0; $hppDapur = 0; $hppTrekking = 0;
 
-        // 1 & 2. REKAP PENDAPATAN & HPP
+        // 1 & 2. REKAP PENDAPATAN & HPP (Berdasarkan Tanggal Spesifik)
         if (Schema::hasTable('sales_report_items') && Schema::hasTable('sales_reports') && Schema::hasTable('items')) {
             $salesCols = Schema::getColumnListing('sales_reports');
             $salesDateCol = in_array('tanggal_transaksi', $salesCols) ? 'tanggal_transaksi' : (in_array('tanggal', $salesCols) ? 'tanggal' : 'created_at');
@@ -43,8 +44,8 @@ class LaporanKeuanganController extends Controller
             $query = DB::table('sales_report_items')
                 ->join('sales_reports', 'sales_report_items.sales_report_id', '=', 'sales_reports.id')
                 ->join('items', 'sales_report_items.item_id', '=', 'items.id')
-                ->whereYear("sales_reports.{$salesDateCol}", $year)
-                ->whereMonth("sales_reports.{$salesDateCol}", $month);
+                // 🔥 UBAH 2: Ganti whereYear & whereMonth menjadi whereDate
+                ->whereDate("sales_reports.{$salesDateCol}", $dateParam);
 
             if ($hppCol) { $query->leftJoin('recipes', 'items.nama', '=', 'recipes.name'); }
 
@@ -70,7 +71,7 @@ class LaporanKeuanganController extends Controller
             }
         }
 
-        // 3. KERUGIAN BAHAN BAKU
+        // 3. KERUGIAN BAHAN BAKU (Berdasarkan Tanggal Spesifik)
         $kerugianBahanBaku = 0;
         if (Schema::hasTable('laporan_kerugians') && Schema::hasTable('items')) {
             $lossCols = Schema::getColumnListing('laporan_kerugians');
@@ -78,13 +79,22 @@ class LaporanKeuanganController extends Controller
             $lossCol = in_array('total_loss_amount', $lossCols) ? 'total_loss_amount' : (in_array('total_loss', $lossCols) ? 'total_loss' : null);
 
             if ($lossCol) {
-                $kerugianBahanBaku = (float) DB::table('laporan_kerugians')->whereIn('status', ['verified', 'Disetujui'])->whereYear($lossDateCol, $year)->whereMonth($lossDateCol, $month)->sum($lossCol);
+                $kerugianBahanBaku = (float) DB::table('laporan_kerugians')
+                    ->whereIn('status', ['verified', 'Disetujui'])
+                    // 🔥 UBAH 3: Ganti whereYear & whereMonth menjadi whereDate
+                    ->whereDate($lossDateCol, $dateParam)
+                    ->sum($lossCol);
             } elseif (in_array('kuantitas', $lossCols) && Schema::hasColumn('items', 'harga_dasar')) {
-                $kerugianBahanBaku = (float) DB::table('laporan_kerugians')->join('items', 'laporan_kerugians.item_id', '=', 'items.id')->where('laporan_kerugians.status', 'Disetujui')->whereYear("laporan_kerugians.{$lossDateCol}", $year)->whereMonth("laporan_kerugians.{$lossDateCol}", $month)->sum(DB::raw('laporan_kerugians.kuantitas * COALESCE(items.harga_dasar, 0)'));
+                $kerugianBahanBaku = (float) DB::table('laporan_kerugians')
+                    ->join('items', 'laporan_kerugians.item_id', '=', 'items.id')
+                    ->where('laporan_kerugians.status', 'Disetujui')
+                    // 🔥 UBAH 4: Ganti whereYear & whereMonth menjadi whereDate
+                    ->whereDate("laporan_kerugians.{$lossDateCol}", $dateParam)
+                    ->sum(DB::raw('laporan_kerugians.kuantitas * COALESCE(items.harga_dasar, 0)'));
             }
         }
 
-        // 4. OPEX
+        // 4. OPEX (Beban Operasional ditarik secara bulanan menggunakan $monthParam)
         $opexData = (object) [
             'biaya_gaji' => 0, 'perlengkapan_warung' => 0, 'admin_bank' => 0, 'operasional_warung' => 0,
             'biaya_sewa' => 0, 'perbaikan_inventaris' => 0, 'pemeliharaan_warung' => 0, 'biaya_marketing' => 0,
@@ -111,7 +121,8 @@ class LaporanKeuanganController extends Controller
         }
 
         return [
-            'periode'            => $date->translatedFormat('F Y'),
+            // 🔥 UBAH 5: Menggunakan tanggal lengkap untuk teks periode (misal: 26 Oktober 2026)
+            'periode'            => $date->translatedFormat('d F Y'),
             'pendapatanBar'      => $pendapatanBar, 'pendapatanDapur' => $pendapatanDapur, 'pendapatanTrekking' => $pendapatanTrekking,
             'hppBar'             => $hppBar, 'hppDapur' => $hppDapur, 'hppTrekking' => $hppTrekking,
             'biayaGaji'           => $opexData->biaya_gaji,
@@ -133,18 +144,19 @@ class LaporanKeuanganController extends Controller
 
     public function keuangan(Request $request)
     {
-        $monthParam = $request->input('bulan', Carbon::now()->format('Y-m'));
+        // 🔥 UBAH 6: Menangkap parameter 'tanggal', bukan 'bulan'
+        $dateParam = $request->input('tanggal', Carbon::now()->format('Y-m-d'));
         return Inertia::render('Laporan/LaporanKeuangan', [
-            'data'          => $this->getKeuanganData($monthParam),
-            'selectedMonth' => $monthParam,
+            'data'         => $this->getKeuanganData($dateParam),
+            'selectedDate' => $dateParam, // Diubah namanya menjadi selectedDate
         ]);
     }
 
-    // Fungsi Baru untuk Download Excel
     public function exportExcel(Request $request)
     {
-        $monthParam = $request->input('bulan', Carbon::now()->format('Y-m'));
-        $dataKeuangan = $this->getKeuanganData($monthParam);
+        // 🔥 UBAH 7: Download export juga berdasarkan tanggal harian
+        $dateParam = $request->input('tanggal', Carbon::now()->format('Y-m-d'));
+        $dataKeuangan = $this->getKeuanganData($dateParam);
 
         $fileName = 'Laporan_Keuangan_Warung_Cangkruk_' . str_replace(' ', '_', $dataKeuangan['periode']) . '.xlsx';
 
@@ -153,6 +165,7 @@ class LaporanKeuanganController extends Controller
 
     public function storeOpex(Request $request)
     {
+        // Fitur Input OPEX tidak diubah dan TETAP Y-m (Bulanan) karena beban ini sifatnya per bulan
         $request->validate([
             'periode'              => 'required|date_format:Y-m',
             'biaya_gaji'           => 'required|numeric|min:0',

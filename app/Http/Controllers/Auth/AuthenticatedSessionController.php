@@ -12,6 +12,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\ActivityLog;
 use App\Models\LoginHistory;
+use Carbon\Carbon;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -19,7 +20,7 @@ class AuthenticatedSessionController extends Controller
     {
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),
-            'status' => session('status'),
+            'status'           => session('status'),
         ]);
     }
 
@@ -31,22 +32,36 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         if ($user) {
+            $userAgent = $request->header('User-Agent');
+            $device    = $this->getDeviceType($userAgent);
+            $browser   = $this->getBrowser($userAgent);
+            $platform  = $this->getPlatform($userAgent);
+            $ip        = $request->ip();
+
+            // 1. Simpan Login History ke database
+            $loginHistory = LoginHistory::create([
+                'user_id'     => $user->id,
+                'ip_address'  => $ip,
+                'user_agent'  => $userAgent,
+                'device_type' => $device,
+                'browser'     => $browser,
+                'platform'    => $platform,
+                'login_at'    => now(),
+            ]);
+
+            // 2. Catat ActivityLog dengan rincian lengkap pada kolom 'details'
             ActivityLog::create([
                 'user_id'     => $user->id,
                 'activity'    => 'Login',
                 'description' => 'User melakukan login ke sistem',
-            ]);
-
-            // Simpan login history
-            $userAgent = $request->header('User-Agent');
-            LoginHistory::create([
-                'user_id'     => $user->id,
-                'ip_address'  => $request->ip(),
-                'user_agent'  => $userAgent,
-                'device_type' => $this->getDeviceType($userAgent),
-                'browser'     => $this->getBrowser($userAgent),
-                'platform'    => $this->getPlatform($userAgent),
-                'login_at'    => now(),
+                'details'     => [
+                    'ip_address'       => $ip,
+                    'device_type'      => $device,
+                    'browser'          => $browser,
+                    'platform'         => $platform,
+                    'role'             => $user->role ?? 'staff',
+                    'login_history_id' => $loginHistory->id ?? null,
+                ],
             ]);
         }
 
@@ -58,11 +73,7 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         if ($user) {
-            ActivityLog::create([
-                'user_id'     => $user->id,
-                'activity'    => 'Logout',
-                'description' => 'User keluar dari sistem',
-            ]);
+            $ip = $request->ip();
 
             // Update logout time di login history terakhir
             $lastLogin = LoginHistory::where('user_id', $user->id)
@@ -70,9 +81,24 @@ class AuthenticatedSessionController extends Controller
                 ->latest('login_at')
                 ->first();
 
+            $durationMinutes = null;
             if ($lastLogin) {
                 $lastLogin->update(['logout_at' => now()]);
+                // Hitung durasi sesi dalam menit
+                $durationMinutes = now()->diffInMinutes($lastLogin->login_at);
             }
+
+            // Catat ActivityLog Logout dengan rincian durasi sesi
+            ActivityLog::create([
+                'user_id'     => $user->id,
+                'activity'    => 'Logout',
+                'description' => 'User keluar dari sistem',
+                'details'     => [
+                    'ip_address'       => $ip,
+                    'durasi_sesi'      => $durationMinutes !== null ? "{$durationMinutes} menit" : 'N/A',
+                    'role'             => $user->role ?? 'staff',
+                ],
+            ]);
         }
 
         Auth::guard('web')->logout();

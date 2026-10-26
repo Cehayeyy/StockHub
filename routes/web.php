@@ -319,6 +319,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan-aktivitas/export', [ActivityLogController::class, 'export'])
         ->name('laporan-aktivitas.export');
 
+    Route::get('/laporan-aktivitas/{id}/session', [ActivityLogController::class, 'sessionDetails'])
+        ->name('laporan-aktivitas.session');
+
     // ===========================
     // SALES REPORT (BILL / NOTA)
     // ===========================

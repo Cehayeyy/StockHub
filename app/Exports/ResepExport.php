@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Recipe;
+use App\Models\Item; // 🔥 UBAH 1: Tambahkan Model Item untuk pencarian data yang hilang
 use Illuminate\Support\Enumerable;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -38,7 +39,24 @@ class ResepExport implements FromCollection, WithHeadings, WithMapping, ShouldAu
         if (is_array($recipe->ingredients)) {
             $arr = [];
             foreach ($recipe->ingredients as $ing) {
-                $arr[] = ($ing['item_name'] ?? 'Bahan') . ' (' . $ing['amount'] . ' ' . $ing['unit'] . ')';
+                // 🔥 UBAH 2: Logika Anti-Error / Bulletproof
+                $itemName = $ing['item_name'] ?? null;
+                
+                // Jika item_name di JSON kosong (Data Lama), cari manual ke database pakai item_id
+                if (empty($itemName) && !empty($ing['item_id'])) {
+                    $item = Item::find($ing['item_id']);
+                    // Jika bahannya masih ada di DB, ambil namanya. Jika sudah terhapus, tulis (Terhapus)
+                    $itemName = $item ? $item->nama : "Bahan ID-{$ing['item_id']} (Terhapus)";
+                } 
+                // Jika item_id juga tidak ada
+                elseif (empty($itemName)) {
+                    $itemName = 'Bahan Tidak Diketahui';
+                }
+
+                $amount = $ing['amount'] ?? 0;
+                $unit = $ing['unit'] ?? '';
+
+                $arr[] = $itemName . ' (' . $amount . ' ' . $unit . ')';
             }
             $ingredientsList = implode(', ', $arr);
         }
@@ -130,7 +148,6 @@ class ResepExport implements FromCollection, WithHeadings, WithMapping, ShouldAu
                 ]);
 
                 // 4. Memperbaiki Kolom "Komposisi" yang Terlalu Lebar
-                // Kita matikan auto-size untuk kolom E, beri lebar fix, dan aktifkan Wrap Text
                 $sheet->getColumnDimension('E')->setAutoSize(false);
                 $sheet->getColumnDimension('E')->setWidth(50); // Lebar maksimal 50
                 $sheet->getStyle("E5:E{$highestRow}")->getAlignment()->setWrapText(true);

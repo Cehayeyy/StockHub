@@ -9,10 +9,17 @@ class ActivityLog extends Model
 {
     use HasFactory;
 
+    // 🔥 1. Tambahkan 'details' agar data diizinkan masuk ke database
     protected $fillable = [
         'user_id',
         'activity',
         'description',
+        'details', 
+    ];
+
+    // 🔥 2. Tambahkan casts agar array otomatis diubah menjadi JSON saat disimpan
+    protected $casts = [
+        'details' => 'array',
     ];
 
     public function user()

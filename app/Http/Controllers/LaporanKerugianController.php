@@ -79,6 +79,8 @@ class LaporanKerugianController extends Controller
         $user = Auth::user();
 
         DB::transaction(function () use ($request, $user) {
+            $logDetailItems = []; // 🔥 Menyimpan detail kerugian untuk ActivityLog
+
             foreach ($request->items as $row) {
                 $item = Item::findOrFail($row['item_id']);
 
@@ -92,12 +94,25 @@ class LaporanKerugianController extends Controller
                     'status' => 'Menunggu Verifikasi',
                 ]);
 
-                ActivityLog::create([
-                    'user_id' => $user->id,
-                    'activity' => 'Catat Kerugian',
-                    'description' => "Melaporkan kerugian bahan '{$item->nama}' sebanyak {$row['kuantitas']} porsi dengan alasan: {$row['alasan']}."
-                ]);
+                // Kumpulkan item untuk log
+                $logDetailItems[] = [
+                    'nama_item' => $item->nama,
+                    'jumlah'    => $row['kuantitas'],
+                    'satuan'    => $item->satuan ?? 'unit',
+                    'alasan'    => $row['alasan']
+                ];
             }
+
+            // 🔥 Catat ke Activity Log dalam SATU log untuk semua item
+            $jumlahItem = count($logDetailItems);
+            ActivityLog::create([
+                'user_id'     => $user->id,
+                'activity'    => 'Input Kerugian',
+                'description' => "Melaporkan kerugian bahan baku ({$jumlahItem} jenis item)",
+                'details'     => [
+                    'items' => $logDetailItems
+                ]
+            ]);
         });
 
         return back()->with('success', 'Laporan kerugian borongan berhasil dikirim ke Supervisor!');
@@ -122,7 +137,7 @@ class LaporanKerugianController extends Controller
                   })
                   ->orWhereHas('staff', function($staffQ) use ($search) {
                       $staffQ->where('name', 'like', "%{$search}%")
-                            ->orWhere('username', 'like', "%{$search}%");
+                             ->orWhere('username', 'like', "%{$search}%");
                   });
             });
         }
@@ -132,7 +147,6 @@ class LaporanKerugianController extends Controller
             $query->whereDate('created_at', $request->tanggal);
         }
 
-        // Paginate 10 data per halaman dan pertahankan query string saat pindah halaman
         $laporan = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Verifikasi/VerifikasiKerugian', [
@@ -147,7 +161,6 @@ class LaporanKerugianController extends Controller
     public function exportExcel(Request $request)
     {
         $filename = "laporan-kerugian-bahan-baku-" . date('Y-m-d') . ".xlsx";
-
         return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\KerugianExport(), $filename);
     }
 
@@ -160,7 +173,7 @@ class LaporanKerugianController extends Controller
             'action' => 'required|in:approve,reject'
         ]);
 
-        $laporan = LaporanKerugian::with('item')->findOrFail($id);
+        $laporan = LaporanKerugian::with('item', 'staff')->findOrFail($id);
         $user = Auth::user();
 
         if ($laporan->status !== 'Menunggu Verifikasi') {
@@ -168,15 +181,15 @@ class LaporanKerugianController extends Controller
         }
 
         DB::transaction(function () use ($laporan, $request, $user) {
+            $tanggalLaporan = $laporan->created_at->toDateString();
+            $itemId = $laporan->item_id;
+            $jumlahKerugian = (float) $laporan->kuantitas;
+
             if ($request->action === 'approve') {
                 $laporan->update([
                     'status' => 'Disetujui',
                     'supervisor_id' => $user->id
                 ]);
-
-                $tanggalLaporan = $laporan->created_at->toDateString();
-                $itemId = $laporan->item_id;
-                $jumlahKerugian = (float) $laporan->kuantitas;
 
                 // 1. Potong Stok Bahan Mentah Harian
                 if ($laporan->division === 'bar') {
@@ -207,7 +220,6 @@ class LaporanKerugianController extends Controller
                                 break;
                             }
                         }
-                        // Hitung setara berapa porsi menu yang berkurang
                         $porsiLoss = $amt > 0 ? ceil($jumlahKerugian / $amt) : $jumlahKerugian;
 
                         $menuItem = Item::where('nama', $recipe->name)->where('division', 'bar')->first();
@@ -222,7 +234,6 @@ class LaporanKerugianController extends Controller
                             }
                         }
                     }
-
                 } else {
                     $stokMentah = StokHarianDapurMentah::where('item_id', $itemId)
                         ->whereDate('tanggal', $tanggalLaporan)
@@ -264,10 +275,18 @@ class LaporanKerugianController extends Controller
                     }
                 }
 
+                // 🔥 Catat Detail Verifikasi (Setuju)
                 ActivityLog::create([
-                    'user_id' => $user->id,
-                    'activity' => 'Approve Kerugian',
-                    'description' => "Menyetujui laporan kerugian bahan '{$laporan->item->nama}' sebanyak {$jumlahKerugian}."
+                    'user_id'     => $user->id,
+                    'activity'    => 'Verifikasi Kerugian',
+                    'description' => "Menyetujui laporan kerugian bahan '{$laporan->item->nama}' dari staf {$laporan->staff->name}.",
+                    'details'     => [
+                        'status'      => 'Disetujui',
+                        'pelapor'     => $laporan->staff->name,
+                        'nama_item'   => $laporan->item->nama,
+                        'jumlah'      => $jumlahKerugian,
+                        'alasan'      => $laporan->alasan
+                    ]
                 ]);
 
             } else {
@@ -276,14 +295,26 @@ class LaporanKerugianController extends Controller
                     'supervisor_id' => $user->id
                 ]);
 
+                // 🔥 Catat Detail Verifikasi (Tolak)
                 ActivityLog::create([
-                    'user_id' => $user->id,
-                    'activity' => 'Reject Kerugian',
-                    'description' => "Menolak laporan kerugian bahan '{$laporan->item->nama}'."
+                    'user_id'     => $user->id,
+                    'activity'    => 'Verifikasi Kerugian',
+                    'description' => "Menolak laporan kerugian bahan '{$laporan->item->nama}' dari staf {$laporan->staff->name}.",
+                    'details'     => [
+                        'status'      => 'Ditolak',
+                        'pelapor'     => $laporan->staff->name,
+                        'nama_item'   => $laporan->item->nama,
+                        'jumlah'      => $jumlahKerugian,
+                        'alasan'      => $laporan->alasan
+                    ]
                 ]);
             }
         });
 
-        return back()->with('success', 'Laporan kerugian disetujui, stok mentah dan porsi menu harian berhasil disesuaikan!');
+        if ($request->action === 'approve') {
+            return back()->with('success', 'Laporan kerugian disetujui, stok mentah dan porsi menu harian berhasil disesuaikan!');
+        } else {
+            return back()->with('success', 'Laporan kerugian telah ditolak.');
+        }
     }
 }

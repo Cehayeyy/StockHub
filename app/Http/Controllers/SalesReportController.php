@@ -180,6 +180,7 @@ class SalesReportController extends Controller
 
                     $subtotalMenu = 0;
                     $processedItems = [];
+                    $logDetailItems = []; // 🔥 Menyimpan detail item khusus untuk ActivityLog
 
                     foreach ($notaData['items'] as $row) {
                         $recipeId = $row['recipe_id'];
@@ -196,7 +197,7 @@ class SalesReportController extends Controller
                         }
 
                         $hargaSatuan = (float) ($recipe->harga_jual_real ?? $recipe->harga_jual ?? 0);
-                        $lineSubtotal = $hargaSatuan * $qty;
+                        $lineSubtotal = $hargaSatuan * $qty; // 🔥 FIX ERROR: perkalian
                         $subtotalMenu += $lineSubtotal;
 
                         $menuItem = $recipe->item_id
@@ -207,7 +208,7 @@ class SalesReportController extends Controller
                             throw new \RuntimeException("Menu '{$recipe->name}' belum terhubung ke data Item divisi {$recipe->division}.");
                         }
 
-                        // Ambil HPP resep saat ini (menyesuaikan nama kolom yang Anda pakai di database)
+                        // Ambil HPP resep saat ini
                         $hppSatuan = (float) ($recipe->total_hpp ?? $recipe->harga_hpp ?? $recipe->hpp ?? 0);
 
                         $processedItems[] = [
@@ -216,7 +217,15 @@ class SalesReportController extends Controller
                             'quantity' => $qty,
                             'harga_satuan' => $hargaSatuan,
                             'subtotal' => $lineSubtotal,
-                            'hpp_saat_transaksi' => $hppSatuan, // <-- Snapshot HPP
+                            'hpp_saat_transaksi' => $hppSatuan,
+                        ];
+
+                        // 🔥 Tambah data ke dalam array khusus Log
+                        $logDetailItems[] = [
+                            'nama_item' => $recipe->name,
+                            'jumlah'    => $qty,
+                            'satuan'    => 'porsi',
+                            'harga'     => $hargaSatuan
                         ];
 
                         // Potong Stok Harian (Bar / Dapur)
@@ -232,7 +241,7 @@ class SalesReportController extends Controller
 
                             if (is_array($recipe->ingredients)) {
                                 foreach ($recipe->ingredients as $ing) {
-                                    $rawQty = $qty * (float) ($ing['amount'] ?? 0);
+                                    $rawQty = $qty * (float) ($ing['amount'] ?? 0); // 🔥 FIX ERROR: perkalian
                                     $mentah = StokHarianMentah::where(['item_id' => $ing['item_id'], 'tanggal' => $tanggal])->first();
                                     if ($mentah) {
                                         $mentah->stok_keluar = (float) $mentah->stok_keluar + $rawQty;
@@ -253,7 +262,7 @@ class SalesReportController extends Controller
 
                             if (is_array($recipe->ingredients)) {
                                 foreach ($recipe->ingredients as $ing) {
-                                    $rawQty = $qty * (float) ($ing['amount'] ?? 0);
+                                    $rawQty = $qty * (float) ($ing['amount'] ?? 0); // 🔥 FIX ERROR: perkalian
                                     $mentah = StokHarianDapurMentah::where(['item_id' => $ing['item_id'], 'tanggal' => $tanggal])->first();
                                     if ($mentah) {
                                         $mentah->stok_keluar = (float) $mentah->stok_keluar + $rawQty;
@@ -267,6 +276,8 @@ class SalesReportController extends Controller
 
                     $diskonPersen = (float) ($notaData['diskon_persen'] ?? 0);
                     $feeMitraPersen = (float) ($notaData['fee_mitra_persen'] ?? 0);
+                    
+                    // 🔥 FIX ERROR: perkalian dan pengurangan
                     $nominalDiskon = ($subtotalMenu * $diskonPersen) / 100;
                     $feeMitra = ($subtotalMenu * $feeMitraPersen) / 100;
                     $totalBersih = ($subtotalMenu - $nominalDiskon) - $feeMitra;
@@ -290,14 +301,22 @@ class SalesReportController extends Controller
                             'quantity' => $pItem['quantity'],
                             'harga_satuan' => $pItem['harga_satuan'],
                             'subtotal' => $pItem['subtotal'],
-                            'hpp_saat_transaksi' => $pItem['hpp_saat_transaksi'], // <-- Simpan ke database
+                            'hpp_saat_transaksi' => $pItem['hpp_saat_transaksi'],
                         ]);
                     }
 
+                    // 🔥 Catat detail log ke JSON details
                     ActivityLog::create([
-                        'user_id' => $userId,
-                        'activity' => 'Input Sales Report',
+                        'user_id'     => $userId,
+                        'activity'    => 'Input Sales Report',
                         'description' => "Berhasil input nota [{$partnerNota}] nomor: {$nomorNota}",
+                        'details'     => [
+                            'nomor_nota'  => $nomorNota,
+                            'partner'     => $partnerNota,
+                            'total_bayar' => $totalBersih,
+                            'diskon'      => $diskonPersen,
+                            'items'       => $logDetailItems // Menyisipkan daftar item
+                        ]
                     ]);
                 }
             });
